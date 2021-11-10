@@ -1,0 +1,8 @@
+# mac related files
+.DS_Store
+
+# build directories
+/build*
+
+# resource files
+Resources/*.rsrc
