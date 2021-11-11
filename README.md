@@ -1,11 +1,11 @@
 PluginCollider
 ===============
 
-*PluginCollider is an experimental fork of https://github.com/supercollider/SuperColliderAU and it is still not complete since it only builts only on macOS.*
+*PluginCollider is an experimental fork of https://github.com/supercollider/SuperColliderAU and it is still not complete since it only builts on macOS.*
 
 ## Current PluginCollider status before it becomes a GA project:
 
-- [ ] Remove CoreAudio dependencies (e.g. Linux support and Windows support)
+- [ ] Remove CoreAudio dependencies (e.g. Linux and Windows support)
 - [ ] Multichannel support
 - [ ] Process midi-input/output and OSC timecode
 
