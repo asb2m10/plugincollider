@@ -11,7 +11,7 @@ PluginCollider
 
 PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU. The embedded server may be controlled over OSC as usual. 
 
-(JUCE)[https://juce.com/] framework is used as a generic wrapper.
+[JUCE](https://juce.com/) framework is used as a generic wrapper.
 * It provides a unified build system among plateforms and plugins configuration
 * It provides a "Standalone" plugin version that greatly simplify development and debugging
 * Simplifies plugin format evolutions and maintenance
@@ -31,5 +31,5 @@ After compiling SuperCollider, cd back to the PluginCollider root directory and 
 
 In order to test the plugin, with sclang execute this code:
 
-   s = Server.remote(\pluginCollider, NetAddr("127.0.0.1", <listening plugin port>), o);
-   { [SinOsc.ar(439, 0, 0.2), SinOsc.ar(444, 0, 0.2)] }.play(s);
+    s = Server.remote(\pluginCollider, NetAddr("127.0.0.1", <listening plugin port>), o);
+    { [SinOsc.ar(439, 0, 0.2), SinOsc.ar(444, 0, 0.2)] }.play(s);
