@@ -29,9 +29,6 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 #endif
 {
     superCollider = new SCProcess();
-
-    juce::File f = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    f.revealToUser();
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor()
@@ -181,19 +178,6 @@ void PluginColliderAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
 
     // TODO: There is probably something to send to world in term of timing...
     auto *playhead = getPlayHead();

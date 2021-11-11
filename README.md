@@ -31,5 +31,6 @@ After compiling SuperCollider, cd back to the PluginCollider root directory and 
 
 In order to test the plugin, with sclang execute this code:
 
+    o = ServerOptions.new;
     s = Server.remote(\pluginCollider, NetAddr("127.0.0.1", <listening plugin port>), o);
     { [SinOsc.ar(439, 0, 0.2), SinOsc.ar(444, 0, 0.2)] }.play(s);

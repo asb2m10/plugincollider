@@ -164,8 +164,6 @@ void SCProcess::run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMess
         
         driver->Callback(input, output, NULL, nFrame, sampleRate, 0);
 
-
-        
         /*float* dataL = buffer.getWritePointer(0);
         float* out = (Float32*) output->mBuffers[0].mData;
         for(int i=0; i<output->mBuffers[0].mDataByteSize; i++) {

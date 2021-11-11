@@ -138,6 +138,7 @@ target_sources(PluginCollider
 	${SC_DIR}/common/SC_fftlib.cpp
 	${SC_DIR}/common/SC_AllocPool.cpp
 	${SC_DIR}/common/SC_Errors.cpp
+    ${SC_DIR}/common/SC_Apple.mm
 	${SC_DIR}/common/Samp.cpp
 	${SC_DIR}/common/SC_StringBuffer.cpp
 	${SC_DIR}/common/SC_StringParser.cpp
