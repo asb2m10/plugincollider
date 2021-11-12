@@ -121,8 +121,9 @@ void PluginColliderAudioProcessor::prepareToPlay (double sampleRate, int samples
     options.mNumInputBusChannels = 2;
     options.mNumOutputBusChannels = 2;
     
-    juce::File pluginDir("/Applications/SuperCollider.app/Contents/Resources/plugins");
-    
+    //juce::File pluginDir("/Applications/SuperCollider.app/Contents/Resources/plugins");
+    //juce::File pluginDir("/usr/lib/SuperCollider/plugins");
+    juce::File pluginDir("/home/asb2m10/var/src/plugincollider/libs/supercollider/build/server/plugins");
     juce::File synthdefs = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support/SuperCollider/synthdefs");
     superCollider->startUp(options, pluginDir.getFullPathName().toStdString(), synthdefs.getFullPathName().toStdString(), 9989);
 

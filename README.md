@@ -22,6 +22,8 @@ In order to build PluginCollider, you first need to build SuperCollider, which i
 
 After this, cd to the libs/supercollider directory and build as explained in the Build Instructions section in README_MACOS.md. This is needed for generating `SC_Version.hpp` and also for compiling plugins. It is important to note that the build process for PluginCollider assumes that the name of the supercollider build folder `build`.
 
+`cmake .. -DSC_EL=no -DSC_QT=OFF`
+
 After compiling SuperCollider, cd back to the PluginCollider root directory and run:
 
     mkdir build
