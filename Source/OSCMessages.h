@@ -36,6 +36,7 @@ public:
 	small_scpacket sendTickMessage(int64 oscTime, int bus);
 	small_scpacket initTreeMessage();
 	small_scpacket quitMessage();
+    small_scpacket freeAllMessage();
 	small_scpacket noteMessage(int64 oscTime, int note, int velocity);
 };
 #endif

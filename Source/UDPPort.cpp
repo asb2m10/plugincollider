@@ -41,7 +41,8 @@ static void udp_reply_func(struct ReplyAddress *addr, char* msg, int size)
 
 static bool UnrollOSCPacket(World *inWorld, int inSize, char *inData, OSC_Packet *inPacket)
 {
-    dumpOSC(2, inSize, inData);
+   if (inSize != 12)
+       dumpOSC(2, inSize, inData);
     
 	if (!strcmp(inData, "#bundle")) { // is a bundle
 		char *data;

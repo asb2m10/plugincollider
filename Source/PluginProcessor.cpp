@@ -29,6 +29,12 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 #endif
 {
     superCollider = new SCProcess();
+
+    addParameter (gain = new juce::AudioParameterFloat ("gain", // parameterID
+                                                        "Gain", // parameter name
+                                                        0.0f,   // minimum value
+                                                        1.0f,   // maximum value
+                                                        0.5f)); // default value
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor()
@@ -188,6 +194,7 @@ void PluginColliderAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     }
     
     superCollider->run(buffer, midiMessages, getSampleRate());
+    buffer.applyGain(*gain);
 }
 
 //==============================================================================

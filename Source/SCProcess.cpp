@@ -172,6 +172,13 @@ void SCProcess::run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMess
     }
 }
 
+void SCProcess::freeAll() {
+    OSCMessages messages;
+    small_scpacket packet = messages.freeAllMessage();
+    World_SendPacket(world, packet.size(), (char*)packet.buf, null_reply_func);
+    scprintf("free\n");
+}
+
 void SCProcess::quit(){
     if(world){
       World_Cleanup(world, true);

@@ -13,8 +13,10 @@
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor (PluginColliderAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
+    //addAndMakeVisible(freeAll);
+    freeAll.setButtonText("g_freeAll");
+    freeAll.setBounds(10,10,200,50);
+    freeAll.addListener(this);
     setSize (400, 300);
 }
 
@@ -40,4 +42,8 @@ void PluginColliderAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
+}
+
+void PluginColliderAudioProcessorEditor::buttonClicked (juce::Button* button) {
+    audioProcessor.superCollider->freeAll();
 }

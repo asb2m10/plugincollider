@@ -24,6 +24,8 @@
 */
 class PluginColliderAudioProcessor  : public juce::AudioProcessor
 {
+    juce::AudioParameterFloat* gain;
+    
 public:
     World* world;
   	SCProcess* superCollider;

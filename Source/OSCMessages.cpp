@@ -70,6 +70,16 @@ small_scpacket OSCMessages::quitMessage(){
   return packet;
 }
 
+small_scpacket OSCMessages::freeAllMessage(){
+    small_scpacket packet;
+    packet.adds("/g_freeAll");
+    packet.maketags(2);
+    packet.addtag(',');
+    packet.addtag('i');
+    packet.addi(0);
+    packet.EndMsg();
+  return packet;
+}
 
 size_t OSCMessages::createSynthMessage(small_scpacket *packet, string name){
 	packet->reset();

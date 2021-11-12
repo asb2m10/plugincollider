@@ -45,6 +45,7 @@ public:
 	void sendParamChangeMessage(string name, float value);
 	void sendNote(int64 oscTime, int note, int velocity);
     void sendTick(int64 oscTime, int bus);
+    void freeAll();
     void quit();
     void run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, double sampleRate);
 
