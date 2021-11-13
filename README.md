@@ -5,7 +5,7 @@ PluginCollider
 
 ## Current PluginCollider status before it becomes a GA project:
 
-- [ ] Remove CoreAudio dependencies (e.g. Linux and Windows support)
+- [x] Remove CoreAudio dependencies (e.g. Linux and Windows support)
 - [ ] Multichannel support
 - [ ] Process midi-input/output and OSC timecode
 
@@ -21,6 +21,8 @@ In order to build PluginCollider, you first need to build SuperCollider, which i
 `git clone --recursive https://github.com/asb2m10/plugincollider`
 
 After this, cd to the libs/supercollider directory and build as explained in the Build Instructions section in README_MACOS.md. This is needed for generating `SC_Version.hpp` and also for compiling plugins. It is important to note that the build process for PluginCollider assumes that the name of the supercollider build folder `build`.
+
+`cmake .. -DSC_EL=no -DSC_QT=OFF`
 
 After compiling SuperCollider, cd back to the PluginCollider root directory and run:
 

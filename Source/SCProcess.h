@@ -31,6 +31,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "SCPluginDriver.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class SCProcess {
@@ -53,8 +55,8 @@ private:
     World* world;
     int findNextFreeUdpPort(int startNum);
     UDPPort* mPort;
-    AudioBufferList *input;
-    AudioBufferList *output;
+    /*AudioBufferList *input;
+    AudioBufferList *output;*/
 };
 
 #endif
