@@ -1,4 +1,5 @@
 /*
+    PluginCollider Copyright (c) 2021 Pascal Gauthier.
 	SuperColliderAU Copyright (c) 2006 Gerard Roma.
 
  This program is free software; you can redistribute it and/or modify

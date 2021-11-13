@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "SCPluginAPI.h"
+#include "SCPluginDriver.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 

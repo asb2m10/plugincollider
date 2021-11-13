@@ -10,8 +10,10 @@ set(CMAKE_BUILD_TYPE "Debug")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -std=c++11")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-#set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -stdlib=libc++")
+if (APPLE)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+	set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -stdlib=libc++")
+endif (APPLE)
 
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} "")
 set(CMAKE_FIND_LIBRARY_PREFIXES ${CMAKE_FIND_LIBRARY_PREFIXES} "")
@@ -53,11 +55,14 @@ include_directories(
 	${SC_DIR}/server/common
     )
 
-#add_definitions("-DSC_AUDIO_API=SC_AUDIO_API_AUDIOUNITS" ${AUDIOUNITS_DEFINITIONS})
+# This is a hack since we will define our own Driver
 add_definitions("-DSC_AUDIO_API=SC_AUDIO_API_PORTAUDIO")
-#add_definitions("-DSC_DARWIN")
-#add_definitions("-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0")
-add_definitions(-w) # TODO: fix deprecation warnings
+
+if (APPLE)
+	add_definitions("-DSC_DARWIN")
+	add_definitions("-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0")
+	add_definitions(-w) # TODO: fix deprecation warnings
+endif (APPLE)
 
 if (NOT Boost_FOUND)
 	file(GLOB boost_system_sources ${SC_DIR}/external_libraries/boost/libs/system/src/*cpp)
@@ -139,17 +144,19 @@ target_sources(PluginCollider
 	${SC_DIR}/common/SC_fftlib.cpp
 	${SC_DIR}/common/SC_AllocPool.cpp
 	${SC_DIR}/common/SC_Errors.cpp
-    #${SC_DIR}/common/SC_Apple.mm
 	${SC_DIR}/common/Samp.cpp
 	${SC_DIR}/common/SC_StringBuffer.cpp
 	${SC_DIR}/common/SC_StringParser.cpp
 	${SC_DIR}/common/sc_popen.cpp
 	${SC_DIR}/common/strtod.c
 	${SC_DIR}/common/SC_Reply.cpp
-	#${SC_DIR}/common/SC_Filesystem_macos.cpp
-	${SC_DIR}/common/SC_Filesystem_unix.cpp
+
+    ${SC_DIR}/common/SC_Apple.mm
+	${SC_DIR}/common/SC_Filesystem_macos.cpp
+
+	# ${SC_DIR}/common/SC_Filesystem_unix.cpp
+
 	${SC_DIR}/external_libraries/TLSF-2.4.6/src/tlsf.c
-	#${SC_DIR}/server/scsynth/SC_AU.cpp
 	${SC_DIR}/server/scsynth/SC_BufGen.cpp
 	${SC_DIR}/server/scsynth/SC_ComPort.cpp
 	${SC_DIR}/server/scsynth/SC_CoreAudio.cpp
@@ -165,10 +172,6 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_Str4.cpp
 	${SC_DIR}/server/scsynth/SC_Unit.cpp
 	${SC_DIR}/server/scsynth/SC_UnitDef.cpp
-	
-
-
-	# ${SC_DIR}/server/scsynth/Rendezvous.cpp
 	${SC_DIR}/server/scsynth/SC_World.cpp
 
 	Source/UDPPort.cpp 
@@ -176,12 +179,10 @@ target_sources(PluginCollider
     Source/PluginEditor.cpp
     Source/PluginProcessor.cpp
 	Source/SCProcess.cpp
-
-	Source/SCPluginAPI.cpp
+	Source/SCPluginDriver.cpp
 
 	${boost_system_sources}
-	${boost_filesystem_sources}	
-    ${PLUGINS})
+	${boost_filesystem_sources})
 
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
@@ -223,5 +224,5 @@ target_link_libraries(PluginCollider
         juce::juce_recommended_warning_flags
 		${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY}
 		${SNDFILE_LIBRARIES}
-		sndfile
+		# sndfile
 		)

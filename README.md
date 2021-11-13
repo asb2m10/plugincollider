@@ -5,7 +5,7 @@ PluginCollider
 
 ## Current PluginCollider status before it becomes a GA project:
 
-- [ ] Remove CoreAudio dependencies (e.g. Linux and Windows support)
+- [x] Remove CoreAudio dependencies (e.g. Linux and Windows support)
 - [ ] Multichannel support
 - [ ] Process midi-input/output and OSC timecode
 

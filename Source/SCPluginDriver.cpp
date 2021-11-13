@@ -1,5 +1,5 @@
 /*
-    SuperCollider real time audio synthesis system
+    PluginCollider Copyright (c) 2021 Pascal Gauthier.    
     Copyright (c) 2002 James McCartney. All rights reserved.
     http://www.audiosynth.com
 
@@ -26,7 +26,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "SCPluginAPI.h"
+#include "SCPluginDriver.h"
 
 int32 server_timeseed() { return timeSeed(); }
 
@@ -38,12 +38,11 @@ int64 oscTimeNow() { return sc_PAOSCTime(); }
 
 void initializeScheduler() {}
 
-
-
 SC_AudioDriver* SC_NewAudioDriver(struct World* inWorld) { return new SC_PluginAudioDriver(inWorld); }
 
 SC_PluginAudioDriver::SC_PluginAudioDriver(struct World* inWorld): SC_AudioDriver(inWorld) {
-
+    mInputChannelCount = inWorld->mNumInputs;
+    mOutputChannelCount = inWorld->mNumOutputs;
 }
 
 SC_PluginAudioDriver::~SC_PluginAudioDriver()
@@ -51,13 +50,11 @@ SC_PluginAudioDriver::~SC_PluginAudioDriver()
 
 }
 
-
 void sc_SetDenormalFlags();
 int SC_PluginAudioDriver::callback(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
     sc_SetDenormalFlags();
     World* world = mWorld;
-
-{   
+ 
     mFromEngine.Free();
     mToEngine.Perform();
     mOscPacketsToEngine.Perform();
@@ -137,7 +134,6 @@ int SC_PluginAudioDriver::callback(juce::AudioBuffer<float>& buffer, juce::MidiB
             // update buffer time
             oscTime = mOSCbuftime = nextTime;
         }
-    }
 
     mAudioSync.Signal();
 }
