@@ -61,8 +61,8 @@ add_definitions("-DSC_AUDIO_API=SC_AUDIO_API_PORTAUDIO")
 if (APPLE)
 	add_definitions("-DSC_DARWIN")
 	add_definitions("-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0")
-	add_definitions(-w) # TODO: fix deprecation warnings
 endif (APPLE)
+add_definitions(-w) # TODO: fix deprecation warnings
 
 if (NOT Boost_FOUND)
 	file(GLOB boost_system_sources ${SC_DIR}/external_libraries/boost/libs/system/src/*cpp)
@@ -109,7 +109,7 @@ add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory c
 
 juce_add_plugin(PluginCollider
     # VERSION ...                               # Set this if the plugin version is different to the project version
-     ICON_BIG  libs/supercollider/icons/sc_cube_256x256.png                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
+     ICON_BIG  Resources/ui/plugincollider_256x256.png
     # ICON_SMALL ...
     # COMPANY_NAME ...                          # Specify the name of the plugin's author
     IS_SYNTH FALSE                              # Is this a synth or an effect?
@@ -117,7 +117,7 @@ juce_add_plugin(PluginCollider
     # NEEDS_MIDI_OUTPUT TRUE/FALSE              # Does the plugin need midi output?
     # IS_MIDI_EFFECT TRUE/FALSE                 # Is this plugin a MIDI effect?
     # EDITOR_WANTS_KEYBOARD_FOCUS TRUE/FALSE    # Does the editor need keyboard focus?
-    # COPY_PLUGIN_AFTER_BUILD TRUE/FALSE        # Should the plugin be installed to a default location after building?
+    COPY_PLUGIN_AFTER_BUILD TRUE                # Should the plugin be installed to a default location after building?
     PLUGIN_MANUFACTURER_CODE DGSB               # A four-character manufacturer id with at least one upper-case character
     PLUGIN_CODE PLSC                            # A unique four-character plugin id with exactly one upper-case character
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case

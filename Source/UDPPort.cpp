@@ -30,7 +30,7 @@ static void udp_reply_func(struct ReplyAddress *addr, char* msg, int size)
 
 	ip::udp::socket * socket = reinterpret_cast<ip::udp::socket*>(addr->mReplyData);
 	ip::udp::endpoint endpoint (addr->mAddress, addr->mPort);
-
+    
 	boost::system::error_code errc;
 	socket->send_to( buffer(msg, size), endpoint, 0, errc);
 
@@ -148,7 +148,7 @@ void UDPPort::handleReceivedUDP(const boost::system::error_code& error,
 		//TODO
 
 		OSC_Packet * packet = (OSC_Packet*)malloc(sizeof(OSC_Packet));
-
+    
 		packet->mReplyAddr.mProtocol = kUDP;
 		packet->mReplyAddr.mAddress  = mRemoteEndpoint.address();
 		packet->mReplyAddr.mPort     = mRemoteEndpoint.port();
@@ -167,7 +167,6 @@ void UDPPort::handleReceivedUDP(const boost::system::error_code& error,
 	void UDPPort::startReceiveUDP()
 	{
 		using namespace boost;
-		printf((mRemoteEndpoint.address().to_string()+"\n").c_str());
 		mUdpSocket.async_receive_from(asio::buffer(mRecvBuffer), mRemoteEndpoint,
 		                             boost::bind(&UDPPort::handleReceivedUDP, this,
 		                                         asio::placeholders::error, asio::placeholders::bytes_transferred));

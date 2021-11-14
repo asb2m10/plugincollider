@@ -224,6 +224,13 @@ void PluginColliderAudioProcessor::setStateInformation (const void* data, int si
     // whose contents will have been created by the getStateInformation() call.
 }
 
+bool PluginColliderAudioProcessor::getActivityMonitor()
+{
+    bool activity = curActivity;
+    curActivity = false;
+    return activity;
+}
+
 //==============================================================================
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

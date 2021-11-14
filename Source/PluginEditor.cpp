@@ -17,11 +17,26 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor (PluginCo
     freeAll.setButtonText("g_freeAll");
     freeAll.setBounds(10,10,200,50);
     freeAll.addListener(this);
-    setSize (400, 300);
+    
+    string listen = "Listening on: ";
+    listen += std::to_string(audioProcessor.superCollider->portNum);
+    portNumberLabel.setText(listen, dontSendNotification);
+    portNumberLabel.setBounds (10, 18, 130, 25);
+    addAndMakeVisible(portNumberLabel);
+    
+    //startTimer(100);
+    
+    setSize (700, 400);
 }
 
 PluginColliderAudioProcessorEditor::~PluginColliderAudioProcessorEditor()
 {
+    stopTimer();
+}
+
+void PluginColliderAudioProcessorEditor::timerCallback()
+{
+    
 }
 
 //==============================================================================
@@ -29,13 +44,6 @@ void PluginColliderAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-    g.setColour (juce::Colours::white);
-    g.setFont (15.0f);
-
-    string listen = "Listening on: ";
-    listen += std::to_string(audioProcessor.superCollider->portNum);
-
-    g.drawFittedText (listen, getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void PluginColliderAudioProcessorEditor::resized()
