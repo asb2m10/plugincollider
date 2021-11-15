@@ -20,7 +20,7 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor (PluginCo
     
     string listen = "Listening on: ";
     listen += std::to_string(audioProcessor.superCollider->portNum);
-    portNumberLabel.setText(listen, dontSendNotification);
+    portNumberLabel.setText(listen, juce::dontSendNotification);
     portNumberLabel.setBounds (10, 18, 130, 25);
     addAndMakeVisible(portNumberLabel);
     

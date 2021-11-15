@@ -1,15 +1,21 @@
 PluginCollider
-===============
+==============
 
-*PluginCollider is an experimental fork of https://github.com/supercollider/SuperColliderAU and it is still not complete since it only builts on macOS.*
+PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU. The embedded server may be controlled over OSC as usual. 
+
+*PluginCollider is an experimental fork of https://github.com/supercollider/SuperColliderAU*
 
 ## Current PluginCollider status before it becomes a GA project:
 
-- [x] Remove CoreAudio dependencies (e.g. Linux and Windows support)
+- [x] Remove CoreAudio (AU) dependencies (e.g. Linux and Windows support)
 - [ ] Multichannel support
-- [ ] Process midi-input/output and OSC timecode
+- [ ] Process midi-input/output and OSC timecode (best effort)
 
-PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU. The embedded server may be controlled over OSC as usual. 
+### Next nice to have
+
+- [ ] Remove World global lock
+- [ ] Configurable UDP port
+- [ ] Server log from plugin UI
 
 [JUCE](https://juce.com/) framework is used as a generic wrapper.
 * It provides a unified build system among plateforms and plugins configuration

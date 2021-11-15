@@ -15,6 +15,12 @@ const int kDefaultBeatDiv = 1;
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
+#ifdef __APPLE__
+   const juce::File DEFAULT_PLUGIN_PATH("/Applications/SuperCollider.app/Contents/Resources/plugins");
+#elif __unix__
+   const juce::File DEFAULT_PLUGIN_PATH("/usr/lib/SuperCollider/plugins");
+#endif
+
 //==============================================================================
 PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -121,12 +127,9 @@ void PluginColliderAudioProcessor::prepareToPlay (double sampleRate, int samples
     options.mNumInputBusChannels = 2;
     options.mNumOutputBusChannels = 2;
     options.mVerbosity = 2;
-    
-    juce::File pluginDir("/Applications/SuperCollider.app/Contents/Resources/plugins");
-    //juce::File pluginDir("/usr/lib/SuperCollider/plugins");
-    //juce::File pluginDir("/home/asb2m10/var/src/plugincollider/libs/supercollider/build/server/plugins");
+
     juce::File synthdefs = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support/SuperCollider/synthdefs");
-    superCollider->startUp(options, pluginDir.getFullPathName().toStdString(), synthdefs.getFullPathName().toStdString(), 9989);
+    superCollider->startUp(options, DEFAULT_PLUGIN_PATH.getFullPathName().toStdString(), synthdefs.getFullPathName().toStdString(), 9989);
 
     scprintf("*******************************************************\n");
     scprintf("PluginCollider Initialized \n");

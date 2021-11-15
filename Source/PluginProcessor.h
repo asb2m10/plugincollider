@@ -23,9 +23,7 @@
 /**
 */
 class PluginColliderAudioProcessor  : public juce::AudioProcessor
-{
-    juce::AudioParameterFloat* gain;
-    
+{    
 public:
     World* world;
   	SCProcess* superCollider;
@@ -69,8 +67,9 @@ public:
 
     bool getActivityMonitor();
 private:
+    juce::AudioParameterFloat* gain;
     bool curActivity;
-    
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginColliderAudioProcessor)
 };

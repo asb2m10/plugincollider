@@ -15,6 +15,11 @@ if (APPLE)
 	set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -stdlib=libc++")
 endif (APPLE)
 
+if (NOT APPLE AND NOT WIN32)
+	# on apple we leave this undefined so it defaults to .scx (in the code)
+	add_definitions("-DSC_PLUGIN_EXT=\".so\"")
+endif()
+
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} "")
 set(CMAKE_FIND_LIBRARY_PREFIXES ${CMAKE_FIND_LIBRARY_PREFIXES} "")
 
@@ -137,6 +142,21 @@ juce_add_plugin(PluginCollider
 # Finally, we supply a list of source files that will be built into the target. This is a standard
 # CMake command.
 
+
+## There probably a better way to do this.
+if (APPLE)
+	target_sources(PluginCollider
+	PRIVATE
+    ${SC_DIR}/common/SC_Apple.mm
+	${SC_DIR}/common/SC_Filesystem_macos.cpp)
+endif (APPLE)
+
+if (UNIX)
+	target_sources(PluginCollider
+	PRIVATE
+	${SC_DIR}/common/SC_Filesystem_unix.cpp)
+endif (UNIX)
+
 target_sources(PluginCollider
     PRIVATE
 	${BOOST_LIBS}
@@ -150,11 +170,6 @@ target_sources(PluginCollider
 	${SC_DIR}/common/sc_popen.cpp
 	${SC_DIR}/common/strtod.c
 	${SC_DIR}/common/SC_Reply.cpp
-
-    ${SC_DIR}/common/SC_Apple.mm
-	${SC_DIR}/common/SC_Filesystem_macos.cpp
-
-	# ${SC_DIR}/common/SC_Filesystem_unix.cpp
 
 	${SC_DIR}/external_libraries/TLSF-2.4.6/src/tlsf.c
 	${SC_DIR}/server/scsynth/SC_BufGen.cpp
@@ -224,5 +239,5 @@ target_link_libraries(PluginCollider
         juce::juce_recommended_warning_flags
 		${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY}
 		${SNDFILE_LIBRARIES}
-		# sndfile
+	    sndfile
 		)
