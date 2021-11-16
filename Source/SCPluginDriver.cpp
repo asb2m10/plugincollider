@@ -37,8 +37,7 @@ void initializeScheduler() {}
 SC_AudioDriver* SC_NewAudioDriver(struct World* inWorld) { return new SC_PluginAudioDriver(inWorld); }
 
 SC_PluginAudioDriver::SC_PluginAudioDriver(struct World* inWorld): SC_AudioDriver(inWorld) {
-    mInputChannelCount = inWorld->mNumInputs;
-    mOutputChannelCount = inWorld->mNumOutputs;
+
 }
 
 SC_PluginAudioDriver::~SC_PluginAudioDriver()
@@ -78,7 +77,7 @@ int SC_PluginAudioDriver::callback(juce::AudioBuffer<float>& buffer, juce::MidiB
 
         // copy+touch inputs
         tch = inTouched;
-        for (int k = 0; k < mInputChannelCount; ++k) {
+        for (int k = 0; k < world->mNumInputs; ++k) {
             const float* src = inBuffers[k] + bufFramePos;
             float* dst = inBuses + k * bufFrames;
             memcpy(dst, src, bufFrames * sizeof(float));
@@ -117,7 +116,7 @@ int SC_PluginAudioDriver::callback(juce::AudioBuffer<float>& buffer, juce::MidiB
 
         // copy touched outputs
         tch = outTouched;
-        for (int k = 0; k < mOutputChannelCount; ++k) {
+        for (int k = 0; k < world->mNumOutputs; ++k) {
             float* dst = outBuffers[k] + bufFramePos;
             if (*tch++ == bufCounter) {
                 const float* src = outBuses + k * bufFrames;

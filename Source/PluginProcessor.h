@@ -10,13 +10,6 @@
 
 //#include <JuceHeader.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-
-#include "SC_CoreAudio.h"
-#include "SC_WorldOptions.h"
-#include "SC_World.h"
-#include "SC_HiddenWorld.h"
-#include "SC_Time.hpp"
-
 #include "SCProcess.h"
 
 //==============================================================================

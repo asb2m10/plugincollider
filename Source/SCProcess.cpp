@@ -23,9 +23,18 @@
 #include "SC_Prototypes.h"
 #include "SC_StringParser.h"
 #include "SC_WorldOptions.h"
-#include "SC_TimeDLL.hpp"
-#include "SC_Time.hpp"
-#include "SC_AU.h"
+
+const int kDefaultPortNumber = 9989;
+const int kDefaultBlockSize = 64;
+const int kDefaultBeatDiv = 1;
+const int kDefaultNumWireBufs = 64;
+const int kDefaultRtMemorySize = 8192;
+
+#ifdef __APPLE__
+   const juce::File DEFAULT_PLUGIN_PATH("/Applications/SuperCollider.app/Contents/Resources/plugins");
+#elif __unix__
+   const juce::File DEFAULT_PLUGIN_PATH("/usr/lib/SuperCollider/plugins");
+#endif
 
 void null_reply_func(struct ReplyAddress* /*addr*/, char* /*msg*/, int /*size*/);
 
@@ -35,6 +44,12 @@ SCProcess::SCProcess() : world(nullptr)
 }
 
 SCProcess::~SCProcess() {
+    const juce::ScopedLock lock(worldLock);    
+    if(world){
+      World_Cleanup(world, true);
+      mPort->stopAsioThread();
+      free(mPort);
+    }
 }
 
 int SCProcess::findNextFreeUdpPort(int startNum){
@@ -66,14 +81,45 @@ int SCProcess::findNextFreeUdpPort(int startNum){
 	return port;
 }
 
-void SCProcess::startUp(WorldOptions options, string pluginsPath, string synthdefsPath, int preferredPort){
-    char stringBuffer[PATH_MAX] ;
+void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutputs, juce::File *plugin, juce::File *synth) {
+    
+    // avoid restarting server if the settings are the same
+    if ( world != nullptr ) {
+        bool same = true;
+
+        same &= sampleRate == world->mSampleRate;
+        same &= buffSize == world->mBufLength;
+        same &= numInputs == world->mNumInputs;
+        same &= numOutputs == world->mNumOutputs;
+
+        if ( same )
+            return;
+    }
+
+    const juce::ScopedLock lock(worldLock);
+
 	OSCMessages messages;
     std::string bindTo("0.0.0.0");
 
-    setenv("SC_PLUGIN_PATH", pluginsPath.c_str(), 1);
-    setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
-    this->portNum = findNextFreeUdpPort(preferredPort);
+    if ( world == nullptr ) 
+        World_Cleanup(world, false);
+
+    WorldOptions options;
+    options.mPreferredSampleRate = sampleRate;
+    options.mBufLength = buffSize;
+    options.mPreferredHardwareBufferFrameSize = buffSize;
+    options.mMaxWireBufs = kDefaultNumWireBufs;
+    options.mRealTimeMemorySize = kDefaultRtMemorySize;
+    options.mNumBuffers = 8192;
+    options.mNumInputBusChannels = 2;
+    options.mNumOutputBusChannels = 2;
+    options.mVerbosity = 2;
+
+    setenv("SC_PLUGIN_PATH", DEFAULT_PLUGIN_PATH.getFullPathName().toRawUTF8(), 1);
+    //setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
+
+    this->portNum = findNextFreeUdpPort(8898);
+
     world = World_New(&options);
     world->mDumpOSC=2;
 
@@ -82,7 +128,26 @@ void SCProcess::startUp(WorldOptions options, string pluginsPath, string synthde
         //if (this->portNum >= 0) World_OpenUDP(world,  bindTo.c_str(), this->portNum);
         small_scpacket packet = messages.initTreeMessage();
         World_SendPacket(world, 16, (char*)packet.buf, null_reply_func);
-      }
+    }
+
+    scprintf("*******************************************************\n");
+    scprintf("PluginCollider Initialized \n");
+    scprintf("PluginCollider mPreferredHardwareBufferFrameSize: %d \n",options.mPreferredHardwareBufferFrameSize );
+    scprintf("PluginCollider mBufLength: %d \n",options.mBufLength );
+    scprintf("PluginCollider  port: %d \n", portNum );
+    scprintf("PluginCollider  mMaxWireBufs: %d \n", options.mMaxWireBufs );
+    scprintf("PluginCollider  mRealTimeMemorySize: %d \n", options.mRealTimeMemorySize );
+    scprintf("PluginCollider  mNumOutputBusChannels %d \n", options.mNumOutputBusChannels );
+	scprintf("*******************************************************\n");
+    fflush(stdout);
+}
+
+
+void SCProcess::run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages){
+    if (world->mRunning){
+        SC_PluginAudioDriver* driver = (SC_PluginAudioDriver*)this->world->hw->mAudioDriver;
+        driver->callback(buffer, midiMessages);
+    }
 }
 
 
@@ -118,24 +183,30 @@ void SCProcess::sendNote(int64 oscTime, int note, int velocity){
 }
 
 
-void SCProcess::run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, double sampleRate){
-    if (world->mRunning){
-        SC_PluginAudioDriver* driver = (SC_PluginAudioDriver*)this->world->hw->mAudioDriver;
-        driver->callback(buffer, midiMessages);
-    }
-}
-
-void SCProcess::freeAll() {
-    OSCMessages messages;
-    small_scpacket packet = messages.freeAllMessage();
-    World_SendPacket(world, packet.size(), (char*)packet.buf, null_reply_func);
-    scprintf("free\n");
-}
 
 void SCProcess::quit(){
-    if(world){
-      World_Cleanup(world, true);
-      mPort->stopAsioThread();
-      free(mPort);
-    }
+}
+
+
+void SCProcess::startUp(WorldOptions options, string pluginsPath, string synthdefsPath, int preferredPort){
+    char stringBuffer[PATH_MAX] ;
+	OSCMessages messages;
+    std::string bindTo("0.0.0.0");
+
+    setenv("SC_PLUGIN_PATH", pluginsPath.c_str(), 1);
+    setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
+    this->portNum = findNextFreeUdpPort(preferredPort);
+
+    if ( world != nullptr ) 
+        World_Cleanup(world, false);
+
+    world = World_New(&options);
+    world->mDumpOSC=2;
+
+    if (world) {
+        if (this->portNum >= 0) mPort = new UDPPort(world,  bindTo.c_str(), this->portNum);
+        //if (this->portNum >= 0) World_OpenUDP(world,  bindTo.c_str(), this->portNum);
+        small_scpacket packet = messages.initTreeMessage();
+        World_SendPacket(world, 16, (char*)packet.buf, null_reply_func);
+      }
 }

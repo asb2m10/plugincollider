@@ -36,10 +36,17 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class SCProcess {
+    juce::File synthPath;
+    juce::File pluginPath;
 
 public:
 	SCProcess();
     ~SCProcess();
+    void quit();
+    void setup(float sampleRate, int buffSize, int numInputs, int numOutput, juce::File *plugin, juce::File *synthDef);
+    void run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages);
+
+    // ---
     string synthName;
     int portNum;
 	void startUp(WorldOptions options, string pluginsPath, string synthdefsPath, int preferredPort);
@@ -47,16 +54,13 @@ public:
 	void sendParamChangeMessage(string name, float value);
 	void sendNote(int64 oscTime, int note, int velocity);
     void sendTick(int64 oscTime, int bus);
-    void freeAll();
-    void quit();
-    void run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages, double sampleRate);
 
 private:
     World* world;
     int findNextFreeUdpPort(int startNum);
     UDPPort* mPort;
-    /*AudioBufferList *input;
-    AudioBufferList *output;*/
+
+    juce::CriticalSection worldLock;
 };
 
 #endif

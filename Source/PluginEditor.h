@@ -15,7 +15,6 @@
 /**
 */
 class PluginColliderAudioProcessorEditor  : public juce::AudioProcessorEditor,
-                                            public juce::Button::Listener,
                                             public juce::Timer
 {
 public:
@@ -25,8 +24,6 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
-
-    void buttonClicked (juce::Button* button) override;
 
     virtual void timerCallback() override;
     

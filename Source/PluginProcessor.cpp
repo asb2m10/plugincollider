@@ -9,28 +9,14 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-const int kDefaultPortNumber = 9989;
-const int kDefaultBlockSize = 64;
-const int kDefaultBeatDiv = 1;
-const int kDefaultNumWireBufs = 64;
-const int kDefaultRtMemorySize = 8192;
-
-#ifdef __APPLE__
-   const juce::File DEFAULT_PLUGIN_PATH("/Applications/SuperCollider.app/Contents/Resources/plugins");
-#elif __unix__
-   const juce::File DEFAULT_PLUGIN_PATH("/usr/lib/SuperCollider/plugins");
-#endif
-
 //==============================================================================
 PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
+                       .withOutput ("Out-3-4", juce::AudioChannelSet::stereo(), false)
+                       .withOutput ("Out-5-6", juce::AudioChannelSet::stereo(), false)                                              
                        )
 #endif
 {
@@ -45,6 +31,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor()
 {
+    scprintf("PluginCollider bye\n");
     superCollider->quit();
     delete superCollider;
 }
@@ -117,30 +104,8 @@ void PluginColliderAudioProcessor::prepareToPlay (double sampleRate, int samples
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
 
-    WorldOptions options;
-    options.mPreferredSampleRate = sampleRate;
-    options.mBufLength = samplesPerBlock;
-    options.mPreferredHardwareBufferFrameSize = samplesPerBlock;
-    options.mMaxWireBufs = kDefaultNumWireBufs;
-    options.mRealTimeMemorySize = kDefaultRtMemorySize;
-    options.mNumBuffers = 8192;
-    options.mNumInputBusChannels = 2;
-    options.mNumOutputBusChannels = 2;
-    options.mVerbosity = 2;
-
-    juce::File synthdefs = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support/SuperCollider/synthdefs");
-    superCollider->startUp(options, DEFAULT_PLUGIN_PATH.getFullPathName().toStdString(), synthdefs.getFullPathName().toStdString(), 9989);
-
-    scprintf("*******************************************************\n");
-    scprintf("PluginCollider Initialized \n");
-    scprintf("PluginCollider mPreferredHardwareBufferFrameSize: %d \n",options.mPreferredHardwareBufferFrameSize );
-    scprintf("PluginCollider mBufLength: %d \n",options.mBufLength );
-    scprintf("PluginCollider  port: %d \n", superCollider->portNum );
-    scprintf("PluginCollider  mMaxWireBufs: %d \n", options.mMaxWireBufs );
-    scprintf("PluginCollider  mRealTimeMemorySize: %d \n", options.mRealTimeMemorySize );
-	scprintf("*******************************************************\n");
-    
-    fflush(stdout);
+    //juce::File synthdefs = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support/SuperCollider/synthdefs");
+    superCollider->setup(sampleRate, samplesPerBlock, getChannelCountOfBus(true, 0), getChannelCountOfBus(false, 0), nullptr, nullptr);
 }
 
 void PluginColliderAudioProcessor::releaseResources()
@@ -198,7 +163,7 @@ void PluginColliderAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
         //posInfo.timeInSeconds;
     }
     
-    superCollider->run(buffer, midiMessages, getSampleRate());
+    superCollider->run(buffer, midiMessages);
     buffer.applyGain(*gain);
 }
 
