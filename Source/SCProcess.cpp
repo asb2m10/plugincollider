@@ -17,12 +17,14 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include "SCProcess.h"
 #include "SC_CoreAudio.h"
 #include "SC_HiddenWorld.h"
 #include "SC_Prototypes.h"
 #include "SC_StringParser.h"
 #include "SC_WorldOptions.h"
+#include "sc_msg_iter.h"
+#include "SC_OscUtils.hpp"
+#include "SCProcess.h"
 
 const int kDefaultPortNumber = 9989;
 const int kDefaultBlockSize = 64;
@@ -38,8 +40,12 @@ const int kDefaultRtMemorySize = 8192;
 
 void null_reply_func(struct ReplyAddress* /*addr*/, char* /*msg*/, int /*size*/);
 
-SCProcess::SCProcess() : world(nullptr)
-{
+///// from SC_ComPort.cpp ///////////
+bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
+
+
+SCProcess::SCProcess() {
+    world = nullptr;
     portNum = 0;
 }
 
@@ -111,8 +117,8 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutp
     options.mMaxWireBufs = kDefaultNumWireBufs;
     options.mRealTimeMemorySize = kDefaultRtMemorySize;
     options.mNumBuffers = 8192;
-    options.mNumInputBusChannels = 2;
-    options.mNumOutputBusChannels = 2;
+    options.mNumInputBusChannels = numInputs;
+    options.mNumOutputBusChannels = numOutputs;
     options.mVerbosity = 2;
 
     setenv("SC_PLUGIN_PATH", DEFAULT_PLUGIN_PATH.getFullPathName().toRawUTF8(), 1);
@@ -124,7 +130,7 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutp
     world->mDumpOSC=2;
 
     if (world) {
-        if (this->portNum >= 0) mPort = new UDPPort(world,  bindTo.c_str(), this->portNum);
+        if (this->portNum >= 0) mPort = new UDPPort(this,  bindTo.c_str(), this->portNum);
         //if (this->portNum >= 0) World_OpenUDP(world,  bindTo.c_str(), this->portNum);
         small_scpacket packet = messages.initTreeMessage();
         World_SendPacket(world, 16, (char*)packet.buf, null_reply_func);
@@ -142,6 +148,101 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutp
     fflush(stdout);
 }
 
+
+bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) {
+   if (inSize != 12)
+       dumpOSC(2, inSize, inData);
+
+    const juce::ScopedTryLock lock(worldLock);
+
+    if (! lock.isLocked() ) 
+        return false;
+
+	if (!strcmp(inData, "#bundle")) { // is a bundle
+		char *data;
+		char *dataEnd = inData + inSize;
+		int len = 16;
+		bool hasNestedBundle = false;
+
+		// get len of nested messages only, without len of nested bundle(s)
+		data = inData + 16; // skip bundle header
+		while (data < dataEnd) {
+			int32 msgSize = OSCint(data);
+			data += sizeof(int32);
+			if (strcmp(data, "#bundle")) // is a message
+				len += sizeof(int32) + msgSize;
+			else
+				hasNestedBundle = true;
+			data += msgSize;
+		}
+
+		if (hasNestedBundle) {
+			if (len > 16) { // not an empty bundle
+				// add nested messages to bundle buffer
+				char *buf = (char*)malloc(len);
+				inPacket->mSize = len;
+				inPacket->mData = buf;
+
+				memcpy(buf, inData, 16); // copy bundle header
+				data = inData + 16; // skip bundle header
+				while (data < dataEnd) {
+					int32 msgSize = OSCint(data);
+					data += sizeof(int32);
+					if (strcmp(data, "#bundle")) { // is a message
+						memcpy(buf, data-sizeof(int32), sizeof(int32) + msgSize);
+						buf += msgSize;
+					}
+					data += msgSize;
+				}
+
+				// process this packet without its nested bundle(s)
+				if(!ProcessOSCPacket(world, inPacket)) {
+					free(buf);
+					return false;
+				}
+			}
+
+			// process nested bundle(s)
+			data = inData + 16; // skip bundle header
+			while (data < dataEnd) {
+				int32 msgSize = OSCint(data);
+				data += sizeof(int32);
+				if (!strcmp(data, "#bundle")) { // is a bundle
+					OSC_Packet* packet = (OSC_Packet*)malloc(sizeof(OSC_Packet));
+					memcpy(packet, inPacket, sizeof(OSC_Packet)); // clone inPacket
+
+					if(!unrollOSCPacket(msgSize, data, packet)) {
+						free(packet);
+						return false;
+					}
+				}
+				data += msgSize;
+			}
+		} else { // !hasNestedBundle
+			char *buf = (char*)malloc(inSize);
+			inPacket->mSize = inSize;
+			inPacket->mData = buf;
+			memcpy(buf, inData, inSize);
+
+			if(!ProcessOSCPacket(world, inPacket)) {
+				free(buf);
+				return false;
+			}
+		}
+	} else { // is a message
+		char *buf = (char*)malloc(inSize);
+		inPacket->mSize = inSize;
+		inPacket->mData = buf;
+		memcpy(buf, inData, inSize);
+
+		if(!ProcessOSCPacket(world, inPacket)) {
+			free(buf);
+			return false;
+		}
+	}
+
+	return true;
+}
 
 void SCProcess::run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages){
     if (world->mRunning){
@@ -188,25 +289,25 @@ void SCProcess::quit(){
 }
 
 
-void SCProcess::startUp(WorldOptions options, string pluginsPath, string synthdefsPath, int preferredPort){
-    char stringBuffer[PATH_MAX] ;
-	OSCMessages messages;
-    std::string bindTo("0.0.0.0");
+// void SCProcess::startUp(WorldOptions options, string pluginsPath, string synthdefsPath, int preferredPort){
+//     char stringBuffer[PATH_MAX] ;
+// 	OSCMessages messages;
+//     std::string bindTo("0.0.0.0");
 
-    setenv("SC_PLUGIN_PATH", pluginsPath.c_str(), 1);
-    setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
-    this->portNum = findNextFreeUdpPort(preferredPort);
+//     setenv("SC_PLUGIN_PATH", pluginsPath.c_str(), 1);
+//     setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
+//     this->portNum = findNextFreeUdpPort(preferredPort);
 
-    if ( world != nullptr ) 
-        World_Cleanup(world, false);
+//     if ( world != nullptr ) 
+//         World_Cleanup(world, false);
 
-    world = World_New(&options);
-    world->mDumpOSC=2;
+//     world = World_New(&options);
+//     world->mDumpOSC=2;
 
-    if (world) {
-        if (this->portNum >= 0) mPort = new UDPPort(world,  bindTo.c_str(), this->portNum);
-        //if (this->portNum >= 0) World_OpenUDP(world,  bindTo.c_str(), this->portNum);
-        small_scpacket packet = messages.initTreeMessage();
-        World_SendPacket(world, 16, (char*)packet.buf, null_reply_func);
-      }
-}
+//     if (world) {
+//         if (this->portNum >= 0) mPort = new UDPPort(world,  bindTo.c_str(), this->portNum);
+//         //if (this->portNum >= 0) World_OpenUDP(world,  bindTo.c_str(), this->portNum);
+//         small_scpacket packet = messages.initTreeMessage();
+//         World_SendPacket(world, 16, (char*)packet.buf, null_reply_func);
+//       }
+// }

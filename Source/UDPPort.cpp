@@ -18,11 +18,7 @@
  */
 
 #include "UDPPort.h"
-#include "SC_OscUtils.hpp"
 
-///// from SC_ComPort.cpp ///////////
-
-bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
 
 static void udp_reply_func(struct ReplyAddress *addr, char* msg, int size)
 {
@@ -38,100 +34,7 @@ static void udp_reply_func(struct ReplyAddress *addr, char* msg, int size)
 		printf("%s\n", errc.message().c_str());
 }
 
-
-static bool UnrollOSCPacket(World *inWorld, int inSize, char *inData, OSC_Packet *inPacket)
-{
-   if (inSize != 12)
-       dumpOSC(2, inSize, inData);
-    
-	if (!strcmp(inData, "#bundle")) { // is a bundle
-		char *data;
-		char *dataEnd = inData + inSize;
-		int len = 16;
-		bool hasNestedBundle = false;
-
-		// get len of nested messages only, without len of nested bundle(s)
-		data = inData + 16; // skip bundle header
-		while (data < dataEnd) {
-			int32 msgSize = OSCint(data);
-			data += sizeof(int32);
-			if (strcmp(data, "#bundle")) // is a message
-				len += sizeof(int32) + msgSize;
-			else
-				hasNestedBundle = true;
-			data += msgSize;
-		}
-
-		if (hasNestedBundle) {
-			if (len > 16) { // not an empty bundle
-				// add nested messages to bundle buffer
-				char *buf = (char*)malloc(len);
-				inPacket->mSize = len;
-				inPacket->mData = buf;
-
-				memcpy(buf, inData, 16); // copy bundle header
-				data = inData + 16; // skip bundle header
-				while (data < dataEnd) {
-					int32 msgSize = OSCint(data);
-					data += sizeof(int32);
-					if (strcmp(data, "#bundle")) { // is a message
-						memcpy(buf, data-sizeof(int32), sizeof(int32) + msgSize);
-						buf += msgSize;
-					}
-					data += msgSize;
-				}
-
-				// process this packet without its nested bundle(s)
-				if(!ProcessOSCPacket(inWorld, inPacket)) {
-					free(buf);
-					return false;
-				}
-			}
-
-			// process nested bundle(s)
-			data = inData + 16; // skip bundle header
-			while (data < dataEnd) {
-				int32 msgSize = OSCint(data);
-				data += sizeof(int32);
-				if (!strcmp(data, "#bundle")) { // is a bundle
-					OSC_Packet* packet = (OSC_Packet*)malloc(sizeof(OSC_Packet));
-					memcpy(packet, inPacket, sizeof(OSC_Packet)); // clone inPacket
-
-					if(!UnrollOSCPacket(inWorld, msgSize, data, packet)) {
-						free(packet);
-						return false;
-					}
-				}
-				data += msgSize;
-			}
-		} else { // !hasNestedBundle
-			char *buf = (char*)malloc(inSize);
-			inPacket->mSize = inSize;
-			inPacket->mData = buf;
-			memcpy(buf, inData, inSize);
-
-			if(!ProcessOSCPacket(inWorld, inPacket)) {
-				free(buf);
-				return false;
-			}
-		}
-	} else { // is a message
-		char *buf = (char*)malloc(inSize);
-		inPacket->mSize = inSize;
-		inPacket->mData = buf;
-		memcpy(buf, inData, inSize);
-
-		if(!ProcessOSCPacket(inWorld, inPacket)) {
-			free(buf);
-			return false;
-		}
-	}
-
-	return true;
-}
-
 /////
-
 
 void UDPPort::handleReceivedUDP(const boost::system::error_code& error,
 	                       std::size_t bytes_transferred)
@@ -158,7 +61,7 @@ void UDPPort::handleReceivedUDP(const boost::system::error_code& error,
 
 		packet->mSize = bytes_transferred;
     
-		if (!UnrollOSCPacket(mWorld, bytes_transferred, mRecvBuffer.data(), packet))
+		if (!mSCProcess->unrollOSCPacket(bytes_transferred, mRecvBuffer.data(), packet))
 			free(packet);
 
 		startReceiveUDP();
@@ -172,8 +75,8 @@ void UDPPort::handleReceivedUDP(const boost::system::error_code& error,
 		                                         asio::placeholders::error, asio::placeholders::bytes_transferred));
 	}
 
-	UDPPort::UDPPort(struct World * world, std::string bindTo, int inPortNum):
-		mWorld(world), mPortNum(inPortNum), mbindTo(bindTo), mUdpSocket(mIoService)
+	UDPPort::UDPPort(SCProcess *scprocess, std::string bindTo, int inPortNum):
+		mSCProcess(scprocess), mPortNum(inPortNum), mbindTo(bindTo), mUdpSocket(mIoService)
 	{
 		using namespace boost::asio;
 		startAsioThread();
@@ -184,13 +87,6 @@ void UDPPort::handleReceivedUDP(const boost::system::error_code& error,
 
 		boost::asio::socket_base::send_buffer_size option(65536);
 		mUdpSocket.set_option(option);
-
-#ifdef USE_RENDEZVOUS
-		if (world->mRendezvous) {
-			SC_Thread thread( boost::bind( PublishPortToRendezvous, kSCRendezvous_UDP, sc_htons(mPortNum) ) );
-			mRendezvousThread = std::move(thread);
-		}
-#endif
 		startReceiveUDP();
 	}
 

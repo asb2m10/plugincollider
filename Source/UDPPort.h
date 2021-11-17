@@ -18,8 +18,7 @@
 
  // Adaptated from SC_UdpInPort in SC_ComPort.cpp
 
-#ifndef _UDPPort_
-#define _UDPPort_
+#pragma once
 
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
@@ -30,10 +29,13 @@
 #include "SC_WorldOptions.h"
 #include "OSC_Packet.h"
 #include "sc_msg_iter.h"
+#include "SCProcess.h"
+
+class SCProcess;
 
 class UDPPort {
 private:
-  struct World *mWorld;
+  SCProcess *mSCProcess;
   int mPortNum;
   std::string mbindTo;
 	static const int kTextBufSize = 65536;
@@ -47,9 +49,7 @@ private:
 
 public:
   boost::asio::ip::udp::socket mUdpSocket;
-  UDPPort(struct World *world, std::string bindTo, int inPortNum);
+  UDPPort(SCProcess *scprocess, std::string bindTo, int inPortNum);
 	void startAsioThread();
 	void stopAsioThread();
 };
-
-#endif

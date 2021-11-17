@@ -16,8 +16,7 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef _SCProcess_
-#define _SCProcess_
+#pragma once
 
 #include "SC_WorldOptions.h"
 #include "SC_World.h"
@@ -35,6 +34,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+class UDPPort;
+
 class SCProcess {
     juce::File synthPath;
     juce::File pluginPath;
@@ -45,22 +46,23 @@ public:
     void quit();
     void setup(float sampleRate, int buffSize, int numInputs, int numOutput, juce::File *plugin, juce::File *synthDef);
     void run(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages);
+    bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
+    int portNum;
 
+private:
+    juce::CriticalSection worldLock;
+
+    World* world;
+    int findNextFreeUdpPort(int startNum);
+    UDPPort* mPort;
+
+// ATTIC 
     // ---
     string synthName;
-    int portNum;
 	void startUp(WorldOptions options, string pluginsPath, string synthdefsPath, int preferredPort);
 	void makeSynth();
 	void sendParamChangeMessage(string name, float value);
 	void sendNote(int64 oscTime, int note, int velocity);
     void sendTick(int64 oscTime, int bus);
 
-private:
-    World* world;
-    int findNextFreeUdpPort(int startNum);
-    UDPPort* mPort;
-
-    juce::CriticalSection worldLock;
 };
-
-#endif
