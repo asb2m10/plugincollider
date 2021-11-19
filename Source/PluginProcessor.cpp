@@ -16,12 +16,11 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                        .withOutput ("Out-3-4", juce::AudioChannelSet::stereo(), false)
-                       .withOutput ("Out-5-6", juce::AudioChannelSet::stereo(), false)                                              
+                       .withOutput ("Out-5-6", juce::AudioChannelSet::stereo(), false)
+                       .withOutput ("Out-7-8", juce::AudioChannelSet::stereo(), false)
                        )
 #endif
 {
-    superCollider = new SCProcess();
-
     addParameter (gain = new juce::AudioParameterFloat ("gain", // parameterID
                                                         "Gain", // parameter name
                                                         0.0f,   // minimum value
@@ -32,8 +31,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor()
 {
     scprintf("PluginCollider bye\n");
-    superCollider->quit();
-    delete superCollider;
+    superCollider.quit();
 }
 
 //==============================================================================
@@ -103,9 +101,11 @@ void PluginColliderAudioProcessor::prepareToPlay (double sampleRate, int samples
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    
+    
 
     //juce::File synthdefs = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support/SuperCollider/synthdefs");
-    superCollider->setup(sampleRate, samplesPerBlock, getChannelCountOfBus(true, 0), getChannelCountOfBus(false, 0), nullptr, nullptr);
+    superCollider.setup(sampleRate, samplesPerBlock,  getTotalNumInputChannels(), getTotalNumOutputChannels(), nullptr, nullptr);
 }
 
 void PluginColliderAudioProcessor::releaseResources()
@@ -117,26 +117,8 @@ void PluginColliderAudioProcessor::releaseResources()
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool PluginColliderAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+    // FIX THIS, (see how it works with auval)
     return true;
-  #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
-
-    // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
-        return false;
-   #endif
-
-    return true;
-  #endif
 }
 #endif
 
@@ -163,7 +145,7 @@ void PluginColliderAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
         //posInfo.timeInSeconds;
     }
     
-    superCollider->run(buffer, midiMessages);
+    superCollider.run(buffer, midiMessages);
     buffer.applyGain(*gain);
 }
 

@@ -8,7 +8,7 @@ PluginCollider is a generic (multiplatform/plugin format) wrapper that allows us
 ## Current PluginCollider status before it becomes a GA project:
 
 - [x] Remove CoreAudio (AU) dependencies (e.g. Linux and Windows support)
-- [ ] Multichannel support
+- [x] Multichannel support
 - [ ] Process midi-input/output and OSC timecode (best effort)
 
 ### Next nice to have

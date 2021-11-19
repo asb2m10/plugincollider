@@ -102,12 +102,17 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutp
             return;
     }
 
+    if ( portNum == 0 ) {
+        portNum = findNextFreeUdpPort(8898);
+        if (this->portNum >= 0) {
+            std::string bindTo("0.0.0.0");
+            mPort = new UDPPort(this,  bindTo.c_str(), this->portNum);
+        }
+    }
+
     const juce::ScopedLock lock(worldLock);
 
-	OSCMessages messages;
-    std::string bindTo("0.0.0.0");
-
-    if ( world == nullptr ) 
+    if ( world != nullptr ) 
         World_Cleanup(world, false);
 
     WorldOptions options;
@@ -124,28 +129,26 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutp
     setenv("SC_PLUGIN_PATH", DEFAULT_PLUGIN_PATH.getFullPathName().toRawUTF8(), 1);
     //setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
 
-    this->portNum = findNextFreeUdpPort(8898);
-
     world = World_New(&options);
     world->mDumpOSC=2;
 
-    if (world) {
-        if (this->portNum >= 0) mPort = new UDPPort(this,  bindTo.c_str(), this->portNum);
-        //if (this->portNum >= 0) World_OpenUDP(world,  bindTo.c_str(), this->portNum);
+    if (world) {        
+        OSCMessages messages;
         small_scpacket packet = messages.initTreeMessage();
         World_SendPacket(world, 16, (char*)packet.buf, null_reply_func);
+        scprintf("*******************************************************\n");
+        scprintf("PluginCollider Initialized \n");
+        scprintf("PluginCollider mPreferredHardwareBufferFrameSize: %d \n",options.mPreferredHardwareBufferFrameSize );
+        scprintf("PluginCollider mBufLength: %d \n",options.mBufLength );
+        scprintf("PluginCollider  port: %d \n", portNum );
+        scprintf("PluginCollider  mMaxWireBufs: %d \n", options.mMaxWireBufs );
+        scprintf("PluginCollider  mRealTimeMemorySize: %d \n", options.mRealTimeMemorySize );
+        scprintf("PluginCollider  mNumInputBusChannels %d \n", options.mNumInputBusChannels );		
+        scprintf("PluginCollider  mNumOutputBusChannels %d \n", options.mNumOutputBusChannels );
+        scprintf("*******************************************************\n");
+    } else {
+        scprintf("Unable to initiale world\n");
     }
-
-    scprintf("*******************************************************\n");
-    scprintf("PluginCollider Initialized \n");
-    scprintf("PluginCollider mPreferredHardwareBufferFrameSize: %d \n",options.mPreferredHardwareBufferFrameSize );
-    scprintf("PluginCollider mBufLength: %d \n",options.mBufLength );
-    scprintf("PluginCollider  port: %d \n", portNum );
-    scprintf("PluginCollider  mMaxWireBufs: %d \n", options.mMaxWireBufs );
-    scprintf("PluginCollider  mRealTimeMemorySize: %d \n", options.mRealTimeMemorySize );
-    scprintf("PluginCollider  mNumOutputBusChannels %d \n", options.mNumOutputBusChannels );
-	scprintf("*******************************************************\n");
-    fflush(stdout);
 }
 
 
