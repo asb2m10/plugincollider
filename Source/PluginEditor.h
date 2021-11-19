@@ -13,27 +13,27 @@
 
 //==============================================================================
 /**
-*/
-class PluginColliderAudioProcessorEditor  : public juce::AudioProcessorEditor,
-                                            public juce::Timer
-{
+ */
+class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                           public juce::Timer {
 public:
-    PluginColliderAudioProcessorEditor (PluginColliderAudioProcessor&);
-    ~PluginColliderAudioProcessorEditor() override;
+  PluginColliderAudioProcessorEditor(PluginColliderAudioProcessor &);
+  ~PluginColliderAudioProcessorEditor() override;
 
-    //==============================================================================
-    void paint (juce::Graphics&) override;
-    void resized() override;
+  //==============================================================================
+  void paint(juce::Graphics &) override;
+  void resized() override;
 
-    virtual void timerCallback() override;
-    
+  virtual void timerCallback() override;
+
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
-    PluginColliderAudioProcessor& audioProcessor;
-    juce::TextButton freeAll;
-    
-    juce::Label portNumberLabel;
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginColliderAudioProcessorEditor)
+  // This reference is provided as a quick way for your editor to
+  // access the processor object that created it.
+  PluginColliderAudioProcessor &audioProcessor;
+  juce::TextButton freeAll;
+
+  juce::Label portNumberLabel;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
+      PluginColliderAudioProcessorEditor)
 };

@@ -1,5 +1,5 @@
 /*
-	SuperColliderAU Copyright (c) 2006 Gerard Roma.
+        SuperColliderAU Copyright (c) 2006 Gerard Roma.
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -26,17 +26,17 @@ using std::string;
 
 static int kDefaultNodeId = 1000;
 
-class OSCMessages   {
+class OSCMessages {
 public:
-	OSCMessages();
-	char* initTree;
-	char* synthDef;
-	size_t parameterMessage(small_scpacket *packet, string name, float value);
-	size_t createSynthMessage(small_scpacket *packet, string name);
-	small_scpacket sendTickMessage(int64 oscTime, int bus);
-	small_scpacket initTreeMessage();
-	small_scpacket quitMessage();
-    small_scpacket freeAllMessage();
-	small_scpacket noteMessage(int64 oscTime, int note, int velocity);
+  OSCMessages();
+  char *initTree;
+  char *synthDef;
+  size_t parameterMessage(small_scpacket *packet, string name, float value);
+  size_t createSynthMessage(small_scpacket *packet, string name);
+  small_scpacket sendTickMessage(int64 oscTime, int bus);
+  small_scpacket initTreeMessage();
+  small_scpacket quitMessage();
+  small_scpacket freeAllMessage();
+  small_scpacket noteMessage(int64 oscTime, int note, int velocity);
 };
 #endif

@@ -16,20 +16,20 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
- // Adaptated from SC_UdpInPort in SC_ComPort.cpp
+// Adaptated from SC_UdpInPort in SC_ComPort.cpp
 
 #pragma once
 
+#include "OSC_Packet.h"
+#include "SCProcess.h"
+#include "SC_Lock.h"
+#include "SC_WorldOptions.h"
+#include "sc_msg_iter.h"
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/typeof/typeof.hpp>
-#include "SC_Lock.h"
-#include "SC_WorldOptions.h"
-#include "OSC_Packet.h"
-#include "sc_msg_iter.h"
-#include "SCProcess.h"
 
 class SCProcess;
 
@@ -38,11 +38,11 @@ private:
   SCProcess *mSCProcess;
   int mPortNum;
   std::string mbindTo;
-	static const int kTextBufSize = 65536;
+  static const int kTextBufSize = 65536;
   boost::array<char, kTextBufSize> mRecvBuffer;
   boost::asio::ip::udp::endpoint mRemoteEndpoint;
   boost::asio::io_service mIoService;
-	SC_Thread mAsioThread;
+  SC_Thread mAsioThread;
   void handleReceivedUDP(const boost::system::error_code &error,
                          std::size_t bytes_transferred);
   void startReceiveUDP();
@@ -50,6 +50,6 @@ private:
 public:
   boost::asio::ip::udp::socket mUdpSocket;
   UDPPort(SCProcess *scprocess, std::string bindTo, int inPortNum);
-	void startAsioThread();
-	void stopAsioThread();
+  void startAsioThread();
+  void stopAsioThread();
 };
