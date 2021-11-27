@@ -1,8 +1,10 @@
 
 #include "SC_CoreAudio.h"
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "SC_TimeDLL.hpp"
 
 class SC_PluginAudioDriver : public SC_AudioDriver {
+  SC_TimeDLL mDLL;
 protected:
   // Driver interface methods
   virtual bool DriverSetup(int *outNumSamplesPerCallback,

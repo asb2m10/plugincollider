@@ -17,7 +17,6 @@
  */
 class PluginColliderAudioProcessor : public juce::AudioProcessor {
 public:
-  World *world;
   SCProcess superCollider;
 
   //==============================================================================

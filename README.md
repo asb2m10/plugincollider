@@ -1,7 +1,7 @@
 PluginCollider
 ==============
 
-PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU. The embedded server may be controlled over OSC as usual. 
+PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual. 
 
 *PluginCollider is an experimental fork of https://github.com/supercollider/SuperColliderAU*
 

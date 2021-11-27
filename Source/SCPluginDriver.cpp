@@ -32,6 +32,9 @@ int32 server_timeseed() { return timeSeed(); }
 
 int64 oscTimeNow() { return OSCTime(getTime()); }
 
+static double pluginOscTimeSeconds() { return OSCTime(getTime()) * kOSCtoSecs; }
+
+
 void initializeScheduler() {}
 
 SC_AudioDriver *SC_NewAudioDriver(struct World *inWorld) {
@@ -48,6 +51,8 @@ int SC_PluginAudioDriver::callback(juce::AudioBuffer<float> &buffer,
                                    juce::MidiBuffer &midiMessages) {
   sc_SetDenormalFlags();
   World *world = mWorld;
+
+  mDLL.Update(pluginOscTimeSeconds());
 
   mFromEngine.Free();
   mToEngine.Perform();
@@ -66,9 +71,12 @@ int SC_PluginAudioDriver::callback(juce::AudioBuffer<float> &buffer,
   int32 *outTouched = mWorld->mAudioBusTouched;
   int bufFramePos = 0;
 
-  int64 oscTime = mOSCbuftime;
-  int64 oscInc = mOSCincrement;
-  double oscToSamples = mOSCtoSamples;
+  int mMaxOutputLatency = 0; //
+
+  int64 oscTime = mOSCbuftime = (mDLL.PeriodTime() + mMaxOutputLatency) * kSecondsToOSCunits + .5;
+  int64 oscInc = mOSCincrement = (mDLL.Period() / numBufs) * kSecondsToOSCunits + .5;
+  mSmoothSampleRate = mDLL.SampleRate();
+  double oscToSamples = mOSCtoSamples = mSmoothSampleRate * kOSCtoSecs /* 1/pow(2,32) */;
 
   for (int i = 0; i < numBufs;
        ++i, mWorld->mBufCounter++, bufFramePos += bufFrames) {
@@ -84,7 +92,6 @@ int SC_PluginAudioDriver::callback(juce::AudioBuffer<float> &buffer,
       *tch++ = bufCounter;
     }
 
-    // run engine
     int64 schedTime;
     int64 nextTime = oscTime + oscInc;
     // DEBUG
@@ -142,6 +149,8 @@ bool SC_PluginAudioDriver::DriverSetup(int *outNumSamples,
                                        double *outSampleRate) {
   *outSampleRate = mPreferredSampleRate;
   *outNumSamples = mPreferredHardwareBufferFrameSize;
+
+  mDLL.Reset(mPreferredSampleRate, mPreferredHardwareBufferFrameSize, SC_TIME_DLL_BW, pluginOscTimeSeconds());
   return true;
 }
 

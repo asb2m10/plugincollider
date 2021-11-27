@@ -1,1 +1,3 @@
-d1 $ sound "bd sn"
+d1 $ s "bd"
+
+hush

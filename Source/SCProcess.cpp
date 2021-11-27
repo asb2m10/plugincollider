@@ -39,11 +39,14 @@ const juce::File DEFAULT_PLUGIN_PATH("/usr/lib/SuperCollider/plugins");
 #endif
 
 void null_reply_func(struct ReplyAddress * /*addr*/, char * /*msg*/, int /*size*/);
+int scprocess_scprintf(const char* format, va_list ap);
 
 ///// from SC_ComPort.cpp ///////////
 bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
 
 SCProcess::SCProcess() {
+  //SetPrintFunc(scprocess_scprintf);
+
   world = nullptr;
   portNum = 0;
 }
@@ -130,7 +133,7 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutp
   // setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
 
   world = World_New(&options);
-  world->mDumpOSC = 2;
+  world->mDumpOSC = 0;
 
   if (world) {
     OSCMessages messages;
@@ -152,9 +155,6 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutp
 }
 
 bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) {
-  if (inSize != 12)
-    dumpOSC(2, inSize, inData);
-
   const juce::ScopedTryLock lock(worldLock);
 
   if (!lock.isLocked())
@@ -287,27 +287,9 @@ void SCProcess::sendNote(int64 oscTime, int note, int velocity) {
 
 void SCProcess::quit() {}
 
-// void SCProcess::startUp(WorldOptions options, string pluginsPath, string
-// synthdefsPath, int preferredPort){
-//     char stringBuffer[PATH_MAX] ;
-// 	OSCMessages messages;
-//     std::string bindTo("0.0.0.0");
-
-//     setenv("SC_PLUGIN_PATH", pluginsPath.c_str(), 1);
-//     setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
-//     this->portNum = findNextFreeUdpPort(preferredPort);
-
-//     if ( world != nullptr )
-//         World_Cleanup(world, false);
-
-//     world = World_New(&options);
-//     world->mDumpOSC=2;
-
-//     if (world) {
-//         if (this->portNum >= 0) mPort = new UDPPort(world,  bindTo.c_str(),
-//         this->portNum);
-//         //if (this->portNum >= 0) World_OpenUDP(world,  bindTo.c_str(),
-//         this->portNum); small_scpacket packet = messages.initTreeMessage();
-//         World_SendPacket(world, 16, (char*)packet.buf, null_reply_func);
-//       }
-// }
+int scprocess_scprintf(const char* fmt, va_list ap) {
+  char buf[4096];
+  int p = vsnprintf(buf, sizeof(buf), fmt, ap);
+  juce::Logger::writeToLog(string(buf));
+  return p;
+}
