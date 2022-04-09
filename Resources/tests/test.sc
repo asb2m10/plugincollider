@@ -1,13 +1,17 @@
 // remote PluginCollider
 o = ServerOptions.new;
-o.maxLogins = 32;    // This is to avoid displaybug https://github.com/supercollider/supercollider/issues/5271
+//o.maxLogins = 32;    // This is to avoid displaybug https://github.com/supercollider/supercollider/issues/5271
 s = Server.remote(\pluginCollider, NetAddr("127.0.0.1", 8898), o);
 
 
 // Local For test purposes
-o = ServerOptions.new;
-s = Server(\Local);
-s.boot()
+s = Server(\Local );
+s.options.numBuffers = 1024 * 256 * 4; // increase this if you need to load more samples
+s.options.memSize = 8192 * 32 * 4; // increase this if you get "alloc failed" messages
+s.options.maxNodes = 1024 * 32 * 4; // increase this if you are getting drop outs and the message "too many nodes"
+s.options.numWireBufs = 128;
+s.options.numOutputBusChannels = 2;
+s.boot();
 
 s.freeAll
 
@@ -115,6 +119,7 @@ s.freeAll
 ~dirt.start(57120);
 
 ~d1 = ~dirt.orbits[0]; // one orbit
+~d2 = ~dirt.orbits[1]; // one orbit
 ~d1.((sound: 'imp', speed: 1, begin: 0, end: 1));
 ~d1.((sound: '808cy:10', speed: 0.2, crush: 2));
 ~d1.((sound: '808cy:10', speed: 0.1, coarse: 1));
@@ -123,6 +128,7 @@ s.freeAll
 ~d1.((sound: '808cy:10', speed: -1));
 ~d1.((sound: '808cy:10', speed: 2, accelerate: -1));
 ~d1.((sound: '808cy:10', speed: -2, accelerate: 1));
+
 
 
 

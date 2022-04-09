@@ -12,23 +12,39 @@
 //==============================================================================
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     PluginColliderAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p) {
+    : AudioProcessorEditor(&p), audioProcessor(p), logViewer(&(p.logger.content)) {
   string listen = "Listening on: ";
   listen += std::to_string(audioProcessor.superCollider.portNum);
   portNumberLabel.setText(listen, juce::dontSendNotification);
   portNumberLabel.setBounds(10, 18, 130, 25);
   addAndMakeVisible(portNumberLabel);
 
-  // startTimer(100);
+  addAndMakeVisible(logViewer);
+  logViewer.setBounds(10, 48, 680, 340);
+
+  addAndMakeVisible(stats);
+  stats.setBounds(200, 18, 480, 25);
+  stats.setJustificationType(juce::Justification::centredRight);
+
+  startTimer(400);
 
   setSize(700, 400);
 }
 
 PluginColliderAudioProcessorEditor::~PluginColliderAudioProcessorEditor() {
-  // stopTimer();
+  stopTimer();
 }
 
-void PluginColliderAudioProcessorEditor::timerCallback() {}
+void PluginColliderAudioProcessorEditor::timerCallback() {
+    if ( logLines != audioProcessor.logger.content.size() ) {
+        logLines = audioProcessor.logger.content.size();
+        logViewer.setText(audioProcessor.logger.content.joinIntoString(""));
+        logViewer.moveCaretToEnd();
+    }
+
+    SCProcess::WorldStats worldStats = audioProcessor.superCollider.getWorldStats();
+    stats.setText(juce::String::formatted("units: %i graph: %i groups: %i", worldStats.mNumUnits, worldStats.mNumGraphs, worldStats.mNumGroups), juce::dontSendNotification);
+}
 
 //==============================================================================
 void PluginColliderAudioProcessorEditor::paint(juce::Graphics &g) {
@@ -38,7 +54,8 @@ void PluginColliderAudioProcessorEditor::paint(juce::Graphics &g) {
 
   g.setColour (juce::Colours::white);
   g.setFont (15.0f);
-  g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);  
+
+
 }
 
 void PluginColliderAudioProcessorEditor::resized() {

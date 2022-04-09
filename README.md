@@ -9,13 +9,9 @@ PluginCollider is a generic (multiplatform/plugin format) wrapper that allows us
 
 - [x] Remove CoreAudio (AU) dependencies (e.g. Linux and Windows support)
 - [x] Multichannel support
-- [ ] Process midi-input/output and OSC timecode (best effort)
-
-### Next nice to have
-
 - [ ] Remove World global lock
 - [ ] Configurable UDP port
-- [ ] Server log from plugin UI
+- [x] Server log from plugin UI
 
 [JUCE](https://juce.com/) framework is used as a generic wrapper.
 * It provides a unified build system among plateforms and plugins configuration

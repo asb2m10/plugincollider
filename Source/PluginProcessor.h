@@ -12,6 +12,18 @@
 #include "SCProcess.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
+// Dirty cheap logger
+class SuperLogger : public juce::Logger {
+public:
+    juce::StringArray content;
+    void printf(const char *fmt, ...);
+    void logMessage(const juce::String &message) override {
+        if (content.size() > 4096) 
+            content.removeRange(0, 2048);
+        content.add(message);
+    }
+};
+
 //==============================================================================
 /**
  */
@@ -57,6 +69,8 @@ public:
   void setStateInformation(const void *data, int sizeInBytes) override;
 
   bool getActivityMonitor();
+
+  SuperLogger logger;
 
 private:
   juce::AudioParameterFloat *gain;

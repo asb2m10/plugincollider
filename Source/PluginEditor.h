@@ -11,6 +11,31 @@
 //#include <JuceHeader.h>
 #include "PluginProcessor.h"
 
+class LogViewer : public juce::TextEditor {
+    juce::StringArray *log;
+public:
+    LogViewer(juce::StringArray *content) {
+        log = content;
+        setMultiLine(true);
+        setReadOnly(true);
+        setScrollbarsShown(true);        
+    }
+
+    void addPopupMenuItems(juce::PopupMenu &menuToAddTo, const juce::MouseEvent *mouseClickEvent) {
+        menuToAddTo.addItem(juce::StandardApplicationCommandIDs::copy, "Copy");
+        menuToAddTo.addItem(juce::StandardApplicationCommandIDs::selectAll, "Select All");
+        menuToAddTo.addSeparator();
+        menuToAddTo.addItem(juce::StandardApplicationCommandIDs::del, "Clear logs");
+    }
+
+    void performPopupMenuAction(int menuItemID) {
+        if (menuItemID == juce::StandardApplicationCommandIDs::del)
+            log->clearQuick();
+        else
+            juce::TextEditor::performPopupMenuAction(menuItemID);
+    }
+};
+
 //==============================================================================
 /**
  */
@@ -31,8 +56,10 @@ private:
   // access the processor object that created it.
   PluginColliderAudioProcessor &audioProcessor;
   juce::TextButton freeAll;
-
+  LogViewer logViewer;
   juce::Label portNumberLabel;
+  int logLines = 0;
+  juce::Label stats;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
       PluginColliderAudioProcessorEditor)

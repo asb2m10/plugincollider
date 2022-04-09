@@ -26,11 +26,13 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
                                                     0.0f,   // minimum value
                                                     1.0f,   // maximum value
                                                     0.5f)); // default value
+  juce::Logger::setCurrentLogger(&logger);                                                    
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
   scprintf("PluginCollider bye\n");
   superCollider.quit();
+  juce::Logger::setCurrentLogger(nullptr);  
 }
 
 //==============================================================================

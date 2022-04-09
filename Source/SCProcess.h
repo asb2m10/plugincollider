@@ -41,6 +41,14 @@ class SCProcess {
   juce::File pluginPath;
 
 public:
+
+  struct WorldStats {
+    uint32 mNumUnits, mNumGraphs, mNumGroups;    
+    WorldStats() {
+      mNumUnits = mNumGraphs = mNumGroups = 0;
+    }
+  };
+
   SCProcess();
   ~SCProcess();
   void quit();
@@ -50,10 +58,23 @@ public:
   bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
   int portNum;
 
+  WorldStats getWorldStats() {
+    const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock (worldLock);
+    WorldStats stats;
+    if ( scopeLock.isLocked() ) {
+      if ( world != nullptr ) {
+        stats.mNumUnits = world->mNumUnits;
+        stats.mNumGraphs = world->mNumGraphs;
+        stats.mNumGroups = world->mNumGroups;
+      }
+    }
+    return stats;
+  }
+
 private:
+  World *world;
   juce::CriticalSection worldLock;
 
-  World *world;
   int findNextFreeUdpPort(int startNum);
   UDPPort *mPort;
 

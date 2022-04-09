@@ -45,7 +45,7 @@ int scprocess_scprintf(const char* format, va_list ap);
 bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
 
 SCProcess::SCProcess() {
-  //SetPrintFunc(scprocess_scprintf);
+  SetPrintFunc(scprocess_scprintf);
 
   world = nullptr;
   portNum = 0;
@@ -290,6 +290,7 @@ void SCProcess::quit() {}
 int scprocess_scprintf(const char* fmt, va_list ap) {
   char buf[4096];
   int p = vsnprintf(buf, sizeof(buf), fmt, ap);
+  printf("%s", buf);
   juce::Logger::writeToLog(string(buf));
   return p;
 }
