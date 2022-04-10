@@ -34,22 +34,22 @@
 class SCProcess;
 
 class UDPPort {
-private:
-  SCProcess *mSCProcess;
-  int mPortNum;
-  std::string mbindTo;
-  static const int kTextBufSize = 65536;
-  boost::array<char, kTextBufSize> mRecvBuffer;
-  boost::asio::ip::udp::endpoint mRemoteEndpoint;
-  boost::asio::io_service mIoService;
-  SC_Thread mAsioThread;
-  void handleReceivedUDP(const boost::system::error_code &error,
-                         std::size_t bytes_transferred);
-  void startReceiveUDP();
+  private:
+    SCProcess *mSCProcess;
+    int mPortNum;
+    std::string mbindTo;
+    static const int kTextBufSize = 65536;
+    boost::array<char, kTextBufSize> mRecvBuffer;
+    boost::asio::ip::udp::endpoint mRemoteEndpoint;
+    boost::asio::io_service mIoService;
+    SC_Thread mAsioThread;
+    void handleReceivedUDP(const boost::system::error_code &error,
+                           std::size_t bytes_transferred);
+    void startReceiveUDP();
 
-public:
-  boost::asio::ip::udp::socket mUdpSocket;
-  UDPPort(SCProcess *scprocess, std::string bindTo, int inPortNum);
-  void startAsioThread();
-  void stopAsioThread();
+  public:
+    boost::asio::ip::udp::socket mUdpSocket;
+    UDPPort(SCProcess *scprocess, std::string bindTo, int inPortNum);
+    void startAsioThread();
+    void stopAsioThread();
 };

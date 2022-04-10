@@ -37,54 +37,52 @@
 class UDPPort;
 
 class SCProcess {
-  juce::File synthPath;
-  juce::File pluginPath;
+    juce::File synthPath;
+    juce::File pluginPath;
 
-public:
+  public:
+    struct WorldStats {
+        uint32 mNumUnits, mNumGraphs, mNumGroups;
+        WorldStats() { mNumUnits = mNumGraphs = mNumGroups = 0; }
+    };
 
-  struct WorldStats {
-    uint32 mNumUnits, mNumGraphs, mNumGroups;    
-    WorldStats() {
-      mNumUnits = mNumGraphs = mNumGroups = 0;
+    SCProcess();
+    ~SCProcess();
+    void quit();
+    void setup(float sampleRate, int buffSize, int numInputs, int numOutput,
+               juce::File *plugin, juce::File *synthDef);
+    void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
+    bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
+    int portNum;
+
+    WorldStats getWorldStats() {
+        const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(
+            worldLock);
+        WorldStats stats;
+        if (scopeLock.isLocked()) {
+            if (world != nullptr) {
+                stats.mNumUnits = world->mNumUnits;
+                stats.mNumGraphs = world->mNumGraphs;
+                stats.mNumGroups = world->mNumGroups;
+            }
+        }
+        return stats;
     }
-  };
 
-  SCProcess();
-  ~SCProcess();
-  void quit();
-  void setup(float sampleRate, int buffSize, int numInputs, int numOutput,
-             juce::File *plugin, juce::File *synthDef);
-  void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
-  bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
-  int portNum;
+  private:
+    World *world;
+    juce::CriticalSection worldLock;
 
-  WorldStats getWorldStats() {
-    const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock (worldLock);
-    WorldStats stats;
-    if ( scopeLock.isLocked() ) {
-      if ( world != nullptr ) {
-        stats.mNumUnits = world->mNumUnits;
-        stats.mNumGraphs = world->mNumGraphs;
-        stats.mNumGroups = world->mNumGroups;
-      }
-    }
-    return stats;
-  }
+    int findNextFreeUdpPort(int startNum);
+    UDPPort *mPort;
 
-private:
-  World *world;
-  juce::CriticalSection worldLock;
-
-  int findNextFreeUdpPort(int startNum);
-  UDPPort *mPort;
-
-  // ATTIC
-  // ---
-  string synthName;
-  void startUp(WorldOptions options, string pluginsPath, string synthdefsPath,
-               int preferredPort);
-  void makeSynth();
-  void sendParamChangeMessage(string name, float value);
-  void sendNote(int64 oscTime, int note, int velocity);
-  void sendTick(int64 oscTime, int bus);
+    // ATTIC
+    // ---
+    string synthName;
+    void startUp(WorldOptions options, string pluginsPath, string synthdefsPath,
+                 int preferredPort);
+    void makeSynth();
+    void sendParamChangeMessage(string name, float value);
+    void sendNote(int64 oscTime, int note, int velocity);
+    void sendTick(int64 oscTime, int bus);
 };

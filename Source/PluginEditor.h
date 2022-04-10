@@ -13,19 +13,23 @@
 
 class LogViewer : public juce::TextEditor {
     juce::StringArray *log;
-public:
+
+  public:
     LogViewer(juce::StringArray *content) {
         log = content;
         setMultiLine(true);
         setReadOnly(true);
-        setScrollbarsShown(true);        
+        setScrollbarsShown(true);
     }
 
-    void addPopupMenuItems(juce::PopupMenu &menuToAddTo, const juce::MouseEvent *mouseClickEvent) {
+    void addPopupMenuItems(juce::PopupMenu &menuToAddTo,
+                           const juce::MouseEvent *mouseClickEvent) {
         menuToAddTo.addItem(juce::StandardApplicationCommandIDs::copy, "Copy");
-        menuToAddTo.addItem(juce::StandardApplicationCommandIDs::selectAll, "Select All");
+        menuToAddTo.addItem(juce::StandardApplicationCommandIDs::selectAll,
+                            "Select All");
         menuToAddTo.addSeparator();
-        menuToAddTo.addItem(juce::StandardApplicationCommandIDs::del, "Clear logs");
+        menuToAddTo.addItem(juce::StandardApplicationCommandIDs::del,
+                            "Clear logs");
     }
 
     void performPopupMenuAction(int menuItemID) {
@@ -41,26 +45,26 @@ public:
  */
 class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
                                            public juce::Timer {
-public:
-  PluginColliderAudioProcessorEditor(PluginColliderAudioProcessor &);
-  ~PluginColliderAudioProcessorEditor() override;
+  public:
+    PluginColliderAudioProcessorEditor(PluginColliderAudioProcessor &);
+    ~PluginColliderAudioProcessorEditor() override;
 
-  //==============================================================================
-  void paint(juce::Graphics &) override;
-  void resized() override;
+    //==============================================================================
+    void paint(juce::Graphics &) override;
+    void resized() override;
 
-  virtual void timerCallback() override;
+    virtual void timerCallback() override;
 
-private:
-  // This reference is provided as a quick way for your editor to
-  // access the processor object that created it.
-  PluginColliderAudioProcessor &audioProcessor;
-  juce::TextButton freeAll;
-  LogViewer logViewer;
-  juce::Label portNumberLabel;
-  int logLines = 0;
-  juce::Label stats;
+  private:
+    // This reference is provided as a quick way for your editor to
+    // access the processor object that created it.
+    PluginColliderAudioProcessor &audioProcessor;
+    juce::TextButton freeAll;
+    LogViewer logViewer;
+    juce::Label portNumberLabel;
+    int logLines = 0;
+    juce::Label stats;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
-      PluginColliderAudioProcessorEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
+        PluginColliderAudioProcessorEditor)
 };
