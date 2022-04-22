@@ -101,6 +101,7 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 void PluginColliderAudioProcessor::releaseResources() {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    superCollider.quit();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations

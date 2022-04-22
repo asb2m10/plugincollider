@@ -137,7 +137,7 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     // setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
 
     world = World_New(&options);
-    world->mDumpOSC = 0;
+    world->mDumpOSC = 2;
 
     if (world) {
         OSCMessages messages;
