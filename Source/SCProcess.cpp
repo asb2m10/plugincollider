@@ -32,11 +32,8 @@ const int kDefaultBeatDiv = 1;
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
-#ifdef __APPLE__
-const juce::File DEFAULT_PLUGIN_PATH(
-    "/Applications/SuperCollider.app/Contents/Resources/plugins");
-#elif __unix__
-const juce::File DEFAULT_PLUGIN_PATH("/usr/lib/SuperCollider/plugins");
+#ifdef WIN32
+     #define close closesocket
 #endif
 
 void null_reply_func(struct ReplyAddress * /*addr*/, char * /*msg*/,
@@ -72,11 +69,12 @@ int SCProcess::findNextFreeUdpPort(int startNum) {
         return -1;
     }
 
-    bzero((char *)&mBindSockAddr, sizeof(mBindSockAddr));
+    memset(&mBindSockAddr, 0, sizeof(mBindSockAddr));
+    // bzero((char *)&mBindSockAddr, );
     mBindSockAddr.sin_family = AF_INET;
     mBindSockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     mBindSockAddr.sin_port = htons(port);
-    const int on = 1;
+    const char on = 1;
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
     while (bind(server_socket, (struct sockaddr *)&mBindSockAddr,
@@ -88,12 +86,14 @@ int SCProcess::findNextFreeUdpPort(int startNum) {
         port++;
         mBindSockAddr.sin_port = htons(port);
     }
+
     close(server_socket);
+
     return port;
 }
 
 void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
-                      int numOutputs, juce::File *plugin, juce::File *synth) {
+                      int numOutputs, int udpPort) {
 
     // avoid restarting server if the settings are the same
     if (world != nullptr) {
@@ -109,7 +109,7 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     }
 
     if (portNum == 0) {
-        portNum = findNextFreeUdpPort(8898);
+        portNum = findNextFreeUdpPort(udpPort);
         if (this->portNum >= 0) {
             std::string bindTo("0.0.0.0");
             mPort = new UDPPort(this, bindTo.c_str(), this->portNum);
@@ -131,10 +131,6 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     options.mNumInputBusChannels = numInputs;
     options.mNumOutputBusChannels = numOutputs;
     options.mVerbosity = 2;
-
-    setenv("SC_PLUGIN_PATH", DEFAULT_PLUGIN_PATH.getFullPathName().toRawUTF8(),
-           1);
-    // setenv("SC_SYNTHDEF_PATH", synthdefsPath.c_str(), 1);
 
     world = World_New(&options);
     world->mDumpOSC = 2;

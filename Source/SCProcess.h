@@ -27,8 +27,13 @@
 #include "UDPPort.h"
 
 #include <stdio.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#ifdef WIN32    
+    #include <iphlpapi.h>
+#else
+    #include <sys/socket.h>
+    #include <unistd.h>
+#endif
+
 
 #include "SCPluginDriver.h"
 
@@ -37,9 +42,6 @@
 class UDPPort;
 
 class SCProcess {
-    juce::File synthPath;
-    juce::File pluginPath;
-
   public:
     struct WorldStats {
         uint32 mNumUnits, mNumGraphs, mNumGroups;
@@ -49,8 +51,7 @@ class SCProcess {
     SCProcess();
     ~SCProcess();
     void quit();
-    void setup(float sampleRate, int buffSize, int numInputs, int numOutput,
-               juce::File *plugin, juce::File *synthDef);
+    void setup(float sampleRate, int buffSize, int numInputs, int numOutput, int udpPort);
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
     int portNum;

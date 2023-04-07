@@ -142,6 +142,8 @@ int SC_PluginAudioDriver::callback(juce::AudioBuffer<float> &buffer,
     }
 
     mAudioSync.Signal();
+
+    return 0;
 }
 
 // ====================================================================

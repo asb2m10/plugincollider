@@ -14,17 +14,41 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     PluginColliderAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
       logViewer(&(p.logger.content)) {
-    string listen = "Listening on: ";
-    listen += std::to_string(audioProcessor.superCollider.portNum);
-    portNumberLabel.setText(listen, juce::dontSendNotification);
-    portNumberLabel.setBounds(10, 18, 130, 25);
-    addAndMakeVisible(portNumberLabel);
+
+    configButton.setButtonText("Configure");
+    addAndMakeVisible(configButton);
+    configButton.setBounds(10, 18, 130, 25);
+
+    configButton.onClick = [ this ] {
+        settingsWindow = new juce::AlertWindow("PluginCollider settings", "", juce::AlertWindow::NoIcon);
+
+        settingsWindow->addTextBlock("Prefred UDP port");
+        settingsWindow->addTextEditor("udpPort", juce::String(audioProcessor.udpPort));
+        settingsWindow->addTextBlock("Plugin path");
+        settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);
+        settingsWindow->addTextBlock("Scsynth path");
+        settingsWindow->addTextEditor("synthPath", audioProcessor.synthPath);
+        settingsWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
+        settingsWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
+
+        settingsWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
+            if (r) {
+                scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
+                juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
+                prop->setValue("udpPort", this->settingsWindow->getTextEditorContents("udpPort"));
+                prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
+                prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("synthPath"));
+                audioProcessor.appProp.saveIfNeeded();
+            }
+        }), true);
+
+    };
 
     addAndMakeVisible(logViewer);
     logViewer.setBounds(10, 48, 680, 340);
 
     addAndMakeVisible(stats);
-    stats.setBounds(200, 18, 480, 25);
+    stats.setBounds(212, 18, 480, 25);
     stats.setJustificationType(juce::Justification::centredRight);
 
     startTimer(400);
@@ -46,7 +70,7 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
     SCProcess::WorldStats worldStats =
         audioProcessor.superCollider.getWorldStats();
     stats.setText(juce::String::formatted(
-                      "units: %i graph: %i groups: %i", worldStats.mNumUnits,
+                      "udp port: %i units: %i graph: %i groups: %i", audioProcessor.superCollider.portNum, worldStats.mNumUnits,
                       worldStats.mNumGraphs, worldStats.mNumGroups),
                   juce::dontSendNotification);
 }

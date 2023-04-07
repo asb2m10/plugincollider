@@ -61,10 +61,11 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     PluginColliderAudioProcessor &audioProcessor;
     juce::TextButton freeAll;
     LogViewer logViewer;
-    juce::Label portNumberLabel;
+    juce::TextButton configButton;
     int logLines = 0;
     juce::Label stats;
-
+    juce::AlertWindow *settingsWindow;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
         PluginColliderAudioProcessorEditor)
 };

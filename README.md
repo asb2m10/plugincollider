@@ -1,7 +1,7 @@
 PluginCollider
 ==============
 
-PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual. 
+PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual. Now support Linux, mac OS and Windows.
 
 *PluginCollider is an experimental fork of https://github.com/supercollider/SuperColliderAU*
 
@@ -10,8 +10,9 @@ PluginCollider is a generic (multiplatform/plugin format) wrapper that allows us
 - [x] Remove CoreAudio (AU) dependencies (e.g. Linux and Windows support)
 - [x] Multichannel support
 - [ ] Remove World global lock
-- [ ] Configurable UDP port
+- [x] Configurable UDP port
 - [x] Server log from plugin UI
+- [ ] Avoid building Supercollider (use forged SC_Version.hpp)
 
 [JUCE](https://juce.com/) framework is used as a generic wrapper.
 * It provides a unified build system among plateforms and plugins configuration
@@ -32,6 +33,8 @@ After compiling SuperCollider, cd back to the PluginCollider root directory and 
     cd build
     cmake ..       # add `-G Xcode` if you want to use Xcode
     make
+
+Don't forget to configure the plugin / scsynth path with the "Configure" button.
 
 In order to test the plugin, with sclang execute this code:
 

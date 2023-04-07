@@ -27,12 +27,47 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
                                                       1.0f,   // maximum value
                                                       0.5f)); // default value
     juce::Logger::setCurrentLogger(&logger);
+
+    juce::PropertiesFile::Options options;
+    options.applicationName = "PluginCollider";
+    options.osxLibrarySubFolder = "Application Support";
+    options.folderName = "PluginCollider";
+    options.filenameSuffix = "settings";
+    appProp.setStorageParameters(options);
+
+    // TODO: move this to the .config directory.
+    juce::PropertiesFile *prop = appProp.getUserSettings();
+    setUdpPort(prop->getValue("udpPort", "8898"));
+    synthPath = prop->getValue("synthPath", "");
+#ifdef WIN32
+    pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");
+#elif __APPLE__
+    pluginPath = prop->getValue("pluginPath", "/Applications/SuperCollider.app/Contents/Resources/plugin");
+#else
+    pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
+#endif
+
+    putenv((juce::String("SC_PLUGIN_PATH=") + pluginPath).toRawUTF8());
+    putenv((juce::String("SC_SYNTHDEF_PATH=") + synthPath).toRawUTF8());
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
     scprintf("PluginCollider bye\n");
     superCollider.quit();
     juce::Logger::setCurrentLogger(nullptr);
+}
+
+int PluginColliderAudioProcessor::setUdpPort(juce::String value) {
+    int udpPortCheck = atoi(value.toRawUTF8());
+
+    if ( udpPortCheck == 0 ) {
+        scprintf("Invalid udp port specified: %s. Setting to default 8898\n", value.toRawUTF8());
+        udpPort = 8898;
+        return 1;
+    }
+
+    udpPort = udpPortCheck;
+    return 0;
 }
 
 //==============================================================================
@@ -95,7 +130,7 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     // juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application
     // Support/SuperCollider/synthdefs");
     superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
-                        getTotalNumOutputChannels(), nullptr, nullptr);
+                        getTotalNumOutputChannels(), udpPort);
 }
 
 void PluginColliderAudioProcessor::releaseResources() {

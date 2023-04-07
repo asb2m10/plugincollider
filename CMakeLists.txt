@@ -25,7 +25,12 @@ set(CMAKE_FIND_LIBRARY_PREFIXES ${CMAKE_FIND_LIBRARY_PREFIXES} "")
 
 set(PLUGINS_DIR ${SC_DIR}/build/server/plugins/${CMAKE_BUILD_TYPE}/)
 file(GLOB PLUGINS ${SC_DIR}/build/server/plugins/${CMAKE_BUILD_TYPE}/*.scx)
-set(SNDFILE_INCLUDE_DIR ${SC_DIR}/external_libraries/libsndfile)
+if (NOT WIN32)
+	set(SNDFILE_INCLUDE_DIR ${SC_DIR}/external_libraries/libsndfile)
+else()
+	set(SNDFILE_INCLUDE_DIR "C:/Program Files/libsndfile/include")
+	set(SNDFILE_LIBRARY "C:/Program Files/libsndfile/lib/sndfile.lib")
+endif()
 set(BOOST_INCLUDE_DIR ${SC_DIR}/external_libraries/boost)
 set(TLSF_INCLUDE_DIR ${SC_DIR}/external_libraries/TLSF-2.4.6/src)
 
@@ -36,7 +41,7 @@ set_property(SOURCE ${SC_DIR}/common/SC_Filesystem_macos.cpp PROPERTY COMPILE_FL
 set(CMAKE_MODULE_PATH ${SC_DIR}/cmake_modules)
 include (${SC_DIR}/cmake_modules/FinalFile.cmake)
 include (${SC_DIR}/cmake_modules/FindSndfile.cmake)
-find_package(Sndfile)
+#find_package(Sndfile)
 
 include_directories(${SC_DIR}/external_libraries
 	${BOOST_INCLUDE_DIR}
@@ -63,6 +68,8 @@ include_directories(
 # This is a hack since we will define our own Driver
 add_definitions("-DSC_AUDIO_API=SC_AUDIO_API_PORTAUDIO")
 
+# TODO: find the loading mechanism upon STATIC_PLUGINS
+# add_definitions("-DSTATIC_PLUGINS")
 if (APPLE)
 	add_definitions("-DSC_DARWIN")
 	add_definitions("-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0")
@@ -73,6 +80,38 @@ if (NOT Boost_FOUND)
 	file(GLOB boost_system_sources ${SC_DIR}/external_libraries/boost/libs/system/src/*cpp)
 	file(GLOB boost_filesystem_sources ${SC_DIR}/external_libraries/boost/libs/filesystem/src/*cpp)
 endif()
+
+if(WIN32)
+    add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX -D_WIN32_WINNT=0x0600)
+
+    #avoid unnecesary autolink
+    add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_ALL_NO_LIB)
+
+    # use session manager to set shared memory location, see issue 2409
+    add_definitions(-DBOOST_INTERPROCESS_BOOTSTAMP_IS_SESSION_MANAGER_BASED)
+endif()
+
+if(MSVC)
+  foreach(flag CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    set(${flag} "${${flag}} /wd4018") # signed/unsigned mismatch
+    set(${flag} "${${flag}} /wd4102") # unreferenced label
+    set(${flag} "${${flag}} /wd4267") # conversion from 'size_t' to 'int', possible loss of data
+    set(${flag} "${${flag}} /wd4244") # conversion from '__int64' to 'int', possible loss of data
+    set(${flag} "${${flag}} /wd4305") # '=' : truncation from 'double' to 'float'
+    set(${flag} "${${flag}} /wd4309") # '=' : truncation of constant value
+    set(${flag} "${${flag}} /wd4800") # forcing value to bool 'true' or 'false' (performance warning)
+    set(${flag} "${${flag}} /wd4996") # The POSIX name for this item is deprecated.
+  endforeach()
+
+# this flag causes MSVC to correctly report __cplusplus, which prevents a compiler error 
+# caused by some versions of libsndfile's C++ header redefining nullptr as NULL. 
+# See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+  add_compile_options("/Zc:__cplusplus")
+
+# _ENABLE_ATOMIC_ALIGNMENT_FIX prevents the build from breaking when VS2015 update 2 upwards are used
+# see http://boost.2283326.n4.nabble.com/lockfree-ENABLE-ATOMIC-ALIGNMENT-FIX-for-VS-2015-Update-2-td4685955.html
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -D_ENABLE_ATOMIC_ALIGNMENT_FIX)
+endif(MSVC)
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/Source
@@ -88,6 +127,8 @@ if (NOT Boost_FOUND)
 	file(GLOB boost_system_sources ${SC_DIR}/external_libraries/boost/libs/system/src/*cpp)
 	file(GLOB boost_filesystem_sources ${SC_DIR}/external_libraries/boost/libs/filesystem/src/*cpp)
 endif()
+
+list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS c)
 
 project(PluginCollider VERSION 0.1.0)
 
@@ -156,6 +197,12 @@ if (UNIX)
 	PRIVATE
 	${SC_DIR}/common/SC_Filesystem_unix.cpp)
 endif (UNIX)
+
+if (WIN32)
+	target_sources(PluginCollider
+	PRIVATE
+	${SC_DIR}/common/SC_Filesystem_win.cpp)
+endif (WIN32)
 
 target_sources(PluginCollider
     PRIVATE
@@ -239,5 +286,4 @@ target_link_libraries(PluginCollider
         juce::juce_recommended_warning_flags
 		${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY}
 		${SNDFILE_LIBRARIES}
-	    sndfile
 		)

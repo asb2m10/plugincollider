@@ -12,6 +12,8 @@
 #include "SCProcess.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
+class PluginColliderAudioProcessorEditor;
+
 // Dirty cheap logger
 class SuperLogger : public juce::Logger {
   public:
@@ -71,10 +73,19 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor {
     bool getActivityMonitor();
 
     SuperLogger logger;
+    int setUdpPort(juce::String value);
+
+    friend PluginColliderAudioProcessorEditor;
 
   private:
+    int udpPort = 8898;
+    juce::String pluginPath;
+    juce::String synthPath;
+
     juce::AudioParameterFloat *gain;
     bool curActivity;
+
+    juce::ApplicationProperties appProp;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)
