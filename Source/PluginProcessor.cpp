@@ -42,13 +42,12 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 #ifdef WIN32
     pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");
 #elif __APPLE__
-    pluginPath = prop->getValue("pluginPath", "/Applications/SuperCollider.app/Contents/Resources/plugin");
+    pluginPath = prop->getValue("pluginPath", "/Applications/SuperCollider.app/Contents/Resources/plugins");
 #else
     pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
 #endif
-
-    putenv((juce::String("SC_PLUGIN_PATH=") + pluginPath).toRawUTF8());
-    putenv((juce::String("SC_SYNTHDEF_PATH=") + synthPath).toRawUTF8());
+    putenv((char*) (juce::String("SC_PLUGIN_PATH=") + pluginPath).toRawUTF8());
+    putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthPath).toRawUTF8());
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {

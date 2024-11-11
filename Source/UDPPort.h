@@ -27,7 +27,7 @@
 #include "sc_msg_iter.h"
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/typeof/typeof.hpp>
 
