@@ -25,6 +25,7 @@
 #include "SC_StringParser.h"
 #include "SC_WorldOptions.h"
 #include "sc_msg_iter.h"
+#include "SC_PlugIn.h"
 
 const int kDefaultPortNumber = 9989;
 const int kDefaultBlockSize = 64;
@@ -131,9 +132,10 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     options.mNumInputBusChannels = numInputs;
     options.mNumOutputBusChannels = numOutputs;
     options.mVerbosity = 2;
+    options.mMaxLogins = 32;
 
     world = World_New(&options);
-    world->mDumpOSC = 2;
+    world->mDumpOSC = 0;
 
     if (world) {
         OSCMessages messages;
@@ -302,4 +304,12 @@ int scprocess_scprintf(const char *fmt, va_list ap) {
     printf("%s", buf);
     juce::Logger::writeToLog(string(buf));
     return p;
+}
+
+// NOUP for now, but JUCE could implement the MouseInputUGen
+PluginLoad(UIUGens) {
+}
+
+
+PluginUnload(UIUGens) {
 }

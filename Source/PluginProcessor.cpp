@@ -47,7 +47,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
 #endif
     putenv((char*) (juce::String("SC_PLUGIN_PATH=") + pluginPath).toRawUTF8());
-    putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthPath).toRawUTF8());
+   //putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthPath).toRawUTF8());
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {

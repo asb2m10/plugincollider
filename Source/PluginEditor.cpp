@@ -22,7 +22,7 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     configButton.onClick = [ this ] {
         settingsWindow = new juce::AlertWindow("PluginCollider settings", "", juce::AlertWindow::NoIcon);
 
-        settingsWindow->addTextBlock("Prefred UDP port");
+        settingsWindow->addTextBlock("Preferd UDP port");
         settingsWindow->addTextEditor("udpPort", juce::String(audioProcessor.udpPort));
         settingsWindow->addTextBlock("Plugin path");
         settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);

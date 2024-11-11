@@ -69,7 +69,7 @@ include_directories(
 add_definitions("-DSC_AUDIO_API=SC_AUDIO_API_PORTAUDIO")
 
 # TODO: find the loading mechanism upon STATIC_PLUGINS
-# add_definitions("-DSTATIC_PLUGINS")
+add_definitions("-DSTATIC_PLUGINS")
 if (APPLE)
 	add_definitions("-DSC_DARWIN")
 	add_definitions("-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0")
@@ -235,6 +235,33 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_Unit.cpp
 	${SC_DIR}/server/scsynth/SC_UnitDef.cpp
 	${SC_DIR}/server/scsynth/SC_World.cpp
+
+	${SC_DIR}/server/plugins/BinaryOpUGens.cpp
+	${SC_DIR}/server/plugins/ChaosUGens.cpp
+	${SC_DIR}/server/plugins/DelayUGens.cpp
+	${SC_DIR}/server/plugins/DemandUGens.cpp
+	${SC_DIR}/server/plugins/DemoUGens.cpp
+	${SC_DIR}/server/plugins/DynNoiseUGens.cpp
+	${SC_DIR}/server/plugins/FilterUGens.cpp
+	${SC_DIR}/server/plugins/GendynUGens.cpp
+	${SC_DIR}/server/plugins/GrainUGens.cpp
+	${SC_DIR}/server/plugins/IOUGens.cpp
+	${SC_DIR}/server/plugins/LFUGens.cpp
+	${SC_DIR}/server/plugins/MulAddUGens.cpp
+	${SC_DIR}/server/plugins/NoiseUGens.cpp
+	${SC_DIR}/server/plugins/OscUGens.cpp
+	${SC_DIR}/server/plugins/PanUGens.cpp
+	${SC_DIR}/server/plugins/PhysicalModelingUGens.cpp
+	${SC_DIR}/server/plugins/ReverbUGens.cpp
+	${SC_DIR}/server/plugins/TestUGens.cpp
+	${SC_DIR}/server/plugins/TriggerUGens.cpp
+	${SC_DIR}/server/plugins/UnaryOpUGens.cpp
+	${SC_DIR}/server/plugins/DiskIO_UGens.cpp
+	${SC_DIR}/server/plugins/FFT_UGens.cpp
+	${SC_DIR}/server/plugins/FFTInterfaceTable.cpp
+	${SC_DIR}/server/plugins/FFT2InterfaceTable.cpp
+	${SC_DIR}/server/plugins/PartitionedConvolution.cpp
+	${SC_DIR}/server/plugins/PV_UGens.cpp
 
 	Source/UDPPort.cpp 
 	Source/OSCMessages.cpp
