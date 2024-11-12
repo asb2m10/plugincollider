@@ -1,43 +1,27 @@
-PluginCollider
+Plugincollider
 ==============
 
-PluginCollider is a generic (multiplatform/plugin format) wrapper that allows using a SuperCollider server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual. Now support Linux, mac OS and Windows.
+Plugincollider is a generic (multiplatform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual. 
 
-*PluginCollider is an experimental fork of https://github.com/supercollider/SuperColliderAU*
+Now support Linux, macOS and Windows.
 
-## Current PluginCollider status before it becomes a GA project:
+An external installation of [Supercollider](https://supercollider.github.io/) is required to run the interpreted code. For now Plugincollider only acts as a server; consider this as a scsynth replacement. The classic Supercollider UI is still used to send "synths/code" the the server that is running inside the plugin.
 
-- [x] Remove CoreAudio (AU) dependencies (e.g. Linux and Windows support)
-- [x] Multichannel support
-- [ ] Remove World global lock
-- [x] Configurable UDP port
-- [x] Server log from plugin UI
-- [ ] Avoid building Supercollider (use forged SC_Version.hpp)
+*Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
-[JUCE](https://juce.com/) framework is used as a generic wrapper.
-* It provides a unified build system among plateforms and plugins configuration
-* It provides a "Standalone" plugin version that greatly simplify development and debugging
-* Simplifies plugin format evolutions and maintenance
+## Build instructions
 
-In order to build PluginCollider, you first need to build SuperCollider, which is included in this repository as a submodule. For this to work you must first clone the PluginCollider with the recursive flag:
+Be sure to install Supercollider and JUCE dependencies; dont forget [sndfile](https://github.com/libsndfile/libsndfile). Then clone recursivly the repository and build Plugincollider like a normal cmake project :
 
-`git clone --recursive https://github.com/asb2m10/plugincollider`
-
-After this, cd to the libs/supercollider directory and build as explained in the Build Instructions section in README_MACOS.md. This is needed for generating `SC_Version.hpp` and also for compiling plugins. It is important to note that the build process for PluginCollider assumes that the name of the supercollider build folder `build`.
-
-`cmake .. -DSC_EL=no -DSC_QT=OFF`
-
-After compiling SuperCollider, cd back to the PluginCollider root directory and run:
-
+    git clone --recursive https://github.com/asb2m10/Plugincollider
+    cd Plugincollider
     mkdir build
     cd build
     cmake ..       # add `-G Xcode` if you want to use Xcode
     make
 
-Don't forget to configure the plugin / scsynth path with the "Configure" button.
-
-In order to test the plugin, with sclang execute this code:
+In order to test the plugin, with sclang execute this code (replace port 8898 where the server port is actually running):
 
     o = ServerOptions.new;
-    s = Server.remote(\pluginCollider, NetAddr("127.0.0.1", 8898), o);
+    s = Server.remote(\Plugincollider, NetAddr("127.0.0.1", 8898), o);
     { [SinOsc.ar(439, 0, 0.2), SinOsc.ar(444, 0, 0.2)] }.play(s);
