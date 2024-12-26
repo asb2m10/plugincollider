@@ -1,26 +1,9 @@
-// remote PluginCollider
+
+// First set remote pluginCollider server
 o = ServerOptions.new;
-//o.maxLogins = 32;    // This is to avoid displaybug https://github.com/supercollider/supercollider/issues/5271
 s = Server.remote(\pluginCollider, NetAddr("127.0.0.1", 8898), o);
 
-
-// Local For test purposes
-s = Server(\Local );
-s.options.numBuffers = 1024 * 256 * 4; // increase this if you need to load more samples
-s.options.memSize = 8192 * 32 * 4; // increase this if you get "alloc failed" messages
-s.options.maxNodes = 1024 * 32 * 4; // increase this if you are getting drop outs and the message "too many nodes"
-s.options.numWireBufs = 128;
-s.options.numOutputBusChannels = 2;
-s.boot();
-
-s.freeAll
-
-
-// basic tone tests
-{ [SinOsc.ar(440, 0, 0.2), SinOsc.ar(441, 0, 0.2)] }.play(s);
-
-
-// supercollider tweets
+// Collection of Supercollider tweets (from https://sccode.org/1-4RA)
 
 {n=LFNoise0.ar(_);f=[60,61];tanh(BBandPass.ar(max(max(n.(4),l=n.(6)),SinOsc.ar(f*ceil(l*9).lag(0.1))*0.7),f,n.(1).abs/2)*700*l.lag(1))}.play(s)
 {t=GaussTrig.ar(0.5);r=TRand.ar(0,1,t);e=EnvGen.ar(Env.sine(r*0.2+0.3),t);Pan2.ar(Gendy1.ar(minfreq:(r*3+1+(e*3))*300)*e,2*r-1)}.play(s)
@@ -37,15 +20,6 @@ a=LFTri;{|f=99|Pan2.ar(a.ar(f+{200.rand+216}.dup(8),{-2pi.rand+2pi}.dup(8),0.01+
 {Array.fill(2,{Decay.ar(Pulse.ar(LFNoise0.ar(3+2.rand,4,5)),0.03, RHPF.ar(PinkNoise.ar,LFNoise2.kr(20,100,2000+3000.rand),0.5))});}.play(s)
 {r=Impulse;c=TChoose;a=(240..8000);n=c.kr(r.kr(2),a/920);PitchShift.ar(BPF.ar(LFNoise0.ar(8,0.5),c.kr(r.kr(n),a),0.5),n/33,n/2)!2}.play(s)
 {Splay.ar({Pluck.ar(BPF.ar(f=product({|i|product({LFPulse.ar(2**2.rand2,2.rand/2)}!(i+2))/(1+i)+1}!8)*86,43).sin,Saw.ar,1,1/f,9)}!9)}.play(s)
-
-// BUG;;;;
-
-
-{f={|o,i|if(i>0,{SinOsc.ar([i,i+1e-4]**2*f.(o,i-1),f.(o,i-1)*1e-4,f.(o,i-1))},o)};f.(60,6)/60}.play(s)
-
-
-// GOOD
-
 {{x=LFNoise0.ar(1)>0;SinOsc.ar(Spring.ar(x,4,3e-05)*(70.rand+190)+(30.rand+90))*EnvGen.kr(Env.perc(0.001,5),x)}!2}.play(s)
 a=VarSaw;{CombN.ar(SinOsc.ar(0,a.ar([200,104])*a.ar(CombN.ar(a.ar(CombN.ar(0.1)))<<3pi)*20pi))}.play(s)
 {l=LFNoise2;o=0.3;FreeVerb.ar(LPF.ar(SinOsc.ar(l.ar(o).range(666,1e3))*Saw.ar(17),300),l.ar(o))!2}.play(s)
@@ -84,7 +58,6 @@ a=SinOscFB;{LeakDC.ar(Splay.ar(RHPF.ar(PinkNoise.ar(a.ar(b=1/(1..32),b)),a.ar(a.
 {i=Saw.kr(Saw.kr(-1/9,[3,2]).cubed);PMOsc.ar(Latch.kr(LFCub.kr(99,[0,1],99),i),Pitch.kr(i)[0][0],Decay.kr(Trig.kr(i),i*5,5))}.play(s)
 {mean({|i|99**(-1-LFSaw.kr(i+1/180,1))*SinOsc.ar(i+1*55)}!48)!2}.play(s)
 {d=Duty.kr(Dwhite(0,LFNoise2.ar([1,1]).abs,inf),0,Dwhite(0,230,inf));GVerb.ar(BPF.ar(PinkNoise.ar(39),d.midicps,0.005).softclip,2,0.05)}.play(s)
-
 {c=0.4;b=LFNoise1;DelayL.ar(FreeVerb.ar(a=Decay.ar(Dust.ar(c!2),c,c)*FBSineL.ar(b.ar(1,1e4,1e4),b.ar(1,8,9),1,1),1,1),1,c,c)+a}.play(s)
 {SinOsc.ar(440,0,LFSaw.kr(1,0,0.6,0.5))+SinOsc.ar(440,0,LFSaw.kr(0.2,0,0.3,0.1))}.play(s)
 {l=LFSaw;SinOsc.ar(15**(l.kr(-4.8,1)*l.kr(-1.8,1))*20).sqrt+(99**l.kr(-0.6,0.5)/99*CuspL.ar)+Blip.ar(0.8,1+LFNoise0.kr(0.2)*3e3,4)!2/4}.play(s)
@@ -94,47 +67,13 @@ p={|f,a=1|LFPulse.ar(f)*a*[1,1.01]};{p.(p.(100-p.(1/16,20))+p.(2,1+p.(1/4))-0.5*
 d={|l,h,f,p|({Ringz.ar(LFPulse.ar(f,p,0.01),exprand(l,h),0.5)}!20).sum};{d.(50,100,2,[0,1/4])+d.(3e3,1e4,4,0)+d.(2e2,3e3,1,0.5)*3e-4!2}.play(s)
 {m=MouseY.kr;i=Impulse.ar([5,5/3,1]);Env.perc(0,0.1,40*m,-8).ar(0,i[0]).cos+SinOscFB.ar(m*90,Decay.ar(i[1..],LFPar.kr(0.3)+1,9))}.play(s)
 {Splay.arFill(8,{a=(1..8).choose;b=LFNoise0.kr(a);c=LFPar.kr(a,0,b); SinOscFB.ar([63,65,67].midicps.choose,c,b)*Pulse.ar(a,c)})}.play(s)
-
 {x=0;(50..120).do{|f|f=f/2;x=SinOsc.ar(f+[0,1],x*Line.kr(1,3,240,doneAction:2))};tanh(x+Ringz.ar(Impulse.ar(2),45,0.3,3))}.play(s)
 {a=HPF.ar(ar(PinkNoise,5e-3),10)*Line.kr(0,1,9);ar(GVerb,({|i|ar(Ringz,a*LFNoise1.kr(0.05+0.1.rand),55*i+60,0.2)}!99).sum,70,99).tanh}.play(s)
 {LFCub.ar(LFSaw.kr(LFPulse.kr(1/4,1/4,1/4)*2+2,1,-20,50))+(WhiteNoise.ar(LFPulse.kr(4,0,LFPulse.kr(1,3/4)/4+0.05))/8)!2}.play(s)
 {LocalOut.ar(a=CombN.ar(BPF.ar(LocalIn.ar(2)*7.5+Saw.ar([32,33],0.2),2**LFNoise0.kr(4/3,4)*300,0.1).distort,2,2,40));a}.play(s)
-
-// SUPERDIRT ==================================================
-
-s.freeAll
-
-
-
-
-
-// localserver
-~dirt = SuperDirt();
-
-// remote
-~dirt = SuperDirt(2, s);
-
-// init...
-~dirt.loadSoundFiles;
-~dirt.start(57120);
-
-~d1 = ~dirt.orbits[0]; // one orbit
-~d2 = ~dirt.orbits[1]; // one orbit
-~d1.((sound: 'imp', speed: 1, begin: 0, end: 1));
-~d1.((sound: '808cy:10', speed: 0.2, crush: 2));
-~d1.((sound: '808cy:10', speed: 0.1, coarse: 1));
-
-~d1.((sound: '808cy:10', speed: 1));
-~d1.((sound: '808cy:10', speed: -1));
-~d1.((sound: '808cy:10', speed: 2, accelerate: -1));
-~d1.((sound: '808cy:10', speed: -2, accelerate: 1));
-
-
-
-
-
-
-//
-
 {a = PMOsc;b= SinOsc;c=0.004;d=440; a.ar(b.kr(0.1,d),d/2+b.kr(d*0.01,0,0.004  ),1,a.ar(4,2,1,0,a.ar(c,2,1)),b.kr(0.1))}.play(s)
 {a = PMOsc;b= SinOsc;c=RLPF;d=440;c.ar(a.ar(c.kr(b.kr(20,0,d),b.kr(0.2,0,d))),b.kr(0.01,b.kr(0.1),1).range(d,d*32))}.play(s)
+
+// BUG; this one doesn't work
+
+{f={|o,i|if(i>0,{SinOsc.ar([i,i+1e-4]**2*f.(o,i-1),f.(o,i-1)*1e-4,f.(o,i-1))},o)};f.(60,6)/60}.play(s)

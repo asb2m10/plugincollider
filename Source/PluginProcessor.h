@@ -10,6 +10,7 @@
 
 //#include <JuceHeader.h>
 #include "SCProcess.h"
+#include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class PluginColliderAudioProcessorEditor;
@@ -29,7 +30,7 @@ class SuperLogger : public juce::Logger {
 //==============================================================================
 /**
  */
-class PluginColliderAudioProcessor : public juce::AudioProcessor {
+class PluginColliderAudioProcessor : public juce::AudioProcessor, public juce::AudioProcessorParameter::Listener {
   public:
     SCProcess superCollider;
 
@@ -83,9 +84,21 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor {
     juce::String synthPath;
 
     juce::AudioParameterFloat *gain;
+    juce::AudioParameterFloat *controlBus[32];
+    CommandFifo<PluginColliderAudioProcessor> command;
+
     bool curActivity;
 
     juce::ApplicationProperties appProp;
+
+    void parameterValueChanged (int parameterIndex, float newValue) override {
+      command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
+          this->superCollider.setControlBusValue(parameterIndex-1, newValue);
+      });
+    }
+
+    void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override {
+    }
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

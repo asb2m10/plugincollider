@@ -14,7 +14,7 @@
 class LogViewer : public juce::TextEditor {
     juce::StringArray *log;
 
-  public:
+public:
     LogViewer(juce::StringArray *content) {
         log = content;
         setMultiLine(true);
@@ -65,7 +65,11 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     int logLines = 0;
     juce::Label stats;
     juce::AlertWindow *settingsWindow;
-    
+
+    // For now this is for debugging
+    juce::Slider cb1;    
+    std::unique_ptr<juce::SliderParameterAttachment> cb1Attachment;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
         PluginColliderAudioProcessorEditor)
 };

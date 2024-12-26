@@ -56,6 +56,9 @@ class SCProcess {
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
     int portNum;
 
+    // [ TO BE CALLED WITH WOLRDLOCK ]
+    void setControlBusValue(int bus, float value);
+
     WorldStats getWorldStats() {
         const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(
             worldLock);

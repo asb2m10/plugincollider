@@ -28,6 +28,15 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
                                                       0.5f)); // default value
     juce::Logger::setCurrentLogger(&logger);
 
+    for(int i=0;i<32;i++) {
+        addParameter(controlBus[i] = new juce::AudioParameterFloat(juce::String("cb") + juce::String(i), // parameterID
+                                                      juce::String("ControlBus-")+juce::String(i+1), // parameter name
+                                                      0.0f,   // minimum value
+                                                      1.0f,   // maximum value
+                                                      0.5f)); // default value
+        controlBus[i]->addListener(this);
+    }
+
     juce::PropertiesFile::Options options;
     options.applicationName = "PluginCollider";
     options.osxLibrarySubFolder = "Application Support";
@@ -169,6 +178,7 @@ void PluginColliderAudioProcessor::processBlock(
         // posInfo.timeInSeconds;
     }
 
+    command.call(*this);
     superCollider.run(buffer, midiMessages);
     buffer.applyGain(*gain);
 }

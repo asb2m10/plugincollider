@@ -44,6 +44,14 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
     };
 
+    // For now this is for debugging
+    // addAndMakeVisible(cb1);
+    cb1.setSliderStyle(juce::Slider::Rotary);
+    cb1.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
+    cb1.setBounds(150, 10, 50, 50);
+    juce::AudioParameterFloat *parameter = p.controlBus[0];
+    cb1Attachment.reset(new juce::SliderParameterAttachment(*parameter, cb1, nullptr));
+
     addAndMakeVisible(logViewer);
     logViewer.setBounds(10, 48, 680, 340);
 

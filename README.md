@@ -1,17 +1,40 @@
 Plugincollider
 ==============
 
-Plugincollider is a generic (multiplatform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual. 
+Plugincollider is a generic (cross-platform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual.
 
 Now support Linux, macOS and Windows.
 
-An external installation of [Supercollider](https://supercollider.github.io/) is required to run the interpreted code. For now Plugincollider only acts as a server; consider this as a scsynth replacement. The classic Supercollider UI is still used to send "synths/code" the the server that is running inside the plugin.
+An external installation of [SuperCollider](https://supercollider.github.io/) is required to run the interpreted code. For now Plugincollider only acts as a server; consider this as a scsynth replacement. The classic SuperCollider UI is still used to send "synths/code" the the server that is running inside the plugin.
 
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
+## Interacting with SuperCollider server (scsynth) from DAW
+
+Plugin parameters are now linked to the first 32 control buses. The SC code must normalize the values from 0.0 to 1.0; consider using a helper function like this:
+
+    (
+    var mkMappedBus = {|sym, defaultRange=([0, 1]), type=\linlin|
+        var v = NamedControl.kr(sym);
+        var range = NamedControl.kr(sym ++ 'Range', defaultRange);
+        v.perform(type, 0, 1, *range)
+    };
+
+    x = SynthDef("freqtest", {
+            var freq = mkMappedBus.(\freq, [20, 20000], \linexp);
+            var sig = SinOsc.ar(freq);
+            Out.ar(sig, sig!2 * 1);
+        }).play(s);
+    )
+
+    b = Bus.control(s, 1);
+    x.map(\freq, b)
+
+Please note that control buses are not yet read from server to DAW.
+
 ## Build instructions
 
-Be sure to install Supercollider and JUCE dependencies; dont forget [sndfile](https://github.com/libsndfile/libsndfile). Then clone recursivly the repository and build Plugincollider like a normal cmake project :
+Be sure to install SuperCollider and JUCE dependencies; dont forget [sndfile](https://github.com/libsndfile/libsndfile). Then clone recursivly the repository and build Plugincollider like a normal cmake project :
 
     git clone --recursive https://github.com/asb2m10/Plugincollider
     cd Plugincollider

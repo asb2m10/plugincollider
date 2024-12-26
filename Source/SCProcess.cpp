@@ -296,6 +296,15 @@ void SCProcess::sendNote(int64 oscTime, int note, int velocity) {
     World_SendPacket(world, 92, (char *)packet.buf, null_reply_func);
 }
 
+void SCProcess::setControlBusValue(int bus, float value) {
+    if ( bus < 0 || bus >= world->mNumControlBusChannels ) {
+        scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
+        return;
+    }
+    world->mControlBusTouched[bus] = world->mBufCounter;
+    world->mControlBus[bus] = value;
+}
+
 void SCProcess::quit() {}
 
 int scprocess_scprintf(const char *fmt, va_list ap) {
