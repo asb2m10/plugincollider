@@ -110,6 +110,8 @@ if(MSVC)
 # _ENABLE_ATOMIC_ALIGNMENT_FIX prevents the build from breaking when VS2015 update 2 upwards are used
 # see http://boost.2283326.n4.nabble.com/lockfree-ENABLE-ATOMIC-ALIGNMENT-FIX-for-VS-2015-Update-2-td4685955.html
   add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -D_ENABLE_ATOMIC_ALIGNMENT_FIX)
+
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif(MSVC)
 
 # If SuperCollider has been built, use SC_Version.h otherwise use the forged version
@@ -201,7 +203,7 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_UnitDef.cpp
 	${SC_DIR}/server/scsynth/SC_World.cpp
 
-	# plugins ============================================
+	# sc plugins ==========================================
 	${SC_DIR}/server/plugins/BinaryOpUGens.cpp
 	${SC_DIR}/server/plugins/ChaosUGens.cpp
 	${SC_DIR}/server/plugins/DelayUGens.cpp
@@ -229,7 +231,7 @@ target_sources(PluginCollider
 	${SC_DIR}/server/plugins/PartitionedConvolution.cpp
 	${SC_DIR}/server/plugins/PV_UGens.cpp
 
-	# plugincoliider itself =============================
+	# plugincollider itself =============================
 	Source/UDPPort.cpp 
 	Source/OSCMessages.cpp
     Source/PluginEditor.cpp
