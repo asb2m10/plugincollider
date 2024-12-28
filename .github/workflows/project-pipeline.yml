@@ -118,8 +118,7 @@ jobs:
 
     - name: Build
       run: |
-          choco install libsndfile
-          type C:\ProgramData\chocolatey\logs\chocolatey.log
+          choco install libsndfile --x86
           cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_FLAGS=-DDEXED_ID="${{ env.BUILD_VERSION }}"
           cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
 
