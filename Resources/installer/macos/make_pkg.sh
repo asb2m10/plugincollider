@@ -7,11 +7,13 @@
 #
 # It expects the following environment variables to be set:
 # - MAC_SIGNING_CERT: The name (CN) of the certificate to sign the executable with
+# - MAC_SIGNING_B64: The base64 encoded certificate to sign the executable with
 # - MAC_INSTALLING_CERT: The name (CN) of the certificate to sign the installation with
+# - MAC_INSTALLING_B64: The base64 encoded certificate to sign the executable with
 # - MAC_SIGNING_ID: The apple id to sign the package with
 # - MAC_TEAM_ID: The team id to sign the package with
 # - MAC_TEAM_PASSWORD : The password for the apple id
-#
+# - MAC_KEYSTORE_PASSWD: The password for the keychain
 # Documentation for pkgbuild and productbuild: https://developer.apple.com/library/archive/documentation/DeveloperTools/Reference/DistributionDefinitionRef/Chapters/Distribution_XML_Ref.html
 # Taken from surge tuning-note-claps: https://github.com/surge-synthesizer/tuning-note-claps/tree/main/scripts
 
@@ -26,10 +28,6 @@ JUCEDIR=$2
 # The version of the product (eg 1.0.0)
 VERSION=$3
 
-if [[ -z $VERSION ]]; then
-  VERSION="0.0.NIGHTLY"
-fi
-
 TMPDIR="./installer-tmp"
 VST3="${PRODUCT}.vst3"
 AU="${PRODUCT}.component"
@@ -39,6 +37,17 @@ PRODUCTFILE=`echo $PRODUCT | tr ' ' '-' | tr '[:upper:]' '[:lower:]'`
 OUTPUT_BASE_FILENAME="${PRODUCTFILE}-macOS-$VERSION"
 INDIR="input_bin"
 TARGET_DIR="output_bin"
+
+### CERTFICATE IMPORT 
+security create-keychain -p $MAC_KEYSTORE_PASSWD build.keychain
+security default-keychain -s build.keychain
+security unlock-keychain -p $MAC_KEYSTORE_PASSWD build.keychain
+echo $MAC_SIGNING_B64 | base64 --decode > signing.p12
+# echo $MAC_INSTALLING_B64 | base64 --decode > installing.p12
+security import signing.p12 -k build.keychain -P $MAC_KEYSTORE_PASSWD -T /usr/bin/codesign -T /usr/bin/pkgbuild
+# security import installing.p12 -k build.keychain -P $MAC_KEYSTORE_PASSWD -T /usr/bin/pkgbuild
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MAC_KEYSTORE_PASSWD build.keychain
+security set-key-partition-list -S apple-tool:,apple:,pkgbuild: -s -k $MAC_KEYSTORE_PASSWD build.keychain
 
 # Copy JUCE artifact to the staging directory
 mkdir -p $INDIR
@@ -94,7 +103,6 @@ build_flavor()
       codesign  -vvv --deep --stric "$workdir/$flavorprod"
 
       pkgbuild --sign "$MAC_INSTALLING_CERT" --root $workdir --identifier $ident --version $VERSION --install-location "$loc" "$TMPDIR/${PRODUCTFILE}_${flavor}.pkg" $sca || exit 1
-      echo pkgbuild --sign "$MAC_INSTALLING_CERT" --root $workdir --identifier $ident --version $VERSION --install-location "$loc" "$TMPDIR/${PRODUCTFILE}_${flavor}.pkg" $sca || exit 1
     else
       pkgbuild --root $workdir --identifier $ident --version $VERSION --install-location "$loc" "$TMPDIR/${PRODUCTFILE}_${flavor}.pkg" $sca || exit 1
     fi
