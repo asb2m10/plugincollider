@@ -91,8 +91,8 @@ jobs:
         MAC_INSTALLING_B64: ${{ secrets.MAC_INSTALLING_B64 }}
         MAC_SIGNING_ID: ${{ secrets.MAC_SIGNING_ID }}
         MAC_TEAM_ID: ${{ secrets.MAC_TEAM_ID }}
-        MAC_TEAM_PASSWORD : $ {{ secrets.MAC_TEAM_PASSWORD }}
-        MAC_KEYSTORE_PASSWD: $ {{ secrets.MAC_KEYSTORE_PASSWD }}
+        MAC_TEAM_PASSWORD : ${{ secrets.MAC_TEAM_PASSWORD }}
+        MAC_KEYSTORE_PASSWD: ${{ secrets.MAC_KEYSTORE_PASSWD }}
       run: |
         ./Resources/installer/macos/make_pkg.sh PluginCollider ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}} ${{ env.BUILD_VERSION }}
 
