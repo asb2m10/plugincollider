@@ -44,10 +44,11 @@ security default-keychain -s build.keychain
 security unlock-keychain -p $MAC_KEYSTORE_PASSWD build.keychain
 echo $MAC_SIGNING_B64 | base64 --decode > signing.p12
 # echo $MAC_INSTALLING_B64 | base64 --decode > installing.p12
-security import signing.p12 -k build.keychain -P $MAC_KEYSTORE_PASSWD -T /usr/bin/codesign -T /usr/bin/pkgbuild
+security import signing.p12 -k build.keychain -P $MAC_KEYSTORE_PASSWD -T /usr/bin/codesign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
 # security import installing.p12 -k build.keychain -P $MAC_KEYSTORE_PASSWD -T /usr/bin/pkgbuild
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MAC_KEYSTORE_PASSWD build.keychain
 security set-key-partition-list -S apple-tool:,apple:,pkgbuild: -s -k $MAC_KEYSTORE_PASSWD build.keychain
+security set-key-partition-list -S apple-tool:,apple:,productbuild: -s -k $MAC_KEYSTORE_PASSWD build.keychain
 
 # Copy JUCE artifact to the staging directory
 mkdir -p $INDIR
