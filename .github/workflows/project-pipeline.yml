@@ -87,7 +87,7 @@ jobs:
 
     - name: Package
       run: |
-        ./Resources/installer/macos/make_pkg.sh PluginCollider {{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}} ${{ env.BUILD_VERSION }}
+        ./Resources/installer/macos/make_pkg.sh PluginCollider ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}} ${{ env.BUILD_VERSION }}
 
     - name: Upload
       uses: actions/upload-artifact@v4
