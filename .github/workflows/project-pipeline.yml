@@ -54,54 +54,54 @@ jobs:
   #         ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/CLAP/*.clap/**
   #         ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/Standalone/*
 
-  build-macos:
-    runs-on: macos-latest
-    environment: PRD
+  # build-macos:
+  #   runs-on: macos-latest
+  #   environment: PRD
 
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #     with:
+  #       submodules: recursive
 
-    - name: Set build type
-      shell: bash
-      run: |
-        if [ "$GITHUB_REF_TYPE" == "tag" ]; then
-            echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
-            echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
-        else
-            echo "BUILD_TYPE=Debug" >> "$GITHUB_ENV"
-            echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
-        fi
-        echo "BUILD PARM =========="
-        cat $GITHUB_ENV
+  #   - name: Set build type
+  #     shell: bash
+  #     run: |
+  #       if [ "$GITHUB_REF_TYPE" == "tag" ]; then
+  #           echo "BUILD_TYPE=Release" >> "$GITHUB_ENV"
+  #           echo "BUILD_VERSION=${GITHUB_REF_NAME:1}" >> "$GITHUB_ENV"
+  #       else
+  #           echo "BUILD_TYPE=Debug" >> "$GITHUB_ENV"
+  #           echo "BUILD_VERSION=DEVBUILD" >> "$GITHUB_ENV"
+  #       fi
+  #       echo "BUILD PARM =========="
+  #       cat $GITHUB_ENV
 
-    - name: Build
-      run: |
-        brew install libsndfile
-        sudo xcode-select -s '/Applications/Xcode_15.4.app/Contents/Developer'
-        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_FLAGS=-DDEXED_ID=${{ env.BUILD_VERSION }}
-        cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
+  #   - name: Build
+  #     run: |
+  #       brew install libsndfile
+  #       sudo xcode-select -s '/Applications/Xcode_15.4.app/Contents/Developer'
+  #       cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_FLAGS=-DDEXED_ID=${{ env.BUILD_VERSION }}
+  #       cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
 
-    - name: Package
-      env:
-        MAC_SIGNING_CERT: ${{ secrets.MAC_SIGNING_CERT }}
-        MAC_SIGNING_B64: ${{ secrets.MAC_SIGNING_B64 }}
-        MAC_INSTALLING_CERT: ${{ secrets.MAC_INSTALLING_CERT }}
-        MAC_INSTALLING_B64: ${{ secrets.MAC_INSTALLING_B64 }}
-        MAC_SIGNING_ID: ${{ secrets.MAC_SIGNING_ID }}
-        MAC_TEAM_ID: ${{ secrets.MAC_TEAM_ID }}
-        MAC_TEAM_PASSWORD : ${{ secrets.MAC_TEAM_PASSWORD }}
-        MAC_KEYSTORE_PASSWD: ${{ secrets.MAC_KEYSTORE_PASSWD }}
-      run: |
-        ./Resources/installer/macos/make_pkg.sh PluginCollider ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}} ${{ env.BUILD_VERSION }}
+  #   - name: Package
+  #     env:
+  #       MAC_SIGNING_CERT: ${{ secrets.MAC_SIGNING_CERT }}
+  #       MAC_SIGNING_B64: ${{ secrets.MAC_SIGNING_B64 }}
+  #       MAC_INSTALLING_CERT: ${{ secrets.MAC_INSTALLING_CERT }}
+  #       MAC_INSTALLING_B64: ${{ secrets.MAC_INSTALLING_B64 }}
+  #       MAC_SIGNING_ID: ${{ secrets.MAC_SIGNING_ID }}
+  #       MAC_TEAM_ID: ${{ secrets.MAC_TEAM_ID }}
+  #       MAC_TEAM_PASSWORD : ${{ secrets.MAC_TEAM_PASSWORD }}
+  #       MAC_KEYSTORE_PASSWD: ${{ secrets.MAC_KEYSTORE_PASSWD }}
+  #     run: |
+  #       ./Resources/installer/macos/make_pkg.sh PluginCollider ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}} ${{ env.BUILD_VERSION }}
 
-    - name: Upload
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-bin
-        path: |
-          ${{github.workspace}}/output_bin/*.dmg
+  #   - name: Upload
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: macos-bin
+  #       path: |
+  #         ${{github.workspace}}/output_bin/*.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -125,10 +125,11 @@ jobs:
         cat $GITHUB_ENV
 
     - name: Install Deps
+      shell: bash
       run: |
           choco install libsndfile
           echo "$PATH"
-          echo "C:/Program Files/libsndfile/bin" >> $GITHUB_PATH
+          echo "C:\Program Files\libsndfile\bin" >> $GITHUB_PATH
 
     - name: Build
       run: |
