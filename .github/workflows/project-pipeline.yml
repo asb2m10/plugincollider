@@ -124,9 +124,14 @@ jobs:
         echo "BUILD PARM =========="
         cat $GITHUB_ENV
 
-    - name: Build
+    - name: Install Deps
       run: |
           choco install libsndfile
+          echo "$PATH"
+          echo "C:/Program Files/libsndfile/bin" >> $GITHUB_PATH
+
+    - name: Build
+      run: |
           cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_FLAGS=-DDEXED_ID="${{ env.BUILD_VERSION }}"
           cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
 
