@@ -110,6 +110,8 @@ if(MSVC)
 # _ENABLE_ATOMIC_ALIGNMENT_FIX prevents the build from breaking when VS2015 update 2 upwards are used
 # see http://boost.2283326.n4.nabble.com/lockfree-ENABLE-ATOMIC-ALIGNMENT-FIX-for-VS-2015-Update-2-td4685955.html
   add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -D_ENABLE_ATOMIC_ALIGNMENT_FIX)
+
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif(MSVC)
 
 # If SuperCollider has been built, use SC_Version.h otherwise use the forged version
@@ -134,20 +136,21 @@ juce_add_plugin(PluginCollider
     # VERSION ...                               # Set this if the plugin version is different to the project version
      ICON_BIG  Resources/ui/plugincollider_256x256.png
     # ICON_SMALL ...
-    COMPANY_NAME "Digital Suburban"             # Specify the name of the plugin's author
-    IS_SYNTH FALSE                              # Is this a synth or an effect?
-    # NEEDS_MIDI_INPUT TRUE/FALSE               # Does the plugin need midi input?
-    # NEEDS_MIDI_OUTPUT TRUE/FALSE              # Does the plugin need midi output?
-    # IS_MIDI_EFFECT TRUE/FALSE                 # Is this plugin a MIDI effect?
-    # EDITOR_WANTS_KEYBOARD_FOCUS TRUE/FALSE    # Does the editor need keyboard focus?
-    COPY_PLUGIN_AFTER_BUILD TRUE                # Should the plugin be installed to a default location after building?
-    PLUGIN_MANUFACTURER_CODE DGSB               # A four-character manufacturer id with at least one upper-case character
-    PLUGIN_CODE PLSC                            # A unique four-character plugin id with exactly one upper-case character
-                                                # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
-    FORMATS VST3 Standalone                     # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
-    PRODUCT_NAME "PluginCollider")              # The name of the final executable, which can differ from the target name
+    COMPANY_NAME "Digital Suburban"                 # Specify the name of the plugin's author
+	BUNDLE_ID "com.digitalsuburban.PluginCollider"  # The bundle identifier for the plugin, if it should be a standalone bundle
+    IS_SYNTH FALSE                                  # Is this a synth or an effect?
+    NEEDS_MIDI_INPUT TRUE                           # Does the plugin need midi input?
+    # NEEDS_MIDI_OUTPUT TRUE/FALSE                  # Does the plugin need midi output?
+    # IS_MIDI_EFFECT TRUE/FALSE                     # Is this plugin a MIDI effect?
+    # EDITOR_WANTS_KEYBOARD_FOCUS TRUE/FALSE        # Does the editor need keyboard focus?
+    COPY_PLUGIN_AFTER_BUILD TRUE                    # Should the plugin be installed to a default location after building?
+    PLUGIN_MANUFACTURER_CODE DGSB                   # A four-character manufacturer id with at least one upper-case character
+    PLUGIN_CODE PLSC                                # A unique four-character plugin id with exactly one upper-case character
+                                                    # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
+    FORMATS VST3 Standalone                         # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
+    PRODUCT_NAME "PluginCollider")                  # The name of the final executable, which can differ from the target name
 
-# juce_generate_juce_header(PluginCollider)
+	# juce_generate_juce_header(PluginCollider)
 
 if (APPLE)
 	target_sources(PluginCollider
@@ -201,7 +204,7 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_UnitDef.cpp
 	${SC_DIR}/server/scsynth/SC_World.cpp
 
-	# plugins ============================================
+	# sc plugins ==========================================
 	${SC_DIR}/server/plugins/BinaryOpUGens.cpp
 	${SC_DIR}/server/plugins/ChaosUGens.cpp
 	${SC_DIR}/server/plugins/DelayUGens.cpp
@@ -229,7 +232,7 @@ target_sources(PluginCollider
 	${SC_DIR}/server/plugins/PartitionedConvolution.cpp
 	${SC_DIR}/server/plugins/PV_UGens.cpp
 
-	# plugincoliider itself =============================
+	# plugincollider itself =============================
 	Source/UDPPort.cpp 
 	Source/OSCMessages.cpp
     Source/PluginEditor.cpp
