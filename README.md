@@ -9,11 +9,31 @@ An external installation of [SuperCollider](https://supercollider.github.io/) is
 
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
-## Interacting with SuperCollider server (scsynth) from DAW
+# State of the project
+
+SuperCollider is a highly modular ecosystem (sc-plugins, scsynth definitions) that needs to be adapted for each platform from the VST3/clap component. For now consider this as a vanilla scsynth implementation with no external plugins.
+
+Latest builds are availables from [https://github.com/asb2m10/plugincollider/actions](https://github.com/asb2m10/plugincollider/actions)
+
+### TODO
+
+- [ ] implement /midi and /velocity from DAW midi message
+- [ ] more accurate OSC DAW timing
+- [ ] *Windows* bundle sndfile.dll within the plugin installation
+- [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed
+
+### macOS notes
+
+macOS makes it harder to use shared libraries from SuperCollider to Plugincollider. It is easier to build it from your computer for now. I will check how I can do this without having to repackage everything in the plugin within the distribution.
+
+### Windows notes
+
+If you use the binary, you need to install [libsndfile](https://libsndfile.github.io/libsndfile/) and the bin directory (C:\Program Files\libsndfile\bin) must be put in the Windows PATH. Consider using [Chocolatey](https://chocolatey.org/install) with `choco install libsndfile` that does this for you.
+
+# Interacting with SuperCollider server (scsynth) from DAW
 
 Plugin parameters are now linked to the first 32 control buses. The SC code must normalize the values from 0.0 to 1.0; consider using a helper function like this:
 
-    (
     var mkMappedBus = {|sym, defaultRange=([0, 1]), type=\linlin|
         var v = NamedControl.kr(sym);
         var range = NamedControl.kr(sym ++ 'Range', defaultRange);
@@ -25,8 +45,7 @@ Plugin parameters are now linked to the first 32 control buses. The SC code must
             var sig = SinOsc.ar(freq);
             Out.ar(sig, sig!2 * 1);
         }).play(s);
-    )
-
+    
     b = Bus.control(s, 1);
     x.map(\freq, b)
 

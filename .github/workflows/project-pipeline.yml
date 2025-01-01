@@ -56,7 +56,7 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
-    environment: PRD
+  # environment: PRD
 
     steps:
     - uses: actions/checkout@v4
@@ -83,25 +83,29 @@ jobs:
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_FLAGS=-DDEXED_ID=${{ env.BUILD_VERSION }}
         cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
 
-    - name: Package
-      env:
-        MAC_SIGNING_CERT: ${{ secrets.MAC_SIGNING_CERT }}
-        MAC_SIGNING_B64: ${{ secrets.MAC_SIGNING_B64 }}
-        MAC_INSTALLING_CERT: ${{ secrets.MAC_INSTALLING_CERT }}
-        MAC_INSTALLING_B64: ${{ secrets.MAC_INSTALLING_B64 }}
-        MAC_SIGNING_ID: ${{ secrets.MAC_SIGNING_ID }}
-        MAC_TEAM_ID: ${{ secrets.MAC_TEAM_ID }}
-        MAC_TEAM_PASSWORD : ${{ secrets.MAC_TEAM_PASSWORD }}
-        MAC_KEYSTORE_PASSWD: ${{ secrets.MAC_KEYSTORE_PASSWD }}
-      run: |
-        ./Resources/installer/macos/make_pkg.sh PluginCollider ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}} ${{ env.BUILD_VERSION }}
+    # - name: Package
+    #   env:
+    #     MAC_SIGNING_CERT: ${{ secrets.MAC_SIGNING_CERT }}
+    #     MAC_SIGNING_B64: ${{ secrets.MAC_SIGNING_B64 }}
+    #     MAC_INSTALLING_CERT: ${{ secrets.MAC_INSTALLING_CERT }}
+    #     MAC_INSTALLING_B64: ${{ secrets.MAC_INSTALLING_B64 }}
+    #     MAC_SIGNING_ID: ${{ secrets.MAC_SIGNING_ID }}
+    #     MAC_TEAM_ID: ${{ secrets.MAC_TEAM_ID }}
+    #     MAC_TEAM_PASSWORD : ${{ secrets.MAC_TEAM_PASSWORD }}
+    #     MAC_KEYSTORE_PASSWD: ${{ secrets.MAC_KEYSTORE_PASSWD }}
+    #   run: |
+    #     ./Resources/installer/macos/make_pkg.sh PluginCollider ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}} ${{ env.BUILD_VERSION }}
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
         name: macos-bin
         path: |
-          ${{github.workspace}}/output_bin/*.dmg
+          ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/VST3/*.vst3/**
+          ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/CLAP/*.clap/**
+          ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/AU/*.component/**
+          ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/Standalone/*.app/**
+    #     ${{github.workspace}}/output_bin/*.dmg
 
   build-windows:
     runs-on: windows-latest
