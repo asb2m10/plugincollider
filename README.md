@@ -13,7 +13,7 @@ An external installation of [SuperCollider](https://supercollider.github.io/) is
 
 SuperCollider is a highly modular ecosystem (sc-plugins, scsynth definitions) that needs to be adapted for each platform from the VST3/clap component. For now consider this as a vanilla scsynth implementation with no external plugins.
 
-Latest builds are availables from [https://github.com/asb2m10/plugincollider/actions](https://github.com/asb2m10/plugincollider/actions)
+Latest build are available from [https://github.com/asb2m10/plugincollider/actions](https://github.com/asb2m10/plugincollider/actions)
 
 ### TODO
 
