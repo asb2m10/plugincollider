@@ -4,13 +4,17 @@ cmake_minimum_required(VERSION 3.15)
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
+if(NOT SC_DIR)
 set(SC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/supercollider)
+endif()
 
 enable_language(C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+if(NOT MSVC) # should be enought with line above
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} -std=c++17")
+endif()
 
 if (APPLE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
@@ -27,12 +31,7 @@ set(CMAKE_FIND_LIBRARY_PREFIXES ${CMAKE_FIND_LIBRARY_PREFIXES} "")
 
 set(PLUGINS_DIR ${SC_DIR}/build/server/plugins/${CMAKE_BUILD_TYPE}/)
 file(GLOB PLUGINS ${SC_DIR}/build/server/plugins/${CMAKE_BUILD_TYPE}/*.scx)
-if (NOT WIN32)
-	set(SNDFILE_INCLUDE_DIR ${SC_DIR}/external_libraries/libsndfile)
-else()
-	set(SNDFILE_INCLUDE_DIR "C:/Program Files/libsndfile/include")
-	set(SNDFILE_LIBRARY "C:/Program Files/libsndfile/lib/sndfile.lib")
-endif()
+
 set(BOOST_INCLUDE_DIR ${SC_DIR}/external_libraries/boost)
 set(TLSF_INCLUDE_DIR ${SC_DIR}/external_libraries/TLSF-2.4.6/src)
 
@@ -42,8 +41,33 @@ set_property(SOURCE ${SC_DIR}/common/SC_Filesystem_macos.cpp PROPERTY COMPILE_FL
 
 set(CMAKE_MODULE_PATH ${SC_DIR}/cmake_modules)
 include (${SC_DIR}/cmake_modules/FinalFile.cmake)
-include (${SC_DIR}/cmake_modules/FindSndfile.cmake)
-#find_package(Sndfile)
+
+
+# Setup libsndfile
+include(FetchContent)
+FetchContent_Declare(
+    sndfile
+    GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
+    GIT_TAG 17a19ab264fcf238f46104cea9af9a0a5ca3786d
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+
+set(ENABLE_EXTERNAL_LIBS OFF CACHE INTERNAL "xiph!")
+set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "build shared!")
+set(BUILD_PROGRAMS OFF CACHE INTERNAL "dont build programs")
+set(BUILD_TESTING OFF CACHE INTERNAL "dont build testing")
+set(BUILD_EXAMPLES OFF CACHE INTERNAL "dont build examples")
+set(ENABLE_CPACK OFF CACHE INTERNAL "disable cpack")
+set(ENABLE_STATIC_RUNTIME OFF CACHE INTERNAL "disable static runtime")
+set(ENABLE_PACKAGE_CONFIG OFF CACHE INTERNAL "disable package config")
+
+FetchContent_MakeAvailable(sndfile)
+
+set(SNDFILE_LIBRARIES sndfile)
+set(SNDFILE_INCLUDE_DIR ${sndfile_SOURCE_DIR}/include)
+
 
 include_directories(${SC_DIR}/external_libraries
 	${BOOST_INCLUDE_DIR}
