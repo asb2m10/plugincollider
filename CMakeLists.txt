@@ -41,33 +41,34 @@ set_property(SOURCE ${SC_DIR}/common/SC_Filesystem_macos.cpp PROPERTY COMPILE_FL
 
 set(CMAKE_MODULE_PATH ${SC_DIR}/cmake_modules)
 include (${SC_DIR}/cmake_modules/FinalFile.cmake)
+if (NOT APPLE AND NOT WIN32)
+	set(SNDFILE_INCLUDE_DIR ${SC_DIR}/external_libraries/libsndfile)
+else()
+	# On Apple and Windows, we build a local sndfile
+	# Setup libsndfile
+	include(FetchContent)
+	FetchContent_Declare(
+    	sndfile
+    	GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
+    	GIT_TAG 17a19ab264fcf238f46104cea9af9a0a5ca3786d
+    	GIT_PROGRESS TRUE
+    	GIT_SHALLOW TRUE
+	)
 
+	set(ENABLE_EXTERNAL_LIBS OFF CACHE INTERNAL "xiph!")
+	set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "build shared!")
+	set(BUILD_PROGRAMS OFF CACHE INTERNAL "dont build programs")
+	set(BUILD_TESTING OFF CACHE INTERNAL "dont build testing")
+	set(BUILD_EXAMPLES OFF CACHE INTERNAL "dont build examples")
+	set(ENABLE_CPACK OFF CACHE INTERNAL "disable cpack")
+	set(ENABLE_STATIC_RUNTIME OFF CACHE INTERNAL "disable static runtime")
+	set(ENABLE_PACKAGE_CONFIG OFF CACHE INTERNAL "disable package config")
 
-# Setup libsndfile
-include(FetchContent)
-FetchContent_Declare(
-    sndfile
-    GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
-    GIT_TAG 17a19ab264fcf238f46104cea9af9a0a5ca3786d
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
+	FetchContent_MakeAvailable(sndfile)
 
-
-set(ENABLE_EXTERNAL_LIBS OFF CACHE INTERNAL "xiph!")
-set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "build shared!")
-set(BUILD_PROGRAMS OFF CACHE INTERNAL "dont build programs")
-set(BUILD_TESTING OFF CACHE INTERNAL "dont build testing")
-set(BUILD_EXAMPLES OFF CACHE INTERNAL "dont build examples")
-set(ENABLE_CPACK OFF CACHE INTERNAL "disable cpack")
-set(ENABLE_STATIC_RUNTIME OFF CACHE INTERNAL "disable static runtime")
-set(ENABLE_PACKAGE_CONFIG OFF CACHE INTERNAL "disable package config")
-
-FetchContent_MakeAvailable(sndfile)
-
-set(SNDFILE_LIBRARIES sndfile)
-set(SNDFILE_INCLUDE_DIR ${sndfile_SOURCE_DIR}/include)
-
+	set(SNDFILE_LIBRARIES sndfile)
+	set(SNDFILE_INCLUDE_DIR ${sndfile_SOURCE_DIR}/include)
+endif()
 
 include_directories(${SC_DIR}/external_libraries
 	${BOOST_INCLUDE_DIR}
