@@ -17,7 +17,7 @@ jobs:
     - name: Install Linux Dependencies
       if: runner.os == 'Linux'
       run: |
-        sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev ccache xvfb libjack-dev
+        sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev ccache xvfb libjack-dev libsndfile-dev
 
     - uses: actions/checkout@v4
       with:
@@ -126,13 +126,6 @@ jobs:
         fi
         echo "BUILD PARM =========="
         cat $GITHUB_ENV
-
-    - name: Install Deps
-      shell: bash
-      run: |
-          choco install libsndfile
-          echo "$PATH"
-          echo "C:\Program Files\libsndfile\bin" >> $GITHUB_PATH
 
     - name: Build
       run: |
