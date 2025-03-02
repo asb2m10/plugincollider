@@ -84,7 +84,7 @@ include_directories(${SC_DIR}/external_libraries
 	${SC_DIR}/include/common
     ${SC_DIR}/include/server/
     ${SC_DIR}/include/plugin_interface
-	${SC_DIR}/include/plugin_interface	
+	${SC_DIR}/include/plugin_interface
     ${SC_DIR}/server/scsynth/
 	${SC_DIR}/server/common
     ${CMAKE_CURRENT_SOURCE_DIR}/Source
@@ -93,8 +93,10 @@ include_directories(${SC_DIR}/external_libraries
 # This is a hack since we will define our own Driver
 add_definitions("-DSC_AUDIO_API=SC_AUDIO_API_PORTAUDIO")
 
-# TODO: find the loading mechanism upon STATIC_PLUGINS
-add_definitions("-DSTATIC_PLUGINS")
+if (NOT SC_DYNAMIC_PLUGINS)
+	add_definitions("-DSTATIC_PLUGINS")
+endif()
+
 if (APPLE)
 	add_definitions("-DSC_DARWIN")
 	add_definitions("-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0")
@@ -141,7 +143,7 @@ if(MSVC)
 endif(MSVC)
 
 # If SuperCollider has been built, use SC_Version.h otherwise use the forged version
-IF (EXISTS ${SC_DIR}/build/common) 
+IF (EXISTS ${SC_DIR}/build/common)
 	include_directories(${SC_DIR}/build/common)
 ELSE()
 	include_directories(Source/generated)
@@ -197,6 +199,38 @@ if (WIN32)
 	${SC_DIR}/common/SC_Filesystem_win.cpp)
 endif (WIN32)
 
+if (NOT SC_DYNAMIC_PLUGINS)
+target_sources(PluginCollider
+    PRIVATE
+	# sc plugins ==========================================
+	${SC_DIR}/server/plugins/BinaryOpUGens.cpp
+	${SC_DIR}/server/plugins/ChaosUGens.cpp
+	${SC_DIR}/server/plugins/DelayUGens.cpp
+	${SC_DIR}/server/plugins/DemandUGens.cpp
+	${SC_DIR}/server/plugins/DemoUGens.cpp
+	${SC_DIR}/server/plugins/DynNoiseUGens.cpp
+	${SC_DIR}/server/plugins/FilterUGens.cpp
+	${SC_DIR}/server/plugins/GendynUGens.cpp
+	${SC_DIR}/server/plugins/GrainUGens.cpp
+	${SC_DIR}/server/plugins/IOUGens.cpp
+	${SC_DIR}/server/plugins/LFUGens.cpp
+	${SC_DIR}/server/plugins/MulAddUGens.cpp
+	${SC_DIR}/server/plugins/NoiseUGens.cpp
+	${SC_DIR}/server/plugins/OscUGens.cpp
+	${SC_DIR}/server/plugins/PanUGens.cpp
+	${SC_DIR}/server/plugins/PhysicalModelingUGens.cpp
+	${SC_DIR}/server/plugins/ReverbUGens.cpp
+	${SC_DIR}/server/plugins/TestUGens.cpp
+	${SC_DIR}/server/plugins/TriggerUGens.cpp
+	${SC_DIR}/server/plugins/UnaryOpUGens.cpp
+	${SC_DIR}/server/plugins/DiskIO_UGens.cpp
+	${SC_DIR}/server/plugins/FFT_UGens.cpp
+	${SC_DIR}/server/plugins/FFTInterfaceTable.cpp
+	${SC_DIR}/server/plugins/FFT2InterfaceTable.cpp
+	${SC_DIR}/server/plugins/PartitionedConvolution.cpp
+	${SC_DIR}/server/plugins/PV_UGens.cpp)
+endif()
+
 target_sources(PluginCollider
     PRIVATE
 	${BOOST_LIBS}
@@ -229,34 +263,6 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_Unit.cpp
 	${SC_DIR}/server/scsynth/SC_UnitDef.cpp
 	${SC_DIR}/server/scsynth/SC_World.cpp
-
-	# sc plugins ==========================================
-	${SC_DIR}/server/plugins/BinaryOpUGens.cpp
-	${SC_DIR}/server/plugins/ChaosUGens.cpp
-	${SC_DIR}/server/plugins/DelayUGens.cpp
-	${SC_DIR}/server/plugins/DemandUGens.cpp
-	${SC_DIR}/server/plugins/DemoUGens.cpp
-	${SC_DIR}/server/plugins/DynNoiseUGens.cpp
-	${SC_DIR}/server/plugins/FilterUGens.cpp
-	${SC_DIR}/server/plugins/GendynUGens.cpp
-	${SC_DIR}/server/plugins/GrainUGens.cpp
-	${SC_DIR}/server/plugins/IOUGens.cpp
-	${SC_DIR}/server/plugins/LFUGens.cpp
-	${SC_DIR}/server/plugins/MulAddUGens.cpp
-	${SC_DIR}/server/plugins/NoiseUGens.cpp
-	${SC_DIR}/server/plugins/OscUGens.cpp
-	${SC_DIR}/server/plugins/PanUGens.cpp
-	${SC_DIR}/server/plugins/PhysicalModelingUGens.cpp
-	${SC_DIR}/server/plugins/ReverbUGens.cpp
-	${SC_DIR}/server/plugins/TestUGens.cpp
-	${SC_DIR}/server/plugins/TriggerUGens.cpp
-	${SC_DIR}/server/plugins/UnaryOpUGens.cpp
-	${SC_DIR}/server/plugins/DiskIO_UGens.cpp
-	${SC_DIR}/server/plugins/FFT_UGens.cpp
-	${SC_DIR}/server/plugins/FFTInterfaceTable.cpp
-	${SC_DIR}/server/plugins/FFT2InterfaceTable.cpp
-	${SC_DIR}/server/plugins/PartitionedConvolution.cpp
-	${SC_DIR}/server/plugins/PV_UGens.cpp
 
 	# plugincollider itself =============================
 	Source/UDPPort.cpp 

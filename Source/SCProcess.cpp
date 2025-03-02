@@ -133,7 +133,11 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     options.mNumOutputBusChannels = numOutputs;
     options.mVerbosity = 2;
     options.mMaxLogins = 32;
+#if STATIC_PLUGINS
+    scprintf("SC_PLUGIN_PATH is ignored since plugincollider is compiled with SC static plugins\n");
+#else
     options.mUGensPluginPath = pluginsPath.toRawUTF8();
+#endif
 
     // For now the only way to set SynthDefs path
     putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthdefsPath).toRawUTF8());
