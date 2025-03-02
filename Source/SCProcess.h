@@ -51,7 +51,8 @@ class SCProcess {
     SCProcess();
     ~SCProcess();
     void quit();
-    void setup(float sampleRate, int buffSize, int numInputs, int numOutput, int udpPort);
+    void setup(float sampleRate, int buffSize, int numInputs, int numOutput, int udpPort,
+        juce::String pluginsPath, juce::String synthdefsPath);
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
     int portNum;

@@ -55,8 +55,6 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 #else
     pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
 #endif
-    putenv((char*) (juce::String("SC_PLUGIN_PATH=") + pluginPath).toRawUTF8());
-   //putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthPath).toRawUTF8());
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
@@ -138,7 +136,7 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     // juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application
     // Support/SuperCollider/synthdefs");
     superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
-                        getTotalNumOutputChannels(), udpPort);
+                        getTotalNumOutputChannels(), udpPort, pluginPath, synthPath);
 }
 
 void PluginColliderAudioProcessor::releaseResources() {

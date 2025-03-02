@@ -94,7 +94,7 @@ int SCProcess::findNextFreeUdpPort(int startNum) {
 }
 
 void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
-                      int numOutputs, int udpPort) {
+                      int numOutputs, int udpPort, juce::String pluginsPath, juce::String synthdefsPath) {
 
     // avoid restarting server if the settings are the same
     if (world != nullptr) {
@@ -133,6 +133,10 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     options.mNumOutputBusChannels = numOutputs;
     options.mVerbosity = 2;
     options.mMaxLogins = 32;
+    options.mUGensPluginPath = pluginsPath.toRawUTF8();
+
+    // For now the only way to set SynthDefs path
+    putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthdefsPath).toRawUTF8());
 
     world = World_New(&options);
     world->mDumpOSC = 0;
@@ -166,6 +170,9 @@ bool SCProcess::unrollOSCPacket(int inSize, char *inData,
 
     if (!lock.isLocked())
         return false;
+
+    if (world->mDumpOSC)
+        dumpOSC(world->mDumpOSC, inSize, inData);
 
     if (!strcmp(inData, "#bundle")) { // is a bundle
         char *data;
@@ -305,7 +312,9 @@ void SCProcess::setControlBusValue(int bus, float value) {
     world->mControlBus[bus] = value;
 }
 
-void SCProcess::quit() {}
+void SCProcess::quit() {
+    // NO-UP since we dont want the plugin to close
+}
 
 int scprocess_scprintf(const char *fmt, va_list ap) {
     char buf[4096];

@@ -19,16 +19,12 @@ Latest build are available from [https://github.com/asb2m10/plugincollider/actio
 
 - [ ] implement /midi and /velocity from DAW midi message
 - [ ] more accurate OSC DAW timing
-- [ ] *Windows* bundle sndfile.dll within the plugin installation
+- [x] *Windows* bundle sndfile.dll within the plugin installation
 - [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed
 
 ### macOS notes
 
 macOS makes it harder to use shared libraries from SuperCollider to Plugincollider. It is easier to build it from your computer for now. I will check how I can do this without having to repackage everything in the plugin within the distribution.
-
-### Windows notes
-
-If you use the binary, you need to install [libsndfile](https://libsndfile.github.io/libsndfile/) and the bin directory (C:\Program Files\libsndfile\bin) must be put in the Windows PATH. Consider using [Chocolatey](https://chocolatey.org/install) with `choco install libsndfile` that does this for you.
 
 # Interacting with SuperCollider server (scsynth) from DAW
 
@@ -53,7 +49,7 @@ Please note that control buses are not yet read from server to DAW.
 
 ## Build instructions
 
-Be sure to install SuperCollider and JUCE dependencies; dont forget [sndfile](https://github.com/libsndfile/libsndfile). Then clone recursivly the repository and build Plugincollider like a normal cmake project :
+Be sure to install SuperCollider and JUCE dependencies; dont forget [sndfile](https://github.com/libsndfile/libsndfile) on Linux. Then clone recursivly the repository and build Plugincollider like a normal cmake project :
 
     git clone --recursive https://github.com/asb2m10/Plugincollider
     cd Plugincollider

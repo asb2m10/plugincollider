@@ -30,7 +30,7 @@ static void udp_reply_func(struct ReplyAddress *addr, char *msg, int size) {
     socket->send_to(buffer(msg, size), endpoint, 0, errc);
 
     if (errc)
-        printf("%s\n", errc.message().c_str());
+        scprintf("%s\n", errc.message().c_str());
 }
 
 /////
