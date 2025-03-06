@@ -75,13 +75,18 @@ int SCProcess::findNextFreeUdpPort(int startNum) {
     mBindSockAddr.sin_family = AF_INET;
     mBindSockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     mBindSockAddr.sin_port = htons(port);
-    const char on = 1;
-    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    //const char on = 1;
+    //setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
-    while (bind(server_socket, (struct sockaddr *)&mBindSockAddr,
-                sizeof(mBindSockAddr)) < 0) {
+    while (bind(server_socket, (struct sockaddr *)&mBindSockAddr, sizeof(mBindSockAddr)) < 0) {
+#ifdef _WIN32
+        int err = WSAGetLastError();
+        if (--numberOfTries < 0 || (err != WSAEADDRINUSE)) {
+            scprintf("unable to bind udp socket. error: %d, tries left:%d\n", err, numberOfTries);
+#else
         if (--numberOfTries < 0 || (errno != EADDRINUSE)) {
-            scprintf("unable to bind udp socket\n");
+            scprintf("unable to bind udp socket. errno: %d, tries left:%d\n", errno, numberOfTries);
+#endif
             return -1;
         }
         port++;
