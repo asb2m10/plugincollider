@@ -93,6 +93,12 @@ include_directories(${SC_DIR}/external_libraries
 # This is a hack since we will define our own Driver
 add_definitions("-DSC_AUDIO_API=SC_AUDIO_API_PORTAUDIO")
 
+if(NOT APPLE)
+	#apple gets it`s own definition in SC_fftlib.cpp
+	#this can be changed to SC_FFT_FFTW when we can link to fftw
+	add_definitions("-DSC_FFT_GREEN")
+endif()
+
 if (NOT SC_DYNAMIC_PLUGINS)
 	add_definitions("-DSTATIC_PLUGINS")
 endif()
