@@ -26,6 +26,7 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     setUdpPortButton.onClick = [this] () {
         juce::String port = udpPort.getText();
         audioProcessor.setUdpPort(port);
+        udpPort.setText(juce::String(audioProcessor.udpPort.getListenPort()), true);
     };
 
     configButton.setButtonText("Configure");
