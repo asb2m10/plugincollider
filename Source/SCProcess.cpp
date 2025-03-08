@@ -77,6 +77,10 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
             return;
     }
 
+    if ( ! juce::isPowerOfTwo(buffSize) ) {
+        scprintf("Warning: your DAW latency settings is not based on the power of two. Some SC plugins might not work properly.\n");
+    }
+
     this->sampleRate = sampleRate;
     bufferSize = buffSize;
     this->numInputs = numInputs;

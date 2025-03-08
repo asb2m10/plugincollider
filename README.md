@@ -15,6 +15,10 @@ SuperCollider is a highly modular ecosystem (sc-plugins, scsynth definitions) th
 
 Latest build are available from [https://github.com/asb2m10/plugincollider/actions](https://github.com/asb2m10/plugincollider/actions)
 
+### Known issues
+
+* Be sure to set your DAW latency size to a power of two (256, 512, 1024) otherwise some SC plugins might not work properly.
+
 ### TODO
 
 - [ ] implement /midi and /velocity from DAW midi message
