@@ -15,15 +15,26 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     : AudioProcessorEditor(&p), audioProcessor(p),
       logViewer(&(p.logger.content)) {
 
+    addAndMakeVisible(udpPort);
+    addAndMakeVisible(setUdpPortButton);
+
+    udpPort.setBounds(10, 8, 70, 25);
+    udpPort.setInputFilter(new juce::TextEditor::LengthAndCharacterRestriction(5, "0123456789"), true);
+    udpPort.setText(juce::String(p.udpPort.getListenPort()), true);
+    setUdpPortButton.setBounds(70, 8, 100, 25);
+    setUdpPortButton.setButtonText("Set UDP Port");
+    setUdpPortButton.onClick = [this] () {
+        juce::String port = udpPort.getText();
+        audioProcessor.setUdpPort(port);
+    };
+
     configButton.setButtonText("Configure");
     addAndMakeVisible(configButton);
-    configButton.setBounds(10, 18, 130, 25);
+    configButton.setBounds(10, 38, 130, 25);
 
     configButton.onClick = [ this ] {
         settingsWindow = new juce::AlertWindow("PluginCollider settings", "", juce::AlertWindow::NoIcon);
 
-        settingsWindow->addTextBlock("Preferd UDP port");
-        settingsWindow->addTextEditor("udpPort", juce::String(audioProcessor.udpPort));
         settingsWindow->addTextBlock("Plugin path");
         settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);
         settingsWindow->addTextBlock("Scsynth path");
@@ -35,7 +46,6 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
             if (r) {
                 scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
                 juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
-                prop->setValue("udpPort", this->settingsWindow->getTextEditorContents("udpPort"));
                 prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
                 prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("synthPath"));
                 audioProcessor.appProp.saveIfNeeded();
@@ -53,15 +63,21 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     cb1Attachment.reset(new juce::SliderParameterAttachment(*parameter, cb1, nullptr));
 
     addAndMakeVisible(logViewer);
-    logViewer.setBounds(10, 48, 680, 340);
+    logViewer.setBounds(10, 75, 680, 340);
+
+    addAndMakeVisible(rebootButton);
+    rebootButton.setBounds(542, 38, 150, 25);
+    rebootButton.setButtonText("Reboot server");
+    rebootButton.onClick = [this] {
+        audioProcessor.superCollider.reboot();
+    };
 
     addAndMakeVisible(stats);
-    stats.setBounds(212, 18, 480, 25);
+    stats.setBounds(212, 8, 480, 25);
     stats.setJustificationType(juce::Justification::centredRight);
 
     startTimer(400);
-
-    setSize(700, 400);
+    setSize(700, 450);
 }
 
 PluginColliderAudioProcessorEditor::~PluginColliderAudioProcessorEditor() {
@@ -78,7 +94,7 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
     SCProcess::WorldStats worldStats =
         audioProcessor.superCollider.getWorldStats();
     stats.setText(juce::String::formatted(
-                      "udp port: %i units: %i graph: %i groups: %i", audioProcessor.superCollider.portNum, worldStats.mNumUnits,
+                      "units: %i graph: %i groups: %i", worldStats.mNumUnits,
                       worldStats.mNumGraphs, worldStats.mNumGroups),
                   juce::dontSendNotification);
 }

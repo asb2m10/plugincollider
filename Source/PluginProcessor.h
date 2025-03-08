@@ -12,6 +12,7 @@
 #include "SCProcess.h"
 #include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "UDPPort.h"
 
 class PluginColliderAudioProcessorEditor;
 
@@ -27,12 +28,20 @@ class SuperLogger : public juce::Logger {
     }
 };
 
+namespace IDs
+{
+#define DECLARE_ID(name) const juce::Identifier name (#name);
+    DECLARE_ID(ROOT)
+    DECLARE_ID(udpPort)
+};
+
 //==============================================================================
 /**
  */
 class PluginColliderAudioProcessor : public juce::AudioProcessor, public juce::AudioProcessorParameter::Listener {
   public:
     SCProcess superCollider;
+    UDPPort udpPort;
 
     //==============================================================================
     PluginColliderAudioProcessor();
@@ -74,12 +83,11 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor, public juce::A
     bool getActivityMonitor();
 
     SuperLogger logger;
-    int setUdpPort(juce::String value);
+    bool setUdpPort(juce::String value);
 
     friend PluginColliderAudioProcessorEditor;
 
   private:
-    int udpPort = 8898;
     juce::String pluginPath;
     juce::String synthPath;
 
@@ -92,13 +100,16 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor, public juce::A
     juce::ApplicationProperties appProp;
 
     void parameterValueChanged (int parameterIndex, float newValue) override {
-      command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
-          this->superCollider.setControlBusValue(parameterIndex-1, newValue);
-      });
+        command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
+            this->superCollider.setControlBusValue(parameterIndex-1, newValue);
+        });
     }
 
     void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override {
     }
+
+    bool bindUdpPort();
+    juce::ValueTree pluginState;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

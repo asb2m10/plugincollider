@@ -18,31 +18,19 @@
 
 #pragma once
 
+#include <stdio.h>
 #include "SC_CoreAudio.h"
 #include "SC_HiddenWorld.h"
 #include "SC_World.h"
 #include "SC_WorldOptions.h"
-
 #include "OSCMessages.h"
-#include "UDPPort.h"
-
-#include <stdio.h>
-#ifdef WIN32    
-    #include <iphlpapi.h>
-#else
-    #include <sys/socket.h>
-    #include <unistd.h>
-#endif
-
-
+#include "sc_msg_iter.h"
 #include "SCPluginDriver.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class UDPPort;
-
 class SCProcess {
-  public:
+public:
     struct WorldStats {
         uint32 mNumUnits, mNumGraphs, mNumGroups;
         WorldStats() { mNumUnits = mNumGraphs = mNumGroups = 0; }
@@ -51,11 +39,12 @@ class SCProcess {
     SCProcess();
     ~SCProcess();
     void quit();
-    void setup(float sampleRate, int buffSize, int numInputs, int numOutput, int udpPort,
-        juce::String pluginsPath, juce::String synthdefsPath);
+
+    void setup(float sampleRate, int buffSize, int numInputs, int numOutput,
+               juce::String pluginPath, juce::String synthdefPath);
+    void reboot();
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
-    int portNum;
 
     // [ TO BE CALLED WITH WOLRDLOCK ]
     void setControlBusValue(int bus, float value);
@@ -64,8 +53,10 @@ class SCProcess {
         const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(
             worldLock);
         WorldStats stats;
-        if (scopeLock.isLocked()) {
-            if (world != nullptr) {
+        if (scopeLock.isLocked())
+        {
+            if (world != nullptr)
+            {
                 stats.mNumUnits = world->mNumUnits;
                 stats.mNumGraphs = world->mNumGraphs;
                 stats.mNumGroups = world->mNumGroups;
@@ -74,20 +65,25 @@ class SCProcess {
         return stats;
     }
 
-  private:
+private:
     World *world;
     juce::CriticalSection worldLock;
 
-    int findNextFreeUdpPort(int startNum);
-    UDPPort *mPort;
+    void bootServer();
 
     // ATTIC
     // ---
     string synthName;
-    void startUp(WorldOptions options, string pluginsPath, string synthdefsPath,
-                 int preferredPort);
     void makeSynth();
     void sendParamChangeMessage(string name, float value);
     void sendNote(int64 oscTime, int note, int velocity);
     void sendTick(int64 oscTime, int bus);
+
+    float sampleRate;
+    int bufferSize;
+    int numInputs;
+    int numOutputs;
+    juce::String pluginPath;
+    juce::String synthdefPath;
+
 };

@@ -8,6 +8,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "UDPPort.h"
 
 //==============================================================================
 PluginColliderAudioProcessor::PluginColliderAudioProcessor()
@@ -46,7 +47,6 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 
     // TODO: move this to the .config directory.
     juce::PropertiesFile *prop = appProp.getUserSettings();
-    setUdpPort(prop->getValue("udpPort", "8898"));
     synthPath = prop->getValue("synthPath", "");
 #ifdef WIN32
     pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");
@@ -55,6 +55,12 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 #else
     pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
 #endif
+
+    udpPort.handleMessage = [this] (char *msg, int size, OSC_Packet *packet) {
+        return superCollider.unrollOSCPacket(size, msg, packet);
+    };
+
+    pluginState = juce::ValueTree(IDs::ROOT);
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
@@ -63,17 +69,33 @@ PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
     juce::Logger::setCurrentLogger(nullptr);
 }
 
-int PluginColliderAudioProcessor::setUdpPort(juce::String value) {
-    int udpPortCheck = atoi(value.toRawUTF8());
-
-    if ( udpPortCheck == 0 ) {
-        scprintf("Invalid udp port specified: %s. Setting to default 8898\n", value.toRawUTF8());
-        udpPort = 8898;
-        return 1;
+bool PluginColliderAudioProcessor::bindUdpPort() {
+    if ( pluginState.hasProperty(IDs::udpPort)) {
+        int targetPort = pluginState.getProperty(IDs::udpPort);
+        if ( udpPort.connectToPort(targetPort) ) {
+            return true;
+        }
+        scprintf("Unable to bind to registred port %d, seeking random available port\n", targetPort);
     }
 
-    udpPort = udpPortCheck;
-    return 0;
+    if ( ! udpPort.connectToNextFreePort(8898) ) {
+        scprintf("Unable to find free UDP port\n");
+        return false;
+    }
+    pluginState.setProperty(IDs::udpPort, udpPort.getListenPort(), nullptr);
+    return true;
+}
+
+bool PluginColliderAudioProcessor::setUdpPort(juce::String value) {
+    int udpPortCheck = atoi(value.toRawUTF8());
+
+    if ( udpPortCheck < 1024 || udpPortCheck > 65535 ) {
+        scprintf("Invalid udp port specified: %s\n", value.toRawUTF8());
+        return false;
+    }
+
+    pluginState.setProperty(IDs::udpPort, udpPortCheck, nullptr);
+    return bindUdpPort();
 }
 
 //==============================================================================
@@ -135,8 +157,12 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     // juce::File synthdefs =
     // juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application
     // Support/SuperCollider/synthdefs");
+
     superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
-                        getTotalNumOutputChannels(), udpPort, pluginPath, synthPath);
+                        getTotalNumOutputChannels(), pluginPath, synthPath);
+    if ( ! bindUdpPort() ) {
+        scprintf("Unable to bind to UDP port");
+    }
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
@@ -191,18 +217,14 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
 }
 
 //==============================================================================
-void PluginColliderAudioProcessor::getStateInformation(
-    juce::MemoryBlock &destData) {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
+    std::unique_ptr<juce::XmlElement> xml(pluginState.createXml());
+    copyXmlToBinary (*xml, destData);
 }
 
-void PluginColliderAudioProcessor::setStateInformation(const void *data,
-                                                       int sizeInBytes) {
-    // You should use this method to restore your parameters from this memory
-    // block, whose contents will have been created by the getStateInformation()
-    // call.
+void PluginColliderAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
+    pluginState = juce::ValueTree::fromXml(*xmlState);
 }
 
 bool PluginColliderAudioProcessor::getActivityMonitor() {
