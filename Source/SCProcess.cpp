@@ -1,5 +1,5 @@
 /*
-    PluginCollider Copyright (c) 2021 Pascal Gauthier.
+    PluginCollider Copyright (c) 2021-2025 Pascal Gauthier.
         SuperColliderAU Copyright (c) 2006 Gerard Roma.
 
  This program is free software; you can redistribute it and/or modify
@@ -44,57 +44,24 @@ int scprocess_scprintf(const char *format, va_list ap);
 ///// from SC_ComPort.cpp ///////////
 bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
 
-SCProcess::SCProcess() {
+SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
     SetPrintFunc(scprocess_scprintf);
-
     world = nullptr;
-    portNum = 0;
 }
 
 SCProcess::~SCProcess() {
     const juce::ScopedLock lock(worldLock);
     if (world) {
+#ifdef STATIC_PLUGINS
+        World_Cleanup(world, false);
+#else
         World_Cleanup(world, true);
-        mPort->stopAsioThread();
-        free(mPort);
+#endif
     }
-}
-
-int SCProcess::findNextFreeUdpPort(int startNum) {
-    int server_socket = -1;
-    struct sockaddr_in mBindSockAddr;
-    int numberOfTries = 100;
-    int port = startNum;
-    if ((server_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        scprintf("failed to create udp socket\n");
-        return -1;
-    }
-
-    memset(&mBindSockAddr, 0, sizeof(mBindSockAddr));
-    // bzero((char *)&mBindSockAddr, );
-    mBindSockAddr.sin_family = AF_INET;
-    mBindSockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    mBindSockAddr.sin_port = htons(port);
-    const char on = 1;
-    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-
-    while (bind(server_socket, (struct sockaddr *)&mBindSockAddr,
-                sizeof(mBindSockAddr)) < 0) {
-        if (--numberOfTries < 0 || (errno != EADDRINUSE)) {
-            scprintf("unable to bind udp socket\n");
-            return -1;
-        }
-        port++;
-        mBindSockAddr.sin_port = htons(port);
-    }
-
-    close(server_socket);
-
-    return port;
 }
 
 void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
-                      int numOutputs, int udpPort, juce::String pluginsPath, juce::String synthdefsPath) {
+                      int numOutputs, juce::String pluginPath, juce::String synthdefPath) {
 
     // avoid restarting server if the settings are the same
     if (world != nullptr) {
@@ -104,28 +71,45 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
         same &= buffSize == world->mBufLength;
         same &= numInputs == world->mNumInputs;
         same &= numOutputs == world->mNumOutputs;
-
+        same &= pluginPath == this->pluginPath;
+        same &= synthdefPath == this->synthdefPath;
         if (same)
             return;
     }
 
-    if (portNum == 0) {
-        portNum = findNextFreeUdpPort(udpPort);
-        if (this->portNum >= 0) {
-            std::string bindTo("0.0.0.0");
-            mPort = new UDPPort(this, bindTo.c_str(), this->portNum);
-        }
+    if ( ! juce::isPowerOfTwo(buffSize) ) {
+        logger.scprintf("Warning: your DAW latency settings is not based on the power of two. Some SC plugins might not work properly.\n");
     }
 
+    this->sampleRate = sampleRate;
+    bufferSize = buffSize;
+    this->numInputs = numInputs;
+    this->numOutputs = numOutputs;
+    this->pluginPath = pluginPath;
+    this->synthdefPath = synthdefPath;
+
+    bootServer();
+}
+
+void SCProcess::reboot() {
+    if ( world == nullptr )
+        return;
+    bootServer();
+}
+
+void SCProcess::bootServer() {
     const juce::ScopedLock lock(worldLock);
 
-    if (world != nullptr)
+    if (world != nullptr) {
         World_Cleanup(world, false);
+    }
+
+    logger.scprintf("*************** SuperCollider booting ***************\n");
 
     WorldOptions options;
     options.mPreferredSampleRate = sampleRate;
-    options.mBufLength = buffSize;
-    options.mPreferredHardwareBufferFrameSize = buffSize;
+    options.mBufLength = bufferSize;
+    options.mPreferredHardwareBufferFrameSize = bufferSize;
     options.mMaxWireBufs = kDefaultNumWireBufs;
     options.mRealTimeMemorySize = kDefaultRtMemorySize;
     options.mNumBuffers = 8192;
@@ -134,13 +118,14 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     options.mVerbosity = 2;
     options.mMaxLogins = 32;
 #if STATIC_PLUGINS
-    scprintf("SC_PLUGIN_PATH is ignored since plugincollider is compiled with SC static plugins\n");
+    logger.scprintf("SC_PLUGIN_PATH is ignored since plugincollider is compiled with SC static plugins\n");
 #else
-    options.mUGensPluginPath = pluginsPath.toRawUTF8();
+    options.mUGensPluginPath = pluginPath.toRawUTF8();
 #endif
 
     // For now the only way to set SynthDefs path
-    putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthdefsPath).toRawUTF8());
+    if (! synthdefPath.isEmpty() )
+        putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthdefPath).toRawUTF8());
 
     world = World_New(&options);
     world->mDumpOSC = 0;
@@ -149,31 +134,27 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
         OSCMessages messages;
         small_scpacket packet = messages.initTreeMessage();
         World_SendPacket(world, 16, (char *)packet.buf, null_reply_func);
-        scprintf("*******************************************************\n");
-        scprintf("PluginCollider Initialized \n");
-        scprintf("PluginCollider mPreferredHardwareBufferFrameSize: %d \n",
-                 options.mPreferredHardwareBufferFrameSize);
-        scprintf("PluginCollider mBufLength: %d \n", options.mBufLength);
-        scprintf("PluginCollider  port: %d \n", portNum);
-        scprintf("PluginCollider  mMaxWireBufs: %d \n", options.mMaxWireBufs);
-        scprintf("PluginCollider  mRealTimeMemorySize: %d \n",
-                 options.mRealTimeMemorySize);
-        scprintf("PluginCollider  mNumInputBusChannels %d \n",
-                 options.mNumInputBusChannels);
-        scprintf("PluginCollider  mNumOutputBusChannels %d \n",
-                 options.mNumOutputBusChannels);
-        scprintf("*******************************************************\n");
+        logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
+                 "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
+                options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
+                options.mNumInputBusChannels, options.mNumOutputBusChannels);
+        logger.scprintf("*************** SuperCollider boot success ***************\n");
     } else {
-        scprintf("Unable to initiale world\n");
+        logger.scprintf("*************** SuperCollider boot failed ***************\n");
     }
 }
 
-bool SCProcess::unrollOSCPacket(int inSize, char *inData,
-                                OSC_Packet *inPacket) {
+bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) {
     const juce::ScopedTryLock lock(worldLock);
 
     if (!lock.isLocked())
-        return false;
+        return true;
+
+    if (world == NULL)
+        return true;
+
+    if (!world->mRunning)
+        return true;
 
     if (world->mDumpOSC)
         dumpOSC(world->mDumpOSC, inSize, inData);
@@ -309,7 +290,7 @@ void SCProcess::sendNote(int64 oscTime, int note, int velocity) {
 
 void SCProcess::setControlBusValue(int bus, float value) {
     if ( bus < 0 || bus >= world->mNumControlBusChannels ) {
-        scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
+        logger.scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
         return;
     }
     world->mControlBusTouched[bus] = world->mBufCounter;
@@ -323,8 +304,8 @@ void SCProcess::quit() {
 int scprocess_scprintf(const char *fmt, va_list ap) {
     char buf[4096];
     int p = vsnprintf(buf, sizeof(buf), fmt, ap);
-    printf("%s", buf);
-    juce::Logger::writeToLog(string(buf));
+    printf(buf);
+    juce::Logger::writeToLog(juce::String(buf));
     return p;
 }
 

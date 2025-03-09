@@ -15,12 +15,18 @@ SuperCollider is a highly modular ecosystem (sc-plugins, scsynth definitions) th
 
 Latest build are available from [https://github.com/asb2m10/plugincollider/actions](https://github.com/asb2m10/plugincollider/actions)
 
+### Known issues
+
+* Be sure to set your DAW latency size to a power of two (256, 512, 1024) otherwise some SC plugins might not work properly.
+* If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve the issue.
+
 ### TODO
 
 - [ ] implement /midi and /velocity from DAW midi message
 - [ ] more accurate OSC DAW timing
-- [x] *Windows* bundle sndfile.dll within the plugin installation
 - [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed
+- [ ] move OSC messages to realtime (dsp) thread
+- [x] *Windows* bundle sndfile.dll within the plugin installation
 
 ### macOS notes
 

@@ -62,12 +62,16 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::TextButton freeAll;
     LogViewer logViewer;
     juce::TextButton configButton;
+    juce::TextButton rebootButton;
+    juce::TextEditor udpPort;
+    juce::TextButton setUdpPortButton;
+
     int logLines = 0;
     juce::Label stats;
     juce::AlertWindow *settingsWindow;
 
     // For now this is for debugging
-    juce::Slider cb1;    
+    juce::Slider cb1;
     std::unique_ptr<juce::SliderParameterAttachment> cb1Attachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
