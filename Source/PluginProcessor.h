@@ -16,17 +16,6 @@
 
 class PluginColliderAudioProcessorEditor;
 
-// Dirty cheap logger
-class SuperLogger : public juce::Logger {
-  public:
-    juce::StringArray content;
-    void printf(const char *fmt, ...);
-    void logMessage(const juce::String &message) override {
-        if (content.size() > 4096)
-            content.removeRange(0, 2048);
-        content.add(message);
-    }
-};
 
 namespace IDs
 {

@@ -19,7 +19,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)
               .withOutput("Out-3-4", juce::AudioChannelSet::stereo(), false)
               .withOutput("Out-5-6", juce::AudioChannelSet::stereo(), false)
-              .withOutput("Out-7-8", juce::AudioChannelSet::stereo(), false))
+              .withOutput("Out-7-8", juce::AudioChannelSet::stereo(), false)), superCollider(logger)
 #endif
 {
     addParameter(gain = new juce::AudioParameterFloat("gain", // parameterID
@@ -61,10 +61,14 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     };
 
     pluginState = juce::ValueTree(IDs::ROOT);
+
+    if ( ! bindUdpPort() ) {
+        logger.scprintf("Unable to bind to UDP port");
+    }
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
-    scprintf("PluginCollider bye\n");
+    logger.scprintf("PluginCollider bye\n");
     superCollider.quit();
     juce::Logger::setCurrentLogger(nullptr);
 }
@@ -73,16 +77,20 @@ bool PluginColliderAudioProcessor::bindUdpPort() {
     if ( pluginState.hasProperty(IDs::udpPort)) {
         int targetPort = pluginState.getProperty(IDs::udpPort);
         if ( udpPort.connectToPort(targetPort) ) {
+            logger.scprintf("Server listning to port %d\n", targetPort);
             return true;
         }
-        scprintf("Unable to bind to registred port %d, seeking random available port\n", targetPort);
+        logger.scprintf("Unable to bind to registred port %d, seeking random available port\n", targetPort);
     }
 
     if ( ! udpPort.connectToNextFreePort(8898) ) {
-        scprintf("Unable to find free UDP port\n");
+        logger.scprintf("Unable to find free UDP port\n");
         return false;
     }
-    pluginState.setProperty(IDs::udpPort, udpPort.getListenPort(), nullptr);
+
+    int newPort = udpPort.getListenPort();
+    logger.scprintf("Server listning to port %d\n", newPort);
+    pluginState.setProperty(IDs::udpPort, newPort, nullptr);
     return true;
 }
 
@@ -90,63 +98,13 @@ bool PluginColliderAudioProcessor::setUdpPort(juce::String value) {
     int udpPortCheck = atoi(value.toRawUTF8());
 
     if ( udpPortCheck < 1024 || udpPortCheck > 65535 ) {
-        scprintf("Invalid udp port specified: %s\n", value.toRawUTF8());
+        logger.scprintf("Invalid udp port specified: %s\n", value.toRawUTF8());
         return false;
     }
 
     pluginState.setProperty(IDs::udpPort, udpPortCheck, nullptr);
     return bindUdpPort();
 }
-
-//==============================================================================
-const juce::String PluginColliderAudioProcessor::getName() const {
-    return JucePlugin_Name;
-}
-
-bool PluginColliderAudioProcessor::acceptsMidi() const {
-#if JucePlugin_WantsMidiInput
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool PluginColliderAudioProcessor::producesMidi() const {
-#if JucePlugin_ProducesMidiOutput
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool PluginColliderAudioProcessor::isMidiEffect() const {
-#if JucePlugin_IsMidiEffect
-    return true;
-#else
-    return false;
-#endif
-}
-
-double PluginColliderAudioProcessor::getTailLengthSeconds() const {
-    return 0.0;
-}
-
-int PluginColliderAudioProcessor::getNumPrograms() {
-    return 1; // NB: some hosts don't cope very well if you tell them there are
-              // 0 programs, so this should be at least 1, even if you're not
-              // really implementing programs.
-}
-
-int PluginColliderAudioProcessor::getCurrentProgram() { return 0; }
-
-void PluginColliderAudioProcessor::setCurrentProgram(int index) {}
-
-const juce::String PluginColliderAudioProcessor::getProgramName(int index) {
-    return {};
-}
-
-void PluginColliderAudioProcessor::changeProgramName(
-    int index, const juce::String &newName) {}
 
 //==============================================================================
 void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
@@ -160,9 +118,6 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath);
-    if ( ! bindUdpPort() ) {
-        scprintf("Unable to bind to UDP port");
-    }
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
@@ -232,6 +187,56 @@ bool PluginColliderAudioProcessor::getActivityMonitor() {
     curActivity = false;
     return activity;
 }
+
+//==============================================================================
+const juce::String PluginColliderAudioProcessor::getName() const {
+    return JucePlugin_Name;
+}
+
+bool PluginColliderAudioProcessor::acceptsMidi() const {
+#if JucePlugin_WantsMidiInput
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool PluginColliderAudioProcessor::producesMidi() const {
+#if JucePlugin_ProducesMidiOutput
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool PluginColliderAudioProcessor::isMidiEffect() const {
+#if JucePlugin_IsMidiEffect
+    return true;
+#else
+    return false;
+#endif
+}
+
+double PluginColliderAudioProcessor::getTailLengthSeconds() const {
+    return 0.0;
+}
+
+int PluginColliderAudioProcessor::getNumPrograms() {
+    return 1; // NB: some hosts don't cope very well if you tell them there are
+              // 0 programs, so this should be at least 1, even if you're not
+              // really implementing programs.
+}
+
+int PluginColliderAudioProcessor::getCurrentProgram() { return 0; }
+
+void PluginColliderAudioProcessor::setCurrentProgram(int index) {}
+
+const juce::String PluginColliderAudioProcessor::getProgramName(int index) {
+    return {};
+}
+
+void PluginColliderAudioProcessor::changeProgramName(
+    int index, const juce::String &newName) {}
 
 //==============================================================================
 // This creates new instances of the plugin..

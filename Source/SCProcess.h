@@ -29,6 +29,40 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+// Dirty cheap logger
+class SuperLogger : public juce::Logger {
+public:
+    juce::StringArray content;
+
+    /**
+     * Standard log message from current instance.
+     */
+    void log(const juce::String &message) {
+        logMessage(message);
+    }
+
+    /**
+     * Overriden messasge that might be called from static context.
+     */
+    void logMessage(const juce::String &message) override {
+        if (content.size() > 4096)
+            content.removeRange(0, 2048);
+        content.add(message);
+    }
+
+    /**
+     * Printf-like function that logs to the console and to the logger.
+     */
+    void scprintf(const char *fmt, ...) {
+        va_list ap;
+        va_start(ap, fmt);
+        char buf[4096];
+        int p = vsnprintf(buf, sizeof(buf), fmt, ap);
+        printf("%s", buf);
+        log(juce::String(buf));
+    }
+};
+
 class SCProcess {
 public:
     struct WorldStats {
@@ -36,6 +70,7 @@ public:
         WorldStats() { mNumUnits = mNumGraphs = mNumGroups = 0; }
     };
 
+    SCProcess(SuperLogger &logger);
     SCProcess();
     ~SCProcess();
     void quit();
@@ -66,6 +101,7 @@ public:
     }
 
 private:
+    SuperLogger &logger;
     World *world;
     juce::CriticalSection worldLock;
 

@@ -44,7 +44,7 @@ int scprocess_scprintf(const char *format, va_list ap);
 ///// from SC_ComPort.cpp ///////////
 bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
 
-SCProcess::SCProcess() {
+SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
     SetPrintFunc(scprocess_scprintf);
     world = nullptr;
 }
@@ -78,7 +78,7 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     }
 
     if ( ! juce::isPowerOfTwo(buffSize) ) {
-        scprintf("Warning: your DAW latency settings is not based on the power of two. Some SC plugins might not work properly.\n");
+        logger.scprintf("Warning: your DAW latency settings is not based on the power of two. Some SC plugins might not work properly.\n");
     }
 
     this->sampleRate = sampleRate;
@@ -101,11 +101,10 @@ void SCProcess::bootServer() {
     const juce::ScopedLock lock(worldLock);
 
     if (world != nullptr) {
-        scprintf("Closing server\n");
         World_Cleanup(world, false);
     }
 
-    scprintf("*************** SuperCollider booting ***************\n");
+    logger.scprintf("*************** SuperCollider booting ***************\n");
 
     WorldOptions options;
     options.mPreferredSampleRate = sampleRate;
@@ -119,7 +118,7 @@ void SCProcess::bootServer() {
     options.mVerbosity = 2;
     options.mMaxLogins = 32;
 #if STATIC_PLUGINS
-    scprintf("SC_PLUGIN_PATH is ignored since plugincollider is compiled with SC static plugins\n");
+    logger.scprintf("SC_PLUGIN_PATH is ignored since plugincollider is compiled with SC static plugins\n");
 #else
     options.mUGensPluginPath = pluginPath.toRawUTF8();
 #endif
@@ -135,13 +134,13 @@ void SCProcess::bootServer() {
         OSCMessages messages;
         small_scpacket packet = messages.initTreeMessage();
         World_SendPacket(world, 16, (char *)packet.buf, null_reply_func);
-        scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
+        logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
                 options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
                 options.mNumInputBusChannels, options.mNumOutputBusChannels);
-        scprintf("*************** SuperCollider boot success ***************\n");
+        logger.scprintf("*************** SuperCollider boot success ***************\n");
     } else {
-        scprintf("*************** SuperCollider boot failed ***************\n");
+        logger.scprintf("*************** SuperCollider boot failed ***************\n");
     }
 }
 
@@ -291,7 +290,7 @@ void SCProcess::sendNote(int64 oscTime, int note, int velocity) {
 
 void SCProcess::setControlBusValue(int bus, float value) {
     if ( bus < 0 || bus >= world->mNumControlBusChannels ) {
-        scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
+        logger.scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
         return;
     }
     world->mControlBusTouched[bus] = world->mBufCounter;
@@ -305,8 +304,8 @@ void SCProcess::quit() {
 int scprocess_scprintf(const char *fmt, va_list ap) {
     char buf[4096];
     int p = vsnprintf(buf, sizeof(buf), fmt, ap);
-    printf("%s", buf);
-    juce::Logger::writeToLog(string(buf));
+    printf(buf);
+    juce::Logger::writeToLog(juce::String("[GLOBAL] ") + juce::String(buf));
     return p;
 }
 

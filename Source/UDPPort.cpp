@@ -39,8 +39,6 @@ bool UDPPort::connectToPort(int portNumber) {
     socket->setEnablePortReuse(false);
     if (! socket->bindToPort(portNumber))
         return false;
-
-    scprintf("Server listning to port %d\n", portNumber);
     startThread();
     connected = true;
     return true;
@@ -57,7 +55,6 @@ bool UDPPort::connectToNextFreePort(int startNum) {
 
     for(; startNum < 12000 ; startNum++ ) {
         if ( socket->bindToPort(startNum) ) {
-            scprintf("Server listning to port %d\n", startNum);
             startThread();
             connected = true;
             return true;
