@@ -305,7 +305,7 @@ int scprocess_scprintf(const char *fmt, va_list ap) {
     char buf[4096];
     int p = vsnprintf(buf, sizeof(buf), fmt, ap);
     printf(buf);
-    juce::Logger::writeToLog(juce::String("[GLOBAL] ") + juce::String(buf));
+    juce::Logger::writeToLog(juce::String(buf));
     return p;
 }
 
