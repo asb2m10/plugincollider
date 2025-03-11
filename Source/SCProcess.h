@@ -1,4 +1,5 @@
 /*
+    PluginCollider Copyright (c) 2021-2025 Pascal Gauthier.
         SuperColliderAU Copyright (c) 2006 Gerard Roma.
 
  This program is free software; you can redistribute it and/or modify
@@ -28,6 +29,54 @@
 #include "SCPluginDriver.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
+
+class SynthDef {
+    juce::MemoryBlock memoryBlock;
+    juce::String name;
+
+public:
+    static SynthDef *fromFile(juce::File file) {
+        if (!file.existsAsFile())
+            return nullptr;
+        juce::MemoryBlock content;
+        if (!file.loadFileAsData(content))
+            return nullptr;
+        return SynthDef::fromMemory(content);
+    }
+
+    static SynthDef *fromMemory(juce::MemoryBlock &newContent) {
+        if (newContent.getSize() < 0)
+            return nullptr;
+        juce::MemoryInputStream stream(newContent, false);
+
+        // Check header
+        if (stream.readIntBigEndian() != (('S' << 24) | ('C' << 16) | ('g' << 8) | 'f') /*'SCgf'*/)
+            return nullptr;
+
+        // synthdef version
+        stream.readIntBigEndian();
+
+        // number of synth definition in file
+        stream.readShortBigEndian();
+
+        SynthDef *ret = new SynthDef();
+
+        int sz = stream.readByte();
+        char *c = ((char *)stream.getData() + stream.getPosition());
+
+        ret->name = juce::String(c, sz);
+        ret->memoryBlock = newContent;
+        return ret;
+    }
+
+    juce::MemoryBlock &getContent() {
+        return memoryBlock;
+    }
+
+    juce::String getName() {
+        return name;
+    }
+};
 
 // Dirty cheap logger
 class SuperLogger : public juce::Logger {
@@ -88,10 +137,8 @@ public:
         const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(
             worldLock);
         WorldStats stats;
-        if (scopeLock.isLocked())
-        {
-            if (world != nullptr)
-            {
+        if (scopeLock.isLocked()) {
+            if (world != nullptr) {
                 stats.mNumUnits = world->mNumUnits;
                 stats.mNumGraphs = world->mNumGraphs;
                 stats.mNumGroups = world->mNumGroups;
@@ -100,6 +147,8 @@ public:
         return stats;
     }
 
+    bool loadSynthdef(juce::MemoryBlock &block);
+    void showSynthdef();
 private:
     SuperLogger &logger;
     World *world;
@@ -121,5 +170,4 @@ private:
     int numOutputs;
     juce::String pluginPath;
     juce::String synthdefPath;
-
 };

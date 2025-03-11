@@ -22,10 +22,10 @@ Latest build are available from [https://github.com/asb2m10/plugincollider/actio
 
 ### TODO
 
+- [ ] more accurate handling of "WorldLock" - espacially for OSC messages
 - [ ] implement /midi and /velocity from DAW midi message
 - [ ] more accurate OSC DAW timing
 - [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed
-- [ ] move OSC messages to realtime (dsp) thread
 - [x] *Windows* bundle sndfile.dll within the plugin installation
 
 ### macOS notes
@@ -47,7 +47,7 @@ Plugin parameters are now linked to the first 32 control buses. The SC code must
             var sig = SinOsc.ar(freq);
             Out.ar(sig, sig!2 * 1);
         }).play(s);
-    
+
     b = Bus.control(s, 1);
     x.map(\freq, b)
 

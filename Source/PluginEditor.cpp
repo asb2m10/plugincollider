@@ -13,7 +13,7 @@
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     PluginColliderAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
-      logViewer(&(p.logger.content)) {
+      logViewer(&(p.logger.content)), synthDefPanel(p.pluginState) {
 
     addAndMakeVisible(udpPort);
     addAndMakeVisible(setUdpPortButton);
@@ -73,8 +73,37 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
         audioProcessor.superCollider.reboot();
     };
 
+    addAndMakeVisible(loadSynthdefs);
+    loadSynthdefs.setBounds(300, 8, 150, 25);
+    loadSynthdefs.setButtonText("Load synthdefs");
+    loadSynthdefs.onClick = [this] {
+        scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
+                                               juce::File("/home/asb2m10/.local/share/SuperCollider/synthdefs"),
+                                               "*.scsyndef");
+        auto folderChooserFlags = juce::FileBrowserComponent::openMode;
+
+        scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
+            juce::File scfile (chooser.getResult());
+            SynthDef *def = SynthDef::fromFile(scfile);
+
+            if ( def != nullptr ) {
+                scprintf("Found %s", def->getName().toRawUTF8());
+                audioProcessor.superCollider.loadSynthdef(def->getContent());
+            }
+
+            free(def);
+        });
+    };
+
+    addAndMakeVisible(showSynthdefs);
+    showSynthdefs.setBounds(300, 38, 150, 25);
+    showSynthdefs.setButtonText("Show synthdefs");
+    showSynthdefs.onClick = [this] {
+        audioProcessor.superCollider.showSynthdef();
+    };
+
     addAndMakeVisible(stats);
-    stats.setBounds(212, 8, 480, 25);
+    stats.setBounds(542, 8, 150, 25);
     stats.setJustificationType(juce::Justification::centredRight);
 
     startTimer(400);

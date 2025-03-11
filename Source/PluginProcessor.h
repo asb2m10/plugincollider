@@ -22,12 +22,15 @@ namespace IDs
 #define DECLARE_ID(name) const juce::Identifier name (#name);
     DECLARE_ID(ROOT)
     DECLARE_ID(udpPort)
+    DECLARE_ID(synthdef)
+    DECLARE_ID(autoload)
 };
 
 //==============================================================================
 /**
  */
-class PluginColliderAudioProcessor : public juce::AudioProcessor, public juce::AudioProcessorParameter::Listener {
+class PluginColliderAudioProcessor : public juce::AudioProcessor, 
+      public juce::AudioProcessorParameter::Listener, public juce::ValueTree::Listener {
   public:
     SCProcess superCollider;
     UDPPort udpPort;
@@ -75,6 +78,16 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor, public juce::A
     bool setUdpPort(juce::String value);
 
     friend PluginColliderAudioProcessorEditor;
+    juce::ValueTree pluginState;
+
+    void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
+
+    void loadSynthDef(SynthDef *def) {
+        synthDef.reset(def);
+    }
+
+    void playSynth();
+    void stopSynth();
 
   private:
     juce::String pluginPath;
@@ -98,7 +111,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor, public juce::A
     }
 
     bool bindUdpPort();
-    juce::ValueTree pluginState;
+    std::unique_ptr<SynthDef> synthDef;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

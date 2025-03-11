@@ -26,6 +26,7 @@
 #include "SC_WorldOptions.h"
 #include "sc_msg_iter.h"
 #include "SC_PlugIn.h"
+#include "SC_GraphDef.h"
 
 const int kDefaultPortNumber = 9989;
 const int kDefaultBlockSize = 64;
@@ -142,6 +143,30 @@ void SCProcess::bootServer() {
     } else {
         logger.scprintf("*************** SuperCollider boot failed ***************\n");
     }
+}
+
+void SCProcess::showSynthdef() {
+   for (int i=0;i<world->hw->mGraphDefLib->TableSize();i++) {
+        GraphDef *gf = world->hw->mGraphDefLib->AtIndex(i);
+
+        if ( gf != nullptr ) {
+            if  ( strncmp("system_", (const char*) gf->mNodeDef.mName, 6) )
+                logger.scprintf("%s\n", gf->mNodeDef.mName);
+        }
+    }
+}
+
+bool SCProcess::loadSynthdef(juce::MemoryBlock &block) {
+    const juce::ScopedLock lock(worldLock);
+
+    if (world == nullptr)
+        return false;
+    if ( ! world->mRunning )
+        return false;
+
+    GraphDef *inList = GraphDef_Recv(world, (char *) block.getData(), nullptr);
+    GraphDef_Define(world, inList);
+    return true;
 }
 
 bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) {

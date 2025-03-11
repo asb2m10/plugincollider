@@ -171,6 +171,18 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
     return new PluginColliderAudioProcessorEditor(*this);
 }
 
+void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
+    // if ( property == IDs::synthdef ) {
+    //     juce::var ret = pluginState.getProperty(IDs::synthdef);
+    //     if ( ! ret.isBinaryData() )
+    //         return;
+    //      juce::MemoryBlock *mb = ret.getBinaryData();
+
+    //      std::unique_ptr<SynthDef> def(SynthDef::fromMemory(*mb));
+    //      superCollider.loadSynthdef(def->getContent());
+    // }
+}
+
 //==============================================================================
 void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
     std::unique_ptr<juce::XmlElement> xml(pluginState.createXml());
