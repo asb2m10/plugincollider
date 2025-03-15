@@ -63,8 +63,11 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     juce::AudioParameterFloat *parameter = p.controlBus[0];
     cb1Attachment.reset(new juce::SliderParameterAttachment(*parameter, cb1, nullptr));
 
+    addAndMakeVisible(synthDefPanel);
+    synthDefPanel.setBounds(10, 75, 680, 120);
+
     addAndMakeVisible(logViewer);
-    logViewer.setBounds(10, 75, 680, 340);
+    logViewer.setBounds(10, 175, 680, 265);
 
     addAndMakeVisible(rebootButton);
     rebootButton.setBounds(542, 38, 150, 25);

@@ -61,6 +61,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     };
 
     pluginState = juce::ValueTree(IDs::ROOT);
+    pluginState.addListener(this);
 
     if ( ! bindUdpPort() ) {
         logger.scprintf("Unable to bind to UDP port");
@@ -172,15 +173,17 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
 }
 
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
-    // if ( property == IDs::synthdef ) {
-    //     juce::var ret = pluginState.getProperty(IDs::synthdef);
-    //     if ( ! ret.isBinaryData() )
-    //         return;
-    //      juce::MemoryBlock *mb = ret.getBinaryData();
+    if ( property == IDs::synthdef ) {
+        juce::var ret = pluginState.getProperty(IDs::synthdef);
+        if ( ! ret.isBinaryData() )
+            return;
+        juce::MemoryBlock *mb = ret.getBinaryData();
 
-    //      std::unique_ptr<SynthDef> def(SynthDef::fromMemory(*mb));
-    //      superCollider.loadSynthdef(def->getContent());
-    // }
+        std::unique_ptr<SynthDef> def(SynthDef::fromMemory(*mb));
+        logger.scprintf("Loading %s\n", def->getName().toRawUTF8());
+
+        superCollider.loadSynthdef(def->getContent());
+    }
 }
 
 //==============================================================================

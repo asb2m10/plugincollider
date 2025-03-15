@@ -18,9 +18,12 @@ class SynthDefPanel : public juce::Component {
     juce::ToggleButton autoStart;
     std::unique_ptr<juce::FileChooser> scsynthChooser;
 public:
+    juce::TextButton play;
+    juce::TextButton stop;
+
     SynthDefPanel(juce::ValueTree &vt) : vt(vt) {
         addAndMakeVisible(loaddef);
-        loaddef.setButtonText("Load Synthdef...");
+        loaddef.setButtonText("Load");
         loaddef.onClick = [this] () {
             scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
                                                juce::File("/home/asb2m10/.local/share/SuperCollider/synthdefs"),
@@ -33,16 +36,34 @@ public:
                 def.reset(SynthDef::fromFile(scfile));
 
                 if ( def != nullptr ) {
-                    scprintf("Found %s", def->getName().toRawUTF8());
-                    synthname.setText(def->getName(), juce::NotificationType::dontSendNotification);
+                    synthname.setText(juce::String("Synth: ") + def->getName(), juce::NotificationType::dontSendNotification);
                     this->vt.setProperty(IDs::synthdef, def->getContent(), nullptr);
                 }
             });
         };
+
+        addAndMakeVisible(synthname);
+        synthname.setText("Synth: no synthdef loaded...", juce::NotificationType::dontSendNotification);
+        addAndMakeVisible(play);
+        play.setButtonText("Play");
+        addAndMakeVisible(stop);
+        stop.setButtonText("Stop");
+        addAndMakeVisible(autoStart);
+        autoStart.setButtonText("Auto load");
     }
 
     void refresh() {
 
+    }
+
+    void resized() override {
+        auto bounds = getBounds();
+
+        synthname.setBounds(50, 5, bounds.getWidth() - 200, 25);
+        loaddef.setBounds(0, 5, 50, 25);
+        play.setBounds(0, 35, 50, 25);
+        stop.setBounds(55, 35, 50, 25);
+        autoStart.setBounds(110, 35, 100, 25);
     }
 };
 
