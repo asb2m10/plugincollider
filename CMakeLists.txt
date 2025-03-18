@@ -87,7 +87,7 @@ include_directories(${SC_DIR}/external_libraries
 	${SC_DIR}/include/plugin_interface
     ${SC_DIR}/server/scsynth/
 	${SC_DIR}/server/common
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    ${CMAKE_CURRENT_SOURCE_DIR}/source
 	)
 
 # This is a hack since we will define our own Driver
@@ -152,7 +152,7 @@ endif(MSVC)
 IF (EXISTS ${SC_DIR}/build/common)
 	include_directories(${SC_DIR}/build/common)
 ELSE()
-	include_directories(Source/generated)
+	include_directories(source/generated)
 ENDIF()
 
 if (NOT Boost_FOUND)
@@ -168,7 +168,7 @@ add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory c
 
 juce_add_plugin(PluginCollider
     # VERSION ...                               # Set this if the plugin version is different to the project version
-     ICON_BIG  Resources/ui/plugincollider_256x256.png
+     ICON_BIG  resources/ui/plugincollider_256x256.png
     # ICON_SMALL ...
     COMPANY_NAME "Digital Suburban"                 # Specify the name of the plugin's author
 	BUNDLE_ID "com.digitalsuburban.PluginCollider"  # The bundle identifier for the plugin, if it should be a standalone bundle
@@ -271,12 +271,12 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_World.cpp
 
 	# plugincollider itself =============================
-	Source/UDPPort.cpp
-	Source/OSCMessages.cpp
-    Source/PluginEditor.cpp
-    Source/PluginProcessor.cpp
-	Source/SCProcess.cpp
-	Source/SCPluginDriver.cpp
+	source/UDPPort.cpp
+	source/OSCMessages.cpp
+    source/PluginEditor.cpp
+    source/PluginProcessor.cpp
+	source/SCProcess.cpp
+	source/SCPluginDriver.cpp
 
 	${boost_system_sources}
 	${boost_filesystem_sources})
