@@ -20,40 +20,60 @@ class SynthDefPanel : public juce::Component {
 public:
     juce::TextButton play;
     juce::TextButton stop;
+    juce::TextButton set;
+    juce::TextEditor setterIdx;
+    juce::TextEditor setterValue;
 
     SynthDefPanel(juce::ValueTree &vt) : vt(vt) {
         addAndMakeVisible(loaddef);
         loaddef.setButtonText("Load");
         loaddef.onClick = [this] () {
             scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-                                               juce::File("/home/asb2m10/.local/share/SuperCollider/synthdefs"),
+                                               juce::File("/home/asb2m10/src/plugincollider/scsyndef"),
                                                "*.scsyndef");
             auto folderChooserFlags = juce::FileBrowserComponent::openMode;
 
             scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
                 juce::File scfile (chooser.getResult());
+                if ( !scfile.exists() )
+                    return;
+
                 std::unique_ptr<SynthDef> def;
                 def.reset(SynthDef::fromFile(scfile));
 
                 if ( def != nullptr ) {
                     synthname.setText(juce::String("Synth: ") + def->getName(), juce::NotificationType::dontSendNotification);
                     this->vt.setProperty(IDs::synthdef, def->getContent(), nullptr);
+                } else {
+                    auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("Unable to read Synthdef file");
+                    juce::AlertWindow::showAsync(opts, [](int res) {});
                 }
             });
         };
 
         addAndMakeVisible(synthname);
-        synthname.setText("Synth: no synthdef loaded...", juce::NotificationType::dontSendNotification);
         addAndMakeVisible(play);
         play.setButtonText("Play");
         addAndMakeVisible(stop);
         stop.setButtonText("Stop");
         addAndMakeVisible(autoStart);
         autoStart.setButtonText("Auto load");
+
+        addAndMakeVisible(set);
+        set.setButtonText("Set Value");
+        addAndMakeVisible(setterIdx);
+        addAndMakeVisible(setterValue);
+        refresh();
     }
 
     void refresh() {
-
+        juce::var ret = vt.getProperty(IDs::synthdef);
+        juce::MemoryBlock *mb = ret.getBinaryData();
+        std::unique_ptr<SynthDef> def(SynthDef::fromMemory(*mb));
+        if ( def != nullptr )
+            synthname.setText(juce::String("Synth: ") + def->getName(), juce::NotificationType::dontSendNotification);
+        else
+            synthname.setText("Synth: no synthdef loaded", juce::NotificationType::dontSendNotification);
     }
 
     void resized() override {
@@ -64,6 +84,10 @@ public:
         play.setBounds(0, 35, 50, 25);
         stop.setBounds(55, 35, 50, 25);
         autoStart.setBounds(110, 35, 100, 25);
+
+        set.setBounds(bounds.getWidth() - 95, 5, 90, 25);
+        setterIdx.setBounds(bounds.getWidth() - 95, 35, 30, 25);
+        setterValue.setBounds(bounds.getWidth() - 52, 35, 42, 25);
     }
 };
 
@@ -122,9 +146,6 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::TextEditor udpPort;
     juce::TextButton setUdpPortButton;
     juce::TextButton showSynthdefs;
-    juce::TextButton loadSynthdefs;
-
-    std::unique_ptr<juce::FileChooser> scsynthChooser;
 
     int logLines = 0;
     juce::Label stats;

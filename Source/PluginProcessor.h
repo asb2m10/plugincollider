@@ -21,8 +21,10 @@ namespace IDs
 {
 #define DECLARE_ID(name) const juce::Identifier name (#name);
     DECLARE_ID(ROOT)
-    DECLARE_ID(udpPort)
+    DECLARE_ID(udpport)
     DECLARE_ID(synthdef)
+    DECLARE_ID(synthdefName)
+    DECLARE_ID(synthdefParms)
     DECLARE_ID(autoload)
 };
 

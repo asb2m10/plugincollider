@@ -18,7 +18,7 @@ Latest build are available from [https://github.com/asb2m10/plugincollider/actio
 ### Known issues
 
 * Be sure to set your DAW latency size to a power of two (256, 512, 1024) otherwise some SC plugins might not work properly.
-* If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve the issue.
+* If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve this issue.
 
 ### TODO
 

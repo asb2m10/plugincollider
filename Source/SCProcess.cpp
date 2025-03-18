@@ -1,6 +1,6 @@
 /*
-    PluginCollider Copyright (c) 2021-2025 Pascal Gauthier.
-        SuperColliderAU Copyright (c) 2006 Gerard Roma.
+ PluginCollider Copyright (c) 2021-2025 Pascal Gauthier.
+ SuperColliderAU Copyright (c) 2006 Gerard Roma.
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -34,16 +34,75 @@ const int kDefaultBeatDiv = 1;
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
-#ifdef WIN32
-     #define close closesocket
-#endif
-
 void null_reply_func(struct ReplyAddress * /*addr*/, char * /*msg*/,
                      int /*size*/);
 int scprocess_scprintf(const char *format, va_list ap);
 
 ///// from SC_ComPort.cpp ///////////
 bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
+
+/**
+ * @brief Helper Stream class to read Pascal Strings
+ *
+ */
+class MemoryInputPStream : public juce::MemoryInputStream {
+public:
+    MemoryInputPStream(const juce::MemoryBlock& data) : MemoryInputStream(data, false) {
+    }
+
+    juce::String readPString() {
+        int sz = readByte();
+        if ( sz > getNumBytesRemaining() )
+            jassertfalse;
+        char *c = ((char *)getData() + getPosition());
+        skipNextBytes(sz);
+        return juce::String(c, sz);
+    }
+};
+
+SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
+    if (newContent.getSize() < 0)
+        return nullptr;
+    MemoryInputPStream stream(newContent);
+
+    // Check header
+    if (stream.readIntBigEndian() != (('S' << 24) | ('C' << 16) | ('g' << 8) | 'f') /*'SCgf'*/)
+        return nullptr;
+
+    // synthdef version
+    int version = stream.readIntBigEndian();
+    scprintf("Reading version %d\n", version);
+
+    // number of synth definition in file
+    stream.readShortBigEndian();
+
+    SynthDef *ret = new SynthDef();
+    ret->memoryBlock = newContent;
+    ret->name = stream.readPString();
+
+    /* number of constant */
+    int numConstant = stream.readIntBigEndian();
+    stream.skipNextBytes(numConstant * 4);
+
+    /* number of parameters values */
+    int numParametersValues = stream.readIntBigEndian();
+    jassert(numParametersValues<256);
+
+    ret->parametersValues.reset(new float[numParametersValues]);
+    for(int i=0;i<numParametersValues;i++) {
+        ret->parametersValues[i] = stream.readFloatBigEndian();
+    }
+
+    /* number of parameters names */
+    int numParameters = stream.readIntBigEndian();
+    jassert(numParameters<256);
+
+    for(int i=0;i<numParameters;i++) {
+        ret->parameters.add(stream.readPString());
+        int pos = stream.readIntBigEndian();
+    }
+    return ret;
+}
 
 SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
     SetPrintFunc(scprocess_scprintf);
@@ -61,7 +120,7 @@ SCProcess::~SCProcess() {
     }
 }
 
-void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
+bool SCProcess::setup(float sampleRate, int buffSize, int numInputs,
                       int numOutputs, juce::String pluginPath, juce::String synthdefPath) {
 
     // avoid restarting server if the settings are the same
@@ -75,7 +134,7 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
         same &= pluginPath == this->pluginPath;
         same &= synthdefPath == this->synthdefPath;
         if (same)
-            return;
+            return false;
     }
 
     if ( ! juce::isPowerOfTwo(buffSize) ) {
@@ -90,6 +149,7 @@ void SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     this->synthdefPath = synthdefPath;
 
     bootServer();
+    return true;
 }
 
 void SCProcess::reboot() {
@@ -132,9 +192,10 @@ void SCProcess::bootServer() {
     world->mDumpOSC = 0;
 
     if (world) {
-        OSCMessages messages;
-        small_scpacket packet = messages.initTreeMessage();
-        World_SendPacket(world, 16, (char *)packet.buf, null_reply_func);
+        juce::OSCMessage initTree("/g_new", 1);
+        OSCMemoryBlock block(initTree);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+
         logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
                 options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
@@ -165,10 +226,87 @@ bool SCProcess::loadSynthdef(juce::MemoryBlock &block) {
         return false;
 
     GraphDef *inList = GraphDef_Recv(world, (char *) block.getData(), nullptr);
-    GraphDef_Define(world, inList);
+    if ( inList != nullptr )
+        GraphDef_Define(world, inList);
     return true;
 }
 
+void SCProcess::run(juce::AudioBuffer<float> &buffer,
+                    juce::MidiBuffer &midiMessages) {
+    if (world->mRunning) {
+        SC_PluginAudioDriver *driver =
+            (SC_PluginAudioDriver *)this->world->hw->mAudioDriver;
+        driver->callback(buffer, midiMessages);
+    }
+}
+
+void SCProcess::playSynth(juce::String synthName) {
+    if (world->mRunning) {
+        juce::OSCMessage msg("/s_new", synthName, kDefaultNodeId);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+    }
+}
+
+void SCProcess::playSynthNote(juce::String synthName, int note, int velocity)  {
+    if (world->mRunning) {
+        juce::OSCMessage msg("/s_new", synthName, kDefaultNodeId);
+        msg.addString("note");
+        msg.addInt32(note);
+        msg.addString("velocity");
+        msg.addInt32(velocity);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+    }
+}
+
+void SCProcess::stopNode(int nodeId) {
+    if (world->mRunning) {
+        juce::OSCMessage msg("/n_free", nodeId);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+    }
+}
+
+void SCProcess::setControlBusValue(int bus, float value) {
+    if ( bus < 0 || bus >= world->mNumControlBusChannels ) {
+        logger.scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
+        return;
+    }
+    world->mControlBusTouched[bus] = world->mBufCounter;
+    world->mControlBus[bus] = value;
+}
+
+void SCProcess::setNodeValue(int nodeId, int idx, float value) {
+    if (world->mRunning) {
+        juce::OSCMessage msg("/n_set", nodeId, idx, value);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+    }
+}
+
+void SCProcess::quit() {
+    // NO-UP since we dont want the plugin to close
+}
+
+int scprocess_scprintf(const char *fmt, va_list ap) {
+    char buf[4096];
+    int p = vsnprintf(buf, sizeof(buf), fmt, ap);
+    printf(buf);
+    juce::Logger::writeToLog(juce::String(buf));
+    return p;
+}
+
+// NOUP for now, but JUCE could implement the MouseInputUGen
+PluginLoad(UIUGens) {
+}
+
+
+PluginUnload(UIUGens) {
+}
+
+
+// This is copied from SC source code since it is not made public
 bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) {
     const juce::ScopedTryLock lock(worldLock);
 
@@ -271,73 +409,4 @@ bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) 
     }
 
     return true;
-}
-
-void SCProcess::run(juce::AudioBuffer<float> &buffer,
-                    juce::MidiBuffer &midiMessages) {
-    if (world->mRunning) {
-        SC_PluginAudioDriver *driver =
-            (SC_PluginAudioDriver *)this->world->hw->mAudioDriver;
-        driver->callback(buffer, midiMessages);
-    }
-}
-
-void SCProcess::makeSynth() {
-    if (world->mRunning) {
-        OSCMessages messages;
-        small_scpacket packet;
-        size_t messageSize = messages.createSynthMessage(&packet, synthName);
-        World_SendPacket(world, messageSize, (char *)packet.buf,
-                         null_reply_func);
-    }
-}
-
-void SCProcess::sendParamChangeMessage(string name, float value) {
-    OSCMessages messages;
-    //    if(synthName.){
-    small_scpacket packet;
-    size_t messageSize = messages.parameterMessage(&packet, name, value);
-    World_SendPacket(world, messageSize, (char *)packet.buf, null_reply_func);
-    //    }
-}
-
-void SCProcess::sendTick(int64 oscTime, int bus) {
-    OSCMessages messages;
-    small_scpacket packet = messages.sendTickMessage(oscTime, bus);
-    World_SendPacket(world, 40, (char *)packet.buf, null_reply_func);
-}
-
-void SCProcess::sendNote(int64 oscTime, int note, int velocity) {
-    OSCMessages messages;
-    small_scpacket packet = messages.noteMessage(oscTime, note, velocity);
-    World_SendPacket(world, 92, (char *)packet.buf, null_reply_func);
-}
-
-void SCProcess::setControlBusValue(int bus, float value) {
-    if ( bus < 0 || bus >= world->mNumControlBusChannels ) {
-        logger.scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
-        return;
-    }
-    world->mControlBusTouched[bus] = world->mBufCounter;
-    world->mControlBus[bus] = value;
-}
-
-void SCProcess::quit() {
-    // NO-UP since we dont want the plugin to close
-}
-
-int scprocess_scprintf(const char *fmt, va_list ap) {
-    char buf[4096];
-    int p = vsnprintf(buf, sizeof(buf), fmt, ap);
-    printf(buf);
-    juce::Logger::writeToLog(juce::String(buf));
-    return p;
-}
-
-// NOUP for now, but JUCE could implement the MouseInputUGen
-PluginLoad(UIUGens) {
-}
-
-
-PluginUnload(UIUGens) {
 }

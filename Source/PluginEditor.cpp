@@ -65,6 +65,20 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
     addAndMakeVisible(synthDefPanel);
     synthDefPanel.setBounds(10, 75, 680, 120);
+    synthDefPanel.play.onClick = [this] {
+        audioProcessor.playSynth();
+    };
+
+    synthDefPanel.stop.onClick = [this] {
+        audioProcessor.superCollider.stopNode(1000);
+    };
+
+    synthDefPanel.set.onClick = [this] {
+        juce::String idx = this->synthDefPanel.setterIdx.getTextValue().getValue();
+        juce::String value =  this->synthDefPanel.setterValue.getTextValue().getValue();
+
+        this->audioProcessor.superCollider.setNodeValue(1000, idx.getIntValue(), value.getFloatValue());
+    };
 
     addAndMakeVisible(logViewer);
     logViewer.setBounds(10, 175, 680, 265);
@@ -74,28 +88,6 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     rebootButton.setButtonText("Reboot server");
     rebootButton.onClick = [this] {
         audioProcessor.superCollider.reboot();
-    };
-
-    addAndMakeVisible(loadSynthdefs);
-    loadSynthdefs.setBounds(300, 8, 150, 25);
-    loadSynthdefs.setButtonText("Load synthdefs");
-    loadSynthdefs.onClick = [this] {
-        scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-                                               juce::File("/home/asb2m10/.local/share/SuperCollider/synthdefs"),
-                                               "*.scsyndef");
-        auto folderChooserFlags = juce::FileBrowserComponent::openMode;
-
-        scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
-            juce::File scfile (chooser.getResult());
-            SynthDef *def = SynthDef::fromFile(scfile);
-
-            if ( def != nullptr ) {
-                scprintf("Found %s", def->getName().toRawUTF8());
-                audioProcessor.superCollider.loadSynthdef(def->getContent());
-            }
-
-            free(def);
-        });
     };
 
     addAndMakeVisible(showSynthdefs);

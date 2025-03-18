@@ -271,7 +271,7 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_World.cpp
 
 	# plugincollider itself =============================
-	Source/UDPPort.cpp 
+	Source/UDPPort.cpp
 	Source/OSCMessages.cpp
     Source/PluginEditor.cpp
     Source/PluginProcessor.cpp
@@ -294,6 +294,7 @@ target_link_libraries(PluginCollider
     PRIVATE
         # AudioPluginData           # If we'd created a binary data target, we'd link to it here
         juce::juce_audio_utils
+		juce::juce_osc
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

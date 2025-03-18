@@ -1,20 +1,21 @@
-/*
-    PluginCollider Copyright (c) 2021-2025 Pascal Gauthier.
-        SuperColliderAU Copyright (c) 2006 Gerard Roma.
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+/**
+ *
+ * Plugincollider Copyright (c) 2021-2025 Pascal Gauthier.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+ *
  */
 
 #pragma once
@@ -29,10 +30,17 @@
 #include "SCPluginDriver.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_osc/juce_osc.h>
 
+/**
+ * @brief This class represent a compiled SynthDef file.
+ *
+ */
 class SynthDef {
     juce::MemoryBlock memoryBlock;
     juce::String name;
+    juce::StringArray parameters;
+    std::unique_ptr<float []> parametersValues;
 
 public:
     static SynthDef *fromFile(juce::File file) {
@@ -43,31 +51,7 @@ public:
             return nullptr;
         return SynthDef::fromMemory(content);
     }
-
-    static SynthDef *fromMemory(juce::MemoryBlock &newContent) {
-        if (newContent.getSize() < 0)
-            return nullptr;
-        juce::MemoryInputStream stream(newContent, false);
-
-        // Check header
-        if (stream.readIntBigEndian() != (('S' << 24) | ('C' << 16) | ('g' << 8) | 'f') /*'SCgf'*/)
-            return nullptr;
-
-        // synthdef version
-        stream.readIntBigEndian();
-
-        // number of synth definition in file
-        stream.readShortBigEndian();
-
-        SynthDef *ret = new SynthDef();
-
-        int sz = stream.readByte();
-        char *c = ((char *)stream.getData() + stream.getPosition());
-
-        ret->name = juce::String(c, sz);
-        ret->memoryBlock = newContent;
-        return ret;
-    }
+    static SynthDef *fromMemory(juce::MemoryBlock &newContent);
 
     juce::MemoryBlock &getContent() {
         return memoryBlock;
@@ -75,6 +59,10 @@ public:
 
     juce::String getName() {
         return name;
+    }
+
+    juce::StringArray getParameters() {
+        return parameters;
     }
 };
 
@@ -124,11 +112,14 @@ public:
     ~SCProcess();
     void quit();
 
-    void setup(float sampleRate, int buffSize, int numInputs, int numOutput,
+    /* returns true if the server has booted / rebooted */
+    bool setup(float sampleRate, int buffSize, int numInputs, int numOutput,
                juce::String pluginPath, juce::String synthdefPath);
     void reboot();
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
+
+    void setNodeValue(int nodeId, int idx, float value);
 
     // [ TO BE CALLED WITH WOLRDLOCK ]
     void setControlBusValue(int bus, float value);
@@ -148,6 +139,11 @@ public:
     }
 
     bool loadSynthdef(juce::MemoryBlock &block);
+
+    void playSynth(juce::String name);
+    void playSynthNote(juce::String name, int note, int velocity);
+    void stopNode(int nodeId);
+
     void showSynthdef();
 private:
     SuperLogger &logger;
@@ -158,11 +154,9 @@ private:
 
     // ATTIC
     // ---
-    string synthName;
-    void makeSynth();
-    void sendParamChangeMessage(string name, float value);
-    void sendNote(int64 oscTime, int note, int velocity);
-    void sendTick(int64 oscTime, int bus);
+    //void sendParamChangeMessage(string name, float value);
+    //void sendNote(int64 oscTime, int note, int velocity);
+    //void sendTick(int64 oscTime, int bus);
 
     float sampleRate;
     int bufferSize;

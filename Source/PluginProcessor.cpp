@@ -75,8 +75,8 @@ PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
 }
 
 bool PluginColliderAudioProcessor::bindUdpPort() {
-    if ( pluginState.hasProperty(IDs::udpPort)) {
-        int targetPort = pluginState.getProperty(IDs::udpPort);
+    if ( pluginState.hasProperty(IDs::udpport)) {
+        int targetPort = pluginState.getProperty(IDs::udpport);
         if ( udpPort.connectToPort(targetPort) ) {
             logger.scprintf("Server listning to port %d\n", targetPort);
             return true;
@@ -91,7 +91,7 @@ bool PluginColliderAudioProcessor::bindUdpPort() {
 
     int newPort = udpPort.getListenPort();
     logger.scprintf("Server listning to port %d\n", newPort);
-    pluginState.setProperty(IDs::udpPort, newPort, nullptr);
+    pluginState.setProperty(IDs::udpport, newPort, nullptr);
     return true;
 }
 
@@ -103,7 +103,7 @@ bool PluginColliderAudioProcessor::setUdpPort(juce::String value) {
         return false;
     }
 
-    pluginState.setProperty(IDs::udpPort, udpPortCheck, nullptr);
+    pluginState.setProperty(IDs::udpport, udpPortCheck, nullptr);
     return bindUdpPort();
 }
 
@@ -117,8 +117,18 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     // juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application
     // Support/SuperCollider/synthdefs");
 
-    superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
-                        getTotalNumOutputChannels(), pluginPath, synthPath);
+    if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
+                        getTotalNumOutputChannels(), pluginPath, synthPath) ) {
+        juce::var ret = pluginState.getProperty(IDs::synthdef);
+        if ( ! ret.isBinaryData() )
+            return;
+        juce::MemoryBlock *mb = ret.getBinaryData();
+
+        synthDef.reset(SynthDef::fromMemory(*mb));
+        logger.scprintf("Loading %s\n", synthDef->getName().toRawUTF8());
+
+        superCollider.loadSynthdef(synthDef->getContent());
+    }
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
@@ -134,6 +144,14 @@ bool PluginColliderAudioProcessor::isBusesLayoutSupported(
     return true;
 }
 #endif
+
+void PluginColliderAudioProcessor::playSynth() {
+    if ( synthDef != nullptr ) {
+        superCollider.playSynth(synthDef.get()->getName());
+    } else {
+        logger.scprintf("No synthdef loaded\n");
+    }
+}
 
 void PluginColliderAudioProcessor::processBlock(
     juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) {
@@ -158,6 +176,26 @@ void PluginColliderAudioProcessor::processBlock(
         // posInfo.timeInSeconds;
     }
 
+    int midiNote = 60;
+    int velocity = -1;
+
+    // keep last midi event
+    for (const auto meta : midiMessages) {
+        const auto msg = meta.getMessage();
+        if ( msg.isAllNotesOff() ) {
+            velocity = 0;
+        }
+        midiNote = msg.getNoteNumber();
+        velocity = msg.getVelocity();
+    }
+
+    if ( velocity != -1 )
+        if ( velocity == 0 ) {
+            superCollider.stopNode(kDefaultNodeId);
+        } else {
+            // TODO start synth
+        }
+
     command.call(*this);
     superCollider.run(buffer, midiMessages);
     buffer.applyGain(*gain);
@@ -179,10 +217,9 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
             return;
         juce::MemoryBlock *mb = ret.getBinaryData();
 
-        std::unique_ptr<SynthDef> def(SynthDef::fromMemory(*mb));
-        logger.scprintf("Loading %s\n", def->getName().toRawUTF8());
-
-        superCollider.loadSynthdef(def->getContent());
+        synthDef.reset(SynthDef::fromMemory(*mb));
+        logger.scprintf("Loading %s\n", synthDef->getName().toRawUTF8());
+        superCollider.loadSynthdef(synthDef->getContent());
     }
 }
 
