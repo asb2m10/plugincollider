@@ -1,55 +1,72 @@
 /*
-  ==============================================================================
+    PluginCollider Copyright (c) 2025 Pascal Gauthier.
 
-    This file contains the basic framework code for a JUCE plugin editor.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
-  ==============================================================================
-*/
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
 #pragma once
 
-//#include <JuceHeader.h>
 #include "PluginProcessor.h"
+
+class SynthDefTableListModel : public juce::TableListBoxModel {
+    juce::ValueTree &vt;
+public:
+    SynthDefTableListModel(juce::ValueTree &vt) : vt(vt) {
+
+    }
+
+    int getNumColumns() {
+        return 4;
+    }
+
+    int getNumRows() {
+        return 10;
+    }
+
+    void paintRowBackground(juce::Graphics& g, int rowNumber, int /*width*/, int /*height*/, bool rowIsSelected) override {
+        if (rowIsSelected)
+            g.fillAll (juce::Colours::lightblue);
+        else if (rowNumber % 2)
+            g.fillAll (juce::Colours::blue);
+    }
+
+    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override {
+
+    }
+
+
+};
+
+class SynthDefTableListTable: public juce::TableListBox {
+
+};
 
 class SynthDefPanel : public juce::Component {
     juce::ValueTree &vt;
-    juce::TextButton loaddef;
-    juce::Label synthname;
     juce::ToggleButton autoStart;
-    std::unique_ptr<juce::FileChooser> scsynthChooser;
+    juce::Label synthname;
+    SynthDefTableListTable parmTable;
+    SynthDefTableListModel parmModel;
 public:
+    juce::TextButton loaddef;
     juce::TextButton play;
     juce::TextButton stop;
-    juce::TextButton set;
-    juce::TextEditor setterIdx;
-    juce::TextEditor setterValue;
 
-    SynthDefPanel(juce::ValueTree &vt) : vt(vt) {
+    SynthDefPanel(juce::ValueTree &vt) : vt(vt), parmModel(vt) {
         addAndMakeVisible(loaddef);
         loaddef.setButtonText("Load");
-        loaddef.onClick = [this] () {
-            scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-                                               juce::File("/home/asb2m10/src/plugincollider/scsyndef"),
-                                               "*.scsyndef");
-            auto folderChooserFlags = juce::FileBrowserComponent::openMode;
-
-            scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
-                juce::File scfile (chooser.getResult());
-                if ( !scfile.exists() )
-                    return;
-
-                std::unique_ptr<SynthDef> def;
-                def.reset(SynthDef::fromFile(scfile));
-
-                if ( def != nullptr ) {
-                    synthname.setText(juce::String("Synth: ") + def->getName(), juce::NotificationType::dontSendNotification);
-                    this->vt.setProperty(IDs::synthdef, def->getContent(), nullptr);
-                } else {
-                    auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("Unable to read Synthdef file");
-                    juce::AlertWindow::showAsync(opts, [](int res) {});
-                }
-            });
-        };
 
         addAndMakeVisible(synthname);
         addAndMakeVisible(play);
@@ -57,23 +74,24 @@ public:
         addAndMakeVisible(stop);
         stop.setButtonText("Stop");
         addAndMakeVisible(autoStart);
-        autoStart.setButtonText("Auto load");
+        autoStart.setButtonText("Play synth on load");
 
-        addAndMakeVisible(set);
-        set.setButtonText("Set Value");
-        addAndMakeVisible(setterIdx);
-        addAndMakeVisible(setterValue);
+        addAndMakeVisible(parmTable);
+        parmTable.setModel(&parmModel);
+        parmTable.getHeader().addColumn("Argument", 2, 100);
+        parmTable.getHeader().addColumn("Slider", 1, 200);
+        parmTable.getHeader().addColumn("Low", 3, 30);
+        parmTable.getHeader().addColumn("High", 4, 30);
+        parmTable.getHeader().addColumn("Control Bus", 5, 60);
+
         refresh();
     }
 
     void refresh() {
-        juce::var ret = vt.getProperty(IDs::synthdef);
-        juce::MemoryBlock *mb = ret.getBinaryData();
-        std::unique_ptr<SynthDef> def(SynthDef::fromMemory(*mb));
-        if ( def != nullptr )
-            synthname.setText(juce::String("Synth: ") + def->getName(), juce::NotificationType::dontSendNotification);
-        else
-            synthname.setText("Synth: no synthdef loaded", juce::NotificationType::dontSendNotification);
+        juce::String synthName = vt.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getProperty(IDs::synthName);
+        if ( synthName == "" )
+            synthName = "No synthDef loaded";
+        synthname.setText(juce::String("Synth: ") + synthName, juce::NotificationType::dontSendNotification);
     }
 
     void resized() override {
@@ -83,11 +101,8 @@ public:
         loaddef.setBounds(0, 5, 50, 25);
         play.setBounds(0, 35, 50, 25);
         stop.setBounds(55, 35, 50, 25);
-        autoStart.setBounds(110, 35, 100, 25);
-
-        set.setBounds(bounds.getWidth() - 95, 5, 90, 25);
-        setterIdx.setBounds(bounds.getWidth() - 95, 35, 30, 25);
-        setterValue.setBounds(bounds.getWidth() - 52, 35, 42, 25);
+        autoStart.setBounds(0, 65, 200, 25);
+        parmTable.setBounds(190, 5, bounds.getWidth() - 190, bounds.getHeight());
     }
 };
 
@@ -124,7 +139,7 @@ public:
 /**
  */
 class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                           public juce::Timer {
+                                           public juce::Timer, public juce::MenuBarModel {
   public:
     PluginColliderAudioProcessorEditor(PluginColliderAudioProcessor &);
     ~PluginColliderAudioProcessorEditor() override;
@@ -135,26 +150,33 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
 
     virtual void timerCallback() override;
 
+    juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& str) override;
+    void menuItemSelected(int, int) override;
+    juce::StringArray getMenuBarNames() {
+        return juce::StringArray({"Server", "Synthdef", "Node", "Help" });
+    }
+
   private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     PluginColliderAudioProcessor &audioProcessor;
-    juce::TextButton freeAll;
     LogViewer logViewer;
     juce::TextButton configButton;
-    juce::TextButton rebootButton;
     juce::TextEditor udpPort;
     juce::TextButton setUdpPortButton;
-    juce::TextButton showSynthdefs;
+    std::unique_ptr<juce::FileChooser> scsynthChooser;
 
     int logLines = 0;
     juce::Label stats;
     juce::AlertWindow *settingsWindow;
+    std::unique_ptr<juce::MenuBarComponent> menuBar;
 
     // For now this is for debugging
     juce::Slider cb1;
     std::unique_ptr<juce::SliderParameterAttachment> cb1Attachment;
     SynthDefPanel synthDefPanel;
+
+#ifdef DEBUG
+    std::unique_ptr<juce::DocumentWindow> value_tree_debugger;
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
         PluginColliderAudioProcessorEditor)

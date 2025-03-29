@@ -1,13 +1,24 @@
 /*
-  ==============================================================================
+    PluginCollider Copyright (c) 2025 Pascal Gauthier.
 
-    This file contains the basic framework code for a JUCE plugin editor.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
-  ==============================================================================
-*/
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
+#include "ext/value_tree_debugger.h"
 
 //==============================================================================
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
@@ -15,13 +26,14 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     : AudioProcessorEditor(&p), audioProcessor(p),
       logViewer(&(p.logger.content)), synthDefPanel(p.pluginState) {
 
+    menuBar.reset(new juce::MenuBarComponent(this));
+    addAndMakeVisible(menuBar.get());
+
     addAndMakeVisible(udpPort);
     addAndMakeVisible(setUdpPortButton);
 
-    udpPort.setBounds(10, 8, 70, 25);
     udpPort.setInputFilter(new juce::TextEditor::LengthAndCharacterRestriction(5, "0123456789"), true);
     udpPort.setText(juce::String(p.udpPort.getListenPort()), true);
-    setUdpPortButton.setBounds(70, 8, 100, 25);
     setUdpPortButton.setButtonText("Set UDP Port");
     setUdpPortButton.onClick = [this] () {
         juce::String port = udpPort.getText();
@@ -30,7 +42,7 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     };
 
     configButton.setButtonText("Configure");
-    addAndMakeVisible(configButton);
+    //addAndMakeVisible(configButton);
     configButton.setBounds(10, 38, 130, 25);
 
     configButton.onClick = [ this ] {
@@ -55,8 +67,32 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
     };
 
+    synthDefPanel.loaddef.onClick = [this] () {
+        scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
+                                            juce::File("/home/asb2m10/src/plugincollider/scsyndef"),
+                                            "*.scsyndef");
+        auto folderChooserFlags = juce::FileBrowserComponent::openMode;
+
+        scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
+            juce::File scfile (chooser.getResult());
+            if ( !scfile.exists() )
+                return;
+
+            std::unique_ptr<SynthDef> def;
+            def.reset(SynthDef::fromFile(scfile));
+
+            if ( def != nullptr ) {
+                audioProcessor.loadSynthDef(def.get());
+                synthDefPanel.refresh();
+            } else {
+                auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("Unable to read Synthdef file");
+                juce::AlertWindow::showAsync(opts, [](int res) {});
+            }
+        });
+    };
+
     // For now this is for debugging
-    // addAndMakeVisible(cb1);
+    //addAndMakeVisible(cb1);
     cb1.setSliderStyle(juce::Slider::Rotary);
     cb1.setTextBoxStyle(juce::Slider::TextEntryBoxPosition::NoTextBox, true, 0, 0);
     cb1.setBounds(150, 10, 50, 50);
@@ -64,7 +100,6 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     cb1Attachment.reset(new juce::SliderParameterAttachment(*parameter, cb1, nullptr));
 
     addAndMakeVisible(synthDefPanel);
-    synthDefPanel.setBounds(10, 75, 680, 120);
     synthDefPanel.play.onClick = [this] {
         audioProcessor.playSynth();
     };
@@ -73,35 +108,12 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
         audioProcessor.superCollider.stopNode(1000);
     };
 
-    synthDefPanel.set.onClick = [this] {
-        juce::String idx = this->synthDefPanel.setterIdx.getTextValue().getValue();
-        juce::String value =  this->synthDefPanel.setterValue.getTextValue().getValue();
-
-        this->audioProcessor.superCollider.setNodeValue(1000, idx.getIntValue(), value.getFloatValue());
-    };
-
     addAndMakeVisible(logViewer);
-    logViewer.setBounds(10, 175, 680, 265);
-
-    addAndMakeVisible(rebootButton);
-    rebootButton.setBounds(542, 38, 150, 25);
-    rebootButton.setButtonText("Reboot server");
-    rebootButton.onClick = [this] {
-        audioProcessor.superCollider.reboot();
-    };
-
-    addAndMakeVisible(showSynthdefs);
-    showSynthdefs.setBounds(300, 38, 150, 25);
-    showSynthdefs.setButtonText("Show synthdefs");
-    showSynthdefs.onClick = [this] {
-        audioProcessor.superCollider.showSynthdef();
-    };
-
     addAndMakeVisible(stats);
-    stats.setBounds(542, 8, 150, 25);
     stats.setJustificationType(juce::Justification::centredRight);
 
     startTimer(400);
+    setResizable(true, true);
     setSize(700, 450);
 }
 
@@ -124,6 +136,61 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
                   juce::dontSendNotification);
 }
 
+juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevelMenuIndex, const juce::String& str) {
+    juce::PopupMenu ret;
+    switch(topLevelMenuIndex) {
+    case 0 : {
+        juce::PopupMenu udpLogging;
+        juce::PopupMenu serverLogging;
+        juce::PopupMenu logging;
+
+        udpLogging.addItem("Off", true, true, [this] {});
+        udpLogging.addItem("Level 1", true, false, [this] {});
+        udpLogging.addItem("Level 2", true, false, [this] {});
+
+        serverLogging.addItem("Off", true, true, [this] {});
+        serverLogging.addItem("Level 1", true, false, [this] {});
+        serverLogging.addItem("Level 2", true, false, [this] {});
+
+        logging.addSubMenu("UDP", udpLogging);
+        logging.addSubMenu("Server", serverLogging);
+
+        ret.addItem("Configure plugin path...", true, false, [this] { });
+        ret.addSeparator();
+        ret.addSubMenu("Logging", logging);
+        ret.addSeparator();
+        ret.addItem("Reboot server", true, false, [this] {
+            audioProcessor.superCollider.reboot();
+        });
+        }
+        break;
+    case 1:
+        ret.addItem("Dump registred synthdefs", true, false, [this] {
+            audioProcessor.superCollider.showRegistredSynthdef();
+        });
+        break;
+    case 2:
+        ret.addItem("Free all nodes", true, false, [this] {
+            audioProcessor.superCollider.freeNodes();
+        });
+        break;
+    case 3:
+        #ifdef DEBUG
+            ret.addItem("Show internal plugin state", [this] {
+                ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);
+                value_tree_debugger.reset(vtd);
+            });
+            ret.addSeparator();
+        #endif
+        ret.addItem("About...", [this] {});
+    }
+    return ret;
+}
+
+void PluginColliderAudioProcessorEditor::menuItemSelected(int x, int y) {
+    //
+}
+
 //==============================================================================
 void PluginColliderAudioProcessorEditor::paint(juce::Graphics &g) {
     // (Our component is opaque, so we must completely fill the background with
@@ -136,6 +203,11 @@ void PluginColliderAudioProcessorEditor::paint(juce::Graphics &g) {
 }
 
 void PluginColliderAudioProcessorEditor::resized() {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+    int menuSize = juce::LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight();
+    menuBar->setBounds(0, 0, getWidth(), menuSize);
+    udpPort.setBounds(10, 8 + menuSize, 70, 25);
+    setUdpPortButton.setBounds(70, 8 + menuSize, 100, 25);
+    synthDefPanel.setBounds(10, 75, 680, 120);
+    stats.setBounds(342, 8 + menuSize, 350, 25);
+    logViewer.setBounds(10, 175, 680, 265);
 }

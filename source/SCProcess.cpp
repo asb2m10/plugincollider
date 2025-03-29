@@ -1,21 +1,22 @@
 /*
- PluginCollider Copyright (c) 2021-2025 Pascal Gauthier.
- SuperColliderAU Copyright (c) 2006 Gerard Roma.
+    PluginCollider Copyright (c) 2025 Pascal Gauthier.
+    SuperColliderAU Copyright (c) 2006 Gerard Roma.
 
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
 
 #include "SCProcess.h"
 #include "SC_CoreAudio.h"
@@ -206,7 +207,7 @@ void SCProcess::bootServer() {
     }
 }
 
-void SCProcess::showSynthdef() {
+void SCProcess::showRegistredSynthdef() {
    for (int i=0;i<world->hw->mGraphDefLib->TableSize();i++) {
         GraphDef *gf = world->hw->mGraphDefLib->AtIndex(i);
 
@@ -217,7 +218,7 @@ void SCProcess::showSynthdef() {
     }
 }
 
-bool SCProcess::loadSynthdef(juce::MemoryBlock &block) {
+bool SCProcess::loadSynthdef(juce::MemoryBlock *block) {
     const juce::ScopedLock lock(worldLock);
 
     if (world == nullptr)
@@ -225,7 +226,7 @@ bool SCProcess::loadSynthdef(juce::MemoryBlock &block) {
     if ( ! world->mRunning )
         return false;
 
-    GraphDef *inList = GraphDef_Recv(world, (char *) block.getData(), nullptr);
+    GraphDef *inList = GraphDef_Recv(world, (char *) block->getData(), nullptr);
     if ( inList != nullptr )
         GraphDef_Define(world, inList);
     return true;
@@ -237,6 +238,14 @@ void SCProcess::run(juce::AudioBuffer<float> &buffer,
         SC_PluginAudioDriver *driver =
             (SC_PluginAudioDriver *)this->world->hw->mAudioDriver;
         driver->callback(buffer, midiMessages);
+    }
+}
+
+void SCProcess::freeNodes(int rootNodeId) {
+    if (world->mRunning) {
+        juce::OSCMessage msg("/g_freeAll", rootNodeId);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
     }
 }
 

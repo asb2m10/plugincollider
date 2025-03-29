@@ -1,10 +1,21 @@
 /*
-  ==============================================================================
+    PluginCollider Copyright (c) 2025 Pascal Gauthier.
 
-    This file contains the basic framework code for a JUCE plugin processor.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
-  ==============================================================================
-*/
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
@@ -60,7 +71,8 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
         return superCollider.unrollOSCPacket(size, msg, packet);
     };
 
-    pluginState = juce::ValueTree(IDs::ROOT);
+    pluginState = juce::ValueTree(IDs::root);
+    pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
     pluginState.addListener(this);
 
     if ( ! bindUdpPort() ) {
@@ -119,15 +131,14 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath) ) {
-        juce::var ret = pluginState.getProperty(IDs::synthdef);
-        if ( ! ret.isBinaryData() )
-            return;
-        juce::MemoryBlock *mb = ret.getBinaryData();
+    //     juce::var ret = pluginState.getProperty(IDs::synthdef);
+    //     if ( ! ret.isBinaryData() )
+    //         return;
+    //     juce::MemoryBlock *mb = ret.getBinaryData();
 
-        synthDef.reset(SynthDef::fromMemory(*mb));
-        logger.scprintf("Loading %s\n", synthDef->getName().toRawUTF8());
-
-        superCollider.loadSynthdef(synthDef->getContent());
+    //    synthDef.reset(SynthDef::fromMemory(*mb));
+    //    logger.scprintf("Loading %s\n", synthDef->getName().toRawUTF8());
+    //    superCollider.loadSynthdef(synthDef->getContent());
     }
 }
 
@@ -146,11 +157,8 @@ bool PluginColliderAudioProcessor::isBusesLayoutSupported(
 #endif
 
 void PluginColliderAudioProcessor::playSynth() {
-    if ( synthDef != nullptr ) {
-        superCollider.playSynth(synthDef.get()->getName());
-    } else {
-        logger.scprintf("No synthdef loaded\n");
-    }
+    juce::ValueTree synths = pluginState.getChild(0);
+    superCollider.playSynth(synths.getChild(0).getProperty(IDs::synthName));
 }
 
 void PluginColliderAudioProcessor::processBlock(
@@ -210,17 +218,37 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
     return new PluginColliderAudioProcessorEditor(*this);
 }
 
-void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
-    if ( property == IDs::synthdef ) {
-        juce::var ret = pluginState.getProperty(IDs::synthdef);
-        if ( ! ret.isBinaryData() )
-            return;
-        juce::MemoryBlock *mb = ret.getBinaryData();
+void PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
+    pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
 
-        synthDef.reset(SynthDef::fromMemory(*mb));
-        logger.scprintf("Loading %s\n", synthDef->getName().toRawUTF8());
-        superCollider.loadSynthdef(synthDef->getContent());
+    juce::ValueTree synth = juce::ValueTree(IDs::synth);
+    synth.setProperty(IDs::synthName, synthDef->getName(), nullptr);
+    synth.setProperty(IDs::synthBlob, synthDef->getContent(), nullptr);
+
+    juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
+
+    for(int i=0;i<synthDef->getParameters().size();i++) {
+        juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
+
+        parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
+        parameter.setProperty(IDs::pDefaultValue, 0, nullptr);
+        parameter.setProperty(IDs::pRangeLow, 0, nullptr);
+        parameter.setProperty(IDs::pRangeHigh, 1, nullptr);
+        parameter.setProperty(IDs::pControlBus, -1, nullptr);
+        parameters.addChild(parameter, i, nullptr);
     }
+
+    synth.addChild(parameters, 0, nullptr);
+    pluginState.getChildWithName(IDs::synths).addChild(synth, 0, nullptr);
+}
+
+void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
+    if ( property == IDs::synthBlob ) {
+         juce::var ret = pluginState.getProperty(IDs::synthBlob);
+         if ( ! ret.isBinaryData() )
+             return;
+         superCollider.loadSynthdef(ret.getBinaryData());
+     }
 }
 
 //==============================================================================
@@ -230,8 +258,8 @@ void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destDa
 }
 
 void PluginColliderAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
-    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
-    pluginState = juce::ValueTree::fromXml(*xmlState);
+    //std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
+    //pluginState = juce::ValueTree::fromXml(*xmlState);
 }
 
 bool PluginColliderAudioProcessor::getActivityMonitor() {

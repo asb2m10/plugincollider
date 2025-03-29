@@ -1,10 +1,20 @@
 /*
-  ==============================================================================
+    PluginCollider Copyright (c) 2025 Pascal Gauthier.
 
-    This file contains the basic framework code for a JUCE plugin processor.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
-  ==============================================================================
-*/
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
 #pragma once
 
@@ -20,18 +30,26 @@ class PluginColliderAudioProcessorEditor;
 namespace IDs
 {
 #define DECLARE_ID(name) const juce::Identifier name (#name);
-    DECLARE_ID(ROOT)
+    DECLARE_ID(root)
     DECLARE_ID(udpport)
-    DECLARE_ID(synthdef)
-    DECLARE_ID(synthdefName)
-    DECLARE_ID(synthdefParms)
+    DECLARE_ID(synths)
+    DECLARE_ID(synth)
     DECLARE_ID(autoload)
+    DECLARE_ID(synthName)
+    DECLARE_ID(synthBlob)
+    DECLARE_ID(parameters)
+    DECLARE_ID(parameter)
+    DECLARE_ID(pName)
+    DECLARE_ID(pDefaultValue)
+    DECLARE_ID(pControlBus)
+    DECLARE_ID(pRangeLow)
+    DECLARE_ID(pRangeHigh)
 };
 
 //==============================================================================
 /**
  */
-class PluginColliderAudioProcessor : public juce::AudioProcessor, 
+class PluginColliderAudioProcessor : public juce::AudioProcessor,
       public juce::AudioProcessorParameter::Listener, public juce::ValueTree::Listener {
   public:
     SCProcess superCollider;
@@ -84,16 +102,14 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
 
-    void loadSynthDef(SynthDef *def) {
-        synthDef.reset(def);
-    }
-
+    void loadSynthDef(SynthDef *def);
     void playSynth();
     void stopSynth();
 
   private:
     juce::String pluginPath;
     juce::String synthPath;
+    juce::ValueTree synths;
 
     juce::AudioParameterFloat *gain;
     juce::AudioParameterFloat *controlBus[32];
@@ -113,7 +129,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     }
 
     bool bindUdpPort();
-    std::unique_ptr<SynthDef> synthDef;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

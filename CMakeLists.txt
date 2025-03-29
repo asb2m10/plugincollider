@@ -205,6 +205,10 @@ if (WIN32)
 	${SC_DIR}/common/SC_Filesystem_win.cpp)
 endif (WIN32)
 
+target_sources(PluginCollider
+PRIVATE
+source/ext/value_tree_debugger.cpp)
+
 if (NOT SC_DYNAMIC_PLUGINS)
 target_sources(PluginCollider
     PRIVATE
