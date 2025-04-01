@@ -41,7 +41,7 @@ set_property(SOURCE ${SC_DIR}/common/SC_Filesystem_macos.cpp PROPERTY COMPILE_FL
 
 set(CMAKE_MODULE_PATH ${SC_DIR}/cmake_modules)
 include (${SC_DIR}/cmake_modules/FinalFile.cmake)
-if (NOT APPLE AND NOT WIN32)
+if (NOT WIN32)
 	set(SNDFILE_INCLUDE_DIR ${SC_DIR}/external_libraries/libsndfile)
 	include (${SC_DIR}/cmake_modules/FindSndfile.cmake)
 else()

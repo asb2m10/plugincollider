@@ -19,6 +19,7 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 #include "ext/value_tree_debugger.h"
+#include "SC_Version.hpp"
 
 //==============================================================================
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
@@ -69,10 +70,8 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
     synthDefPanel.loaddef.onClick = [this] () {
         scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-                                            juce::File("/home/asb2m10/src/plugincollider/scsyndef"),
-                                            "*.scsyndef");
-        auto folderChooserFlags = juce::FileBrowserComponent::openMode;
-
+                                            juce::File("/home/asb2m10/src/plugincollider/scsyndef"), "*.scsyndef");
+        auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles; 
         scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
             juce::File scfile (chooser.getResult());
             if ( !scfile.exists() )
@@ -82,10 +81,14 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
             def.reset(SynthDef::fromFile(scfile));
 
             if ( def != nullptr ) {
-                audioProcessor.loadSynthDef(def.get());
+                if ( !audioProcessor.loadSynthDef(def.get()) ) {
+                    auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
+                    juce::AlertWindow::showAsync(opts, [](int res) {});
+                    return;
+                }
                 synthDefPanel.refresh();
             } else {
-                auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("Unable to read Synthdef file");
+                auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("Unable to read Synthdef file").withButton("OK");
                 juce::AlertWindow::showAsync(opts, [](int res) {});
             }
         });
@@ -100,20 +103,12 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     cb1Attachment.reset(new juce::SliderParameterAttachment(*parameter, cb1, nullptr));
 
     addAndMakeVisible(synthDefPanel);
-    synthDefPanel.play.onClick = [this] {
-        audioProcessor.playSynth();
-    };
-
-    synthDefPanel.stop.onClick = [this] {
-        audioProcessor.superCollider.stopNode(1000);
-    };
-
     addAndMakeVisible(logViewer);
     addAndMakeVisible(stats);
     stats.setJustificationType(juce::Justification::centredRight);
 
     startTimer(400);
-    setResizable(true, true);
+    //setResizable(true, true);
     setSize(700, 450);
 }
 
@@ -128,8 +123,7 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
         logViewer.moveCaretToEnd();
     }
 
-    SCProcess::WorldStats worldStats =
-        audioProcessor.superCollider.getWorldStats();
+    SCProcess::WorldStats worldStats = audioProcessor.superCollider.getWorldStats();
     stats.setText(juce::String::formatted(
                       "units: %i graph: %i groups: %i", worldStats.mNumUnits,
                       worldStats.mNumGraphs, worldStats.mNumGroups),
@@ -165,24 +159,32 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         }
         break;
     case 1:
-        ret.addItem("Dump registred synthdefs", true, false, [this] {
+        ret.addItem("Clear plugin assigned synthdef", true, false, [this] {
+            audioProcessor.pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
+            synthDefPanel.refresh();
+        });
+        ret.addSeparator();
+        ret.addItem("Show registred synthdefs on scserver", true, false, [this] {
             audioProcessor.superCollider.showRegistredSynthdef();
         });
         break;
     case 2:
-        ret.addItem("Free all nodes", true, false, [this] {
+        ret.addItem("Stop all running nodes", true, false, [this] {
             audioProcessor.superCollider.freeNodes();
         });
         break;
     case 3:
-        #ifdef DEBUG
+        //#ifdef DEBUG
             ret.addItem("Show internal plugin state", [this] {
                 ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);
                 value_tree_debugger.reset(vtd);
             });
             ret.addSeparator();
-        #endif
-        ret.addItem("About...", [this] {});
+        //#endif
+        ret.addItem("About...", [this] {
+            auto opts = juce::MessageBoxOptions().withTitle("Info").withMessage(juce::String("PluginCollider using SuperCollider ") + SC_VersionString() ).withButton("OK");
+            juce::AlertWindow::showAsync(opts, [](int res) {});
+        });
     }
     return ret;
 }
@@ -207,7 +209,7 @@ void PluginColliderAudioProcessorEditor::resized() {
     menuBar->setBounds(0, 0, getWidth(), menuSize);
     udpPort.setBounds(10, 8 + menuSize, 70, 25);
     setUdpPortButton.setBounds(70, 8 + menuSize, 100, 25);
-    synthDefPanel.setBounds(10, 75, 680, 120);
-    stats.setBounds(342, 8 + menuSize, 350, 25);
-    logViewer.setBounds(10, 175, 680, 265);
+    stats.setBounds(394, 8 + menuSize, 300, 25);
+    synthDefPanel.setBounds(10, 60, 680, 220);
+    logViewer.setBounds(10, 295, 680, 145);
 }

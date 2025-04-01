@@ -218,37 +218,58 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
     return new PluginColliderAudioProcessorEditor(*this);
 }
 
-void PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
+bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
+    if ( !superCollider.loadSynthDef(&(synthDef->getContent())) )
+        return false;
+
     pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
 
     juce::ValueTree synth = juce::ValueTree(IDs::synth);
     synth.setProperty(IDs::synthName, synthDef->getName(), nullptr);
     synth.setProperty(IDs::synthBlob, synthDef->getContent(), nullptr);
-
+    synth.setProperty(IDs::staticSynth, false, nullptr);
     juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
-
     for(int i=0;i<synthDef->getParameters().size();i++) {
         juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
-
         parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
-        parameter.setProperty(IDs::pDefaultValue, 0, nullptr);
-        parameter.setProperty(IDs::pRangeLow, 0, nullptr);
-        parameter.setProperty(IDs::pRangeHigh, 1, nullptr);
+
+        // we do our best to find the best low / high values based on the defaultValue
+        int low, high, defaultValue = synthDef->getParametersValues()[i];
+        if ( defaultValue == 0 ) {
+            low = -1;
+            high = 1;
+        } else {
+            low = defaultValue / 5;
+            high = defaultValue * 5;
+        }
+
+        parameter.setProperty(IDs::pDefaultValue, synthDef->getParametersValues()[i], nullptr);
+        parameter.setProperty(IDs::pRangeLow, low, nullptr);
+        parameter.setProperty(IDs::pRangeHigh, high, nullptr);
         parameter.setProperty(IDs::pControlBus, -1, nullptr);
         parameters.addChild(parameter, i, nullptr);
     }
-
     synth.addChild(parameters, 0, nullptr);
     pluginState.getChildWithName(IDs::synths).addChild(synth, 0, nullptr);
+
+    return true;
 }
 
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
-    if ( property == IDs::synthBlob ) {
-         juce::var ret = pluginState.getProperty(IDs::synthBlob);
-         if ( ! ret.isBinaryData() )
-             return;
-         superCollider.loadSynthdef(ret.getBinaryData());
+     if ( property == IDs::pCurrentValue ) {
+        juce::String name = treeWhosePropertyHasChanged.getProperty(IDs::pName);
+        superCollider.setNodeValue(kDefaultNodeId, name, treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue));
      }
+
+     if ( property == IDs::staticSynth) {
+        resetStaticSynth();
+     }
+}
+
+void PluginColliderAudioProcessor::valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
+    if ( childWhichHasBeenRemoved.getType() == IDs::synth ) {
+        superCollider.stopNode(kDefaultNodeId);
+    }
 }
 
 //==============================================================================

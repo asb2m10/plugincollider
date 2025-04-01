@@ -1,5 +1,5 @@
 SynthDef.new(\sineTest, {
-	arg noiseHz=8, courge=10;
+	arg noiseHz=8;
 	var freq, amp, sig;
 	freq = LFNoise0.kr(noiseHz).exprange(200,1000);
 	amp = LFNoise1.kr(12).exprange(0.02,1);

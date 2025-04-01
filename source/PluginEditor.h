@@ -19,92 +19,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
-
-class SynthDefTableListModel : public juce::TableListBoxModel {
-    juce::ValueTree &vt;
-public:
-    SynthDefTableListModel(juce::ValueTree &vt) : vt(vt) {
-
-    }
-
-    int getNumColumns() {
-        return 4;
-    }
-
-    int getNumRows() {
-        return 10;
-    }
-
-    void paintRowBackground(juce::Graphics& g, int rowNumber, int /*width*/, int /*height*/, bool rowIsSelected) override {
-        if (rowIsSelected)
-            g.fillAll (juce::Colours::lightblue);
-        else if (rowNumber % 2)
-            g.fillAll (juce::Colours::blue);
-    }
-
-    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override {
-
-    }
-
-
-};
-
-class SynthDefTableListTable: public juce::TableListBox {
-
-};
-
-class SynthDefPanel : public juce::Component {
-    juce::ValueTree &vt;
-    juce::ToggleButton autoStart;
-    juce::Label synthname;
-    SynthDefTableListTable parmTable;
-    SynthDefTableListModel parmModel;
-public:
-    juce::TextButton loaddef;
-    juce::TextButton play;
-    juce::TextButton stop;
-
-    SynthDefPanel(juce::ValueTree &vt) : vt(vt), parmModel(vt) {
-        addAndMakeVisible(loaddef);
-        loaddef.setButtonText("Load");
-
-        addAndMakeVisible(synthname);
-        addAndMakeVisible(play);
-        play.setButtonText("Play");
-        addAndMakeVisible(stop);
-        stop.setButtonText("Stop");
-        addAndMakeVisible(autoStart);
-        autoStart.setButtonText("Play synth on load");
-
-        addAndMakeVisible(parmTable);
-        parmTable.setModel(&parmModel);
-        parmTable.getHeader().addColumn("Argument", 2, 100);
-        parmTable.getHeader().addColumn("Slider", 1, 200);
-        parmTable.getHeader().addColumn("Low", 3, 30);
-        parmTable.getHeader().addColumn("High", 4, 30);
-        parmTable.getHeader().addColumn("Control Bus", 5, 60);
-
-        refresh();
-    }
-
-    void refresh() {
-        juce::String synthName = vt.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getProperty(IDs::synthName);
-        if ( synthName == "" )
-            synthName = "No synthDef loaded";
-        synthname.setText(juce::String("Synth: ") + synthName, juce::NotificationType::dontSendNotification);
-    }
-
-    void resized() override {
-        auto bounds = getBounds();
-
-        synthname.setBounds(50, 5, bounds.getWidth() - 200, 25);
-        loaddef.setBounds(0, 5, 50, 25);
-        play.setBounds(0, 35, 50, 25);
-        stop.setBounds(55, 35, 50, 25);
-        autoStart.setBounds(0, 65, 200, 25);
-        parmTable.setBounds(190, 5, bounds.getWidth() - 190, bounds.getHeight());
-    }
-};
+#include "SynthDefPanel.h"
 
 class LogViewer : public juce::TextEditor {
     juce::StringArray *log;
@@ -153,7 +68,7 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& str) override;
     void menuItemSelected(int, int) override;
     juce::StringArray getMenuBarNames() {
-        return juce::StringArray({"Server", "Synthdef", "Node", "Help" });
+        return juce::StringArray({"Server", "SynthDef", "Node", "Help" });
     }
 
   private:
@@ -174,9 +89,9 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     std::unique_ptr<juce::SliderParameterAttachment> cb1Attachment;
     SynthDefPanel synthDefPanel;
 
-#ifdef DEBUG
+//#ifdef DEBUG
     std::unique_ptr<juce::DocumentWindow> value_tree_debugger;
-#endif
+//#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
         PluginColliderAudioProcessorEditor)

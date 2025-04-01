@@ -64,6 +64,10 @@ public:
     juce::StringArray getParameters() {
         return parameters;
     }
+
+    float* getParametersValues() {
+        return parametersValues.get();
+    }
 };
 
 // Dirty cheap logger
@@ -118,15 +122,14 @@ public:
     void reboot();
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
-
     void setNodeValue(int nodeId, int idx, float value);
+    void setNodeValue(int nodeId, juce::String parmName, float value);
 
     // [ TO BE CALLED WITH WOLRDLOCK ]
     void setControlBusValue(int bus, float value);
 
     WorldStats getWorldStats() {
-        const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(
-            worldLock);
+        const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(worldLock);
         WorldStats stats;
         if (scopeLock.isLocked()) {
             if (world != nullptr) {
@@ -138,7 +141,7 @@ public:
         return stats;
     }
 
-    bool loadSynthdef(juce::MemoryBlock *block);
+    bool loadSynthDef(juce::MemoryBlock *block);
 
     void playSynth(juce::String name);
     void stopNode(int nodeId);

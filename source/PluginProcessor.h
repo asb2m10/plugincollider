@@ -26,7 +26,6 @@
 
 class PluginColliderAudioProcessorEditor;
 
-
 namespace IDs
 {
 #define DECLARE_ID(name) const juce::Identifier name (#name);
@@ -34,12 +33,13 @@ namespace IDs
     DECLARE_ID(udpport)
     DECLARE_ID(synths)
     DECLARE_ID(synth)
-    DECLARE_ID(autoload)
+    DECLARE_ID(staticSynth)
     DECLARE_ID(synthName)
     DECLARE_ID(synthBlob)
     DECLARE_ID(parameters)
     DECLARE_ID(parameter)
     DECLARE_ID(pName)
+    DECLARE_ID(pCurrentValue)
     DECLARE_ID(pDefaultValue)
     DECLARE_ID(pControlBus)
     DECLARE_ID(pRangeLow)
@@ -101,10 +101,28 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     juce::ValueTree pluginState;
 
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
+    void valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
-    void loadSynthDef(SynthDef *def);
+    bool loadSynthDef(SynthDef *def);
     void playSynth();
     void stopSynth();
+
+    void resetStaticSynth() {
+        superCollider.stopNode(1000);
+        juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);        
+        if ( synth.isValid() ) {
+            if ( synth.getProperty(IDs::staticSynth) ) {
+                playSynth();
+                juce::ValueTree params = synth.getChildWithName(IDs::parameters);
+                for(int i=0;i<params.getNumChildren();i++) {
+                    juce::ValueTree param = params.getChild(i);
+                    if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
+                        superCollider.setNodeValue(1000, juce::String(param.getProperty(IDs::pName)), param.getProperty(IDs::pCurrentValue));
+                    }
+                }
+            }
+        }
+    }
 
   private:
     juce::String pluginPath;

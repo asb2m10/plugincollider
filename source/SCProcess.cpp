@@ -67,12 +67,17 @@ SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
     MemoryInputPStream stream(newContent);
 
     // Check header
-    if (stream.readIntBigEndian() != (('S' << 24) | ('C' << 16) | ('g' << 8) | 'f') /*'SCgf'*/)
+    if (stream.readIntBigEndian() != (('S' << 24) | ('C' << 16) | ('g' << 8) | 'f') /*'SCgf'*/) {
+        scprintf("Invalid SynthDef header\n");
         return nullptr;
+    }
 
     // synthdef version
     int version = stream.readIntBigEndian();
-    scprintf("Reading version %d\n", version);
+    if ( version != 2 ) {
+        scprintf("SynthDef version %d not supported\n", version);
+        return nullptr;
+    }
 
     // number of synth definition in file
     stream.readShortBigEndian();
@@ -208,17 +213,19 @@ void SCProcess::bootServer() {
 }
 
 void SCProcess::showRegistredSynthdef() {
-   for (int i=0;i<world->hw->mGraphDefLib->TableSize();i++) {
+    logger.scprintf("=== Registred SynthDefs:\n");
+    for (int i=0;i<world->hw->mGraphDefLib->TableSize();i++) {
         GraphDef *gf = world->hw->mGraphDefLib->AtIndex(i);
 
         if ( gf != nullptr ) {
             if  ( strncmp("system_", (const char*) gf->mNodeDef.mName, 6) )
-                logger.scprintf("%s\n", gf->mNodeDef.mName);
+                logger.scprintf("\t%s\n", gf->mNodeDef.mName);
         }
     }
+    logger.scprintf("===\n");
 }
 
-bool SCProcess::loadSynthdef(juce::MemoryBlock *block) {
+bool SCProcess::loadSynthDef(juce::MemoryBlock *block) {
     const juce::ScopedLock lock(worldLock);
 
     if (world == nullptr)
@@ -229,6 +236,8 @@ bool SCProcess::loadSynthdef(juce::MemoryBlock *block) {
     GraphDef *inList = GraphDef_Recv(world, (char *) block->getData(), nullptr);
     if ( inList != nullptr )
         GraphDef_Define(world, inList);
+    else 
+        return false;
     return true;
 }
 
@@ -289,6 +298,14 @@ void SCProcess::setControlBusValue(int bus, float value) {
 void SCProcess::setNodeValue(int nodeId, int idx, float value) {
     if (world->mRunning) {
         juce::OSCMessage msg("/n_set", nodeId, idx, value);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+    }
+}
+
+void SCProcess::setNodeValue(int nodeId, juce::String name, float value) {
+    if (world->mRunning) {
+        juce::OSCMessage msg("/n_set", nodeId, name, value);
         OSCMemoryBlock block(msg);
         World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
     }
