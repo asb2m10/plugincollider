@@ -219,7 +219,8 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
 }
 
 bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
-    if ( !superCollider.loadSynthDef(&(synthDef->getContent())) )
+    // TODO: PUT THIS ON THE DSP THREAD
+    if ( !superCollider.rt_loadSynthDef(&(synthDef->getContent())) )
         return false;
 
     pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);

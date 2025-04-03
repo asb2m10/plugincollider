@@ -5,22 +5,37 @@ Plugincollider is a generic (cross-platform/plugin format) wrapper that allows u
 
 Now support Linux, macOS and Windows.
 
-An external installation of [SuperCollider](https://supercollider.github.io/) is required to run the interpreted code. For now Plugincollider only acts as a server; consider this as a scsynth replacement. The classic SuperCollider UI is still used to send "synths/code" the the server that is running inside the plugin.
-
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
-# State of the project
+## State of the project
 
 SuperCollider is a highly modular ecosystem (sc-plugins, scsynth definitions) that needs to be adapted for each platform from the VST3/clap component. For now consider this as a vanilla scsynth implementation with no external plugins.
 
 Latest build are available from [https://github.com/asb2m10/plugincollider/actions](https://github.com/asb2m10/plugincollider/actions)
 
-### Known issues
+## Usage - Supercollider server
+Plugincollider can be used as a standard SuperCollider server by using the SC IDE (or any other sclang client). You can test the plugin by using this SC code (where Plugincollider is running at 127.0.0.1:8898) :
+
+    o = ServerOptions.new;
+    s = Server.remote(\Plugincollider, NetAddr("127.0.0.1", 8898), o);
+    { [SinOsc.ar(439, 0, 0.2), SinOsc.ar(444, 0, 0.2)] }.play(s);
+
+## Usage - SynthDefs files
+
+Plugincollider can load previously compiled [SynthDefs](scsyndef) (*.scsyndef) that will be saved within the DAW plugin state. No installation/usage of Supercollider is required if you want to exclusively use scsyndef files.
+
+If the SynthDef has arguments, they will be exposed to the plugin and the user can set the lower and upper values for each arguments. The user can then easily change them from the Plugincollider UI.
+
+### FX Mode
+
+If there is a SynthDef loaded, the plugin can be put in "FX Mode" that will run this SynthDef on a single node every time the plugin is running. This can be useful if you want to use the plugin as an effect.
+
+# Known issues
 
 * Be sure to set your DAW latency size to a power of two (256, 512, 1024) otherwise some SC plugins might not work properly.
 * If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve this issue.
 
-### TODO
+# TODO
 
 - [ ] more accurate handling of "WorldLock" - espacially for OSC messages
 - [ ] implement /midi and /velocity from DAW midi message
@@ -53,7 +68,7 @@ Plugin parameters are now linked to the first 32 control buses. The SC code must
 
 Please note that control buses are not yet read from server to DAW.
 
-## Build instructions
+# Build instructions
 
 Be sure to install SuperCollider and JUCE dependencies; dont forget [sndfile](https://github.com/libsndfile/libsndfile) on Linux. Then clone recursivly the repository and build Plugincollider like a normal cmake project :
 
@@ -66,6 +81,3 @@ Be sure to install SuperCollider and JUCE dependencies; dont forget [sndfile](ht
 
 In order to test the plugin, with sclang execute this code (replace port 8898 where the server port is actually running):
 
-    o = ServerOptions.new;
-    s = Server.remote(\Plugincollider, NetAddr("127.0.0.1", 8898), o);
-    { [SinOsc.ar(439, 0, 0.2), SinOsc.ar(444, 0, 0.2)] }.play(s);

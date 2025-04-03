@@ -117,7 +117,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
                 for(int i=0;i<params.getNumChildren();i++) {
                     juce::ValueTree param = params.getChild(i);
                     if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
-                        superCollider.setNodeValue(1000, juce::String(param.getProperty(IDs::pName)), param.getProperty(IDs::pCurrentValue));
+                        superCollider.setNodeValue(1000, param.getProperty(IDs::pName).toString(), param.getProperty(IDs::pCurrentValue));
                     }
                 }
             }
@@ -139,7 +139,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     void parameterValueChanged (int parameterIndex, float newValue) override {
         command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
-            this->superCollider.setControlBusValue(parameterIndex-1, newValue);
+            this->superCollider.rt_setControlBusValue(parameterIndex-1, newValue);
         });
     }
 

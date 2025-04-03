@@ -225,7 +225,7 @@ void SCProcess::showRegistredSynthdef() {
     logger.scprintf("===\n");
 }
 
-bool SCProcess::loadSynthDef(juce::MemoryBlock *block) {
+bool SCProcess::rt_loadSynthDef(juce::MemoryBlock *block) {
     const juce::ScopedLock lock(worldLock);
 
     if (world == nullptr)
@@ -286,7 +286,7 @@ void SCProcess::stopNode(int nodeId) {
     }
 }
 
-void SCProcess::setControlBusValue(int bus, float value) {
+void SCProcess::rt_setControlBusValue(int bus, float value) {
     if ( bus < 0 || bus >= world->mNumControlBusChannels ) {
         logger.scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
         return;

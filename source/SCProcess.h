@@ -125,9 +125,6 @@ public:
     void setNodeValue(int nodeId, int idx, float value);
     void setNodeValue(int nodeId, juce::String parmName, float value);
 
-    // [ TO BE CALLED WITH WOLRDLOCK ]
-    void setControlBusValue(int bus, float value);
-
     WorldStats getWorldStats() {
         const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(worldLock);
         WorldStats stats;
@@ -141,7 +138,6 @@ public:
         return stats;
     }
 
-    bool loadSynthDef(juce::MemoryBlock *block);
 
     void playSynth(juce::String name);
     void stopNode(int nodeId);
@@ -149,6 +145,13 @@ public:
     void showRegistredSynthdef();
 
     void playSynthNote(juce::String name, int note, int velocity);
+
+    // Anything rt_ should be called from the audio thread since the worldLock is already aquired
+    // ======================
+    void rt_setControlBusValue(int bus, float value);
+    bool rt_loadSynthDef(juce::MemoryBlock *block);
+    // ======================
+
 private:
     SuperLogger &logger;
     World *world;
