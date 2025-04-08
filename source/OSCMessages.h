@@ -22,7 +22,9 @@
 #include <juce_osc/juce_osc.h>
 #include "SC_Types.h"
 
-static int kDefaultNodeId = 1000;
+//static int kDefaultNodeId = 1000;
+static int kDefaultGroupId = 1;
+
 
 class OSCMemoryBlock {
     juce::MemoryBlock block;

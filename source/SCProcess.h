@@ -28,6 +28,7 @@
 #include "OSCMessages.h"
 #include "sc_msg_iter.h"
 #include "SCPluginDriver.h"
+#include "SC_Node.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_osc/juce_osc.h>
@@ -70,6 +71,7 @@ public:
     }
 };
 
+
 // Dirty cheap logger
 class SuperLogger : public juce::Logger {
 public:
@@ -103,6 +105,53 @@ public:
         log(juce::String(buf));
     }
 };
+
+
+/**
+ * @brief Out of the box recent C++ SuperCollider Node accessor with
+ * embedded exceptions.
+ */
+class SCNodeWalker {
+    Node *noderef;
+public:
+    SCNodeWalker(Node *node) {
+        noderef = node;
+    }
+
+    bool isValid() {
+        return noderef != nullptr;
+    }
+
+    bool isGroup() {
+        if ( noderef == nullptr )
+            return false;
+        return noderef->mIsGroup != 0;
+    }
+
+    Node *node() {
+        if ( noderef == nullptr )
+            throw std::invalid_argument("Node is null");
+        return noderef;
+    }
+
+    Group *group() {
+        Node *n = node();
+        if ( !n->mIsGroup )
+            throw std::invalid_argument("Node is not a group");
+        return (Group *) n;
+    }
+
+    SCNodeWalker parent() {
+        Node *n = node();
+        return SCNodeWalker((Node *) n->mParent);
+    }
+
+    SCNodeWalker next() {
+        Node *n = node();
+        return SCNodeWalker(n->mNext);
+    }
+};
+
 
 class SCProcess {
 public:
@@ -138,21 +187,27 @@ public:
         return stats;
     }
 
-
     void playSynth(juce::String name);
     void stopNode(int nodeId);
     void freeNodes(int rootNodeId = 0);
     void showRegistredSynthdef();
 
-    void playSynthNote(juce::String name, int note, int velocity);
+    void playSynthNote(juce::String name, int destNode, int note, int velocity);
 
     // Anything rt_ should be called from the audio thread since the worldLock is already aquired
     // ======================
+    SCNodeWalker rt_getNode(int destNode);
     void rt_setControlBusValue(int bus, float value);
     bool rt_loadSynthDef(juce::MemoryBlock *block);
+    void rt_freeGroup(int rootGroup);
+    void rt_setNodeValue(int destNode, int idx, float value);
+    int32_t rt_newSynth(juce::String name, int newId, int destNode);
+    void rt_dumpTree();
     // ======================
 
 private:
+    friend class PluginColliderAudioProcessor;
+
     SuperLogger &logger;
     World *world;
     juce::CriticalSection worldLock;

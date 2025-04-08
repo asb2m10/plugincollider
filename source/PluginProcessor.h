@@ -30,20 +30,27 @@ namespace IDs
 {
 #define DECLARE_ID(name) const juce::Identifier name (#name);
     DECLARE_ID(root)
+
     DECLARE_ID(udpport)
     DECLARE_ID(synths)
     DECLARE_ID(synth)
     DECLARE_ID(staticSynth)
     DECLARE_ID(synthName)
     DECLARE_ID(synthBlob)
+
     DECLARE_ID(parameters)
     DECLARE_ID(parameter)
+
     DECLARE_ID(pName)
+    DECLARE_ID(pIdx)
     DECLARE_ID(pCurrentValue)
     DECLARE_ID(pDefaultValue)
     DECLARE_ID(pControlBus)
     DECLARE_ID(pRangeLow)
     DECLARE_ID(pRangeHigh)
+
+    DECLARE_ID(tMidiNote)
+    DECLARE_ID(tFreq)
 };
 
 //==============================================================================
@@ -108,18 +115,12 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void stopSynth();
 
     void resetStaticSynth() {
-        superCollider.stopNode(1000);
-        juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);        
+        superCollider.rt_freeGroup(kDefaultGroupId);
+        juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
         if ( synth.isValid() ) {
             if ( synth.getProperty(IDs::staticSynth) ) {
+                recompileMapValue();
                 playSynth();
-                juce::ValueTree params = synth.getChildWithName(IDs::parameters);
-                for(int i=0;i<params.getNumChildren();i++) {
-                    juce::ValueTree param = params.getChild(i);
-                    if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
-                        superCollider.setNodeValue(1000, param.getProperty(IDs::pName).toString(), param.getProperty(IDs::pCurrentValue));
-                    }
-                }
             }
         }
     }
@@ -147,6 +148,11 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     }
 
     bool bindUdpPort();
+
+    void recompileMapValue();
+    std::map<int, float> precompiledMapValue;
+
+    int boundedVoice[127];
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

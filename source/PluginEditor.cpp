@@ -82,13 +82,13 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
             if ( def != nullptr ) {
                 if ( !audioProcessor.loadSynthDef(def.get()) ) {
-                    auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
+                    auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
                     juce::AlertWindow::showAsync(opts, [](int res) {});
                     return;
                 }
                 synthDefPanel.refresh();
             } else {
-                auto opts = juce::MessageBoxOptions().withTitle ("Error").withMessage("Unable to read Synthdef file").withButton("OK");
+                auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("Unable to read Synthdef file").withButton("OK");
                 juce::AlertWindow::showAsync(opts, [](int res) {});
             }
         });
@@ -169,6 +169,10 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         });
         break;
     case 2:
+        ret.addItem("Dump Tree", true, false, [this] {
+            audioProcessor.superCollider.rt_dumpTree();
+        });
+        ret.addSeparator();
         ret.addItem("Stop all running nodes", true, false, [this] {
             audioProcessor.superCollider.freeNodes();
         });

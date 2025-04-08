@@ -49,7 +49,7 @@ public:
             });
     }
 
-    void call(Proc& proc) noexcept
+    void call(Proc& proc)
     {
         abstractFifo.read(abstractFifo.getNumReady()).forEach([&](int index)
             {

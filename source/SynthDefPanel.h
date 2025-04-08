@@ -108,7 +108,7 @@ public:
 
                 return paramSlider;
             }
-        
+
             case 3:
             case 4: {
                 juce::ValueTree params = getRowParameter(rowNumber);
@@ -261,10 +261,10 @@ public:
         addAndMakeVisible(parmModel);
 
         staticSynth.onClick = [this] {
-            juce::ValueTree synth = this->vt.getChildWithName(IDs::synths).getChildWithName(IDs::synth);        
+            juce::ValueTree synth = this->vt.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
             if ( synth.isValid() ) {
                 synth.setProperty(IDs::staticSynth, staticSynth.getToggleState(), nullptr);
-            }   
+            }
         };
 
         refresh();

@@ -158,7 +158,10 @@ bool PluginColliderAudioProcessor::isBusesLayoutSupported(
 
 void PluginColliderAudioProcessor::playSynth() {
     juce::ValueTree synths = pluginState.getChild(0);
-    superCollider.playSynth(synths.getChild(0).getProperty(IDs::synthName));
+    superCollider.rt_newSynth(synths.getChild(0).getProperty(IDs::synthName), -1, kDefaultGroupId);
+    for(const auto &p: precompiledMapValue) {
+        superCollider.rt_setNodeValue(kDefaultGroupId, p.first, p.second);
+    }
 }
 
 void PluginColliderAudioProcessor::processBlock(
@@ -199,12 +202,16 @@ void PluginColliderAudioProcessor::processBlock(
 
     if ( velocity != -1 )
         if ( velocity == 0 ) {
-            superCollider.stopNode(kDefaultNodeId);
+            superCollider.stopNode(kDefaultGroupId);
         } else {
             // TODO start synth
         }
 
-    command.call(*this);
+    try {
+        command.call(*this);
+    } catch (std::exception e) {
+        logger.scprintf("Catching exception: %s\n", e.what());
+    }
     superCollider.run(buffer, midiMessages);
     buffer.applyGain(*gain);
 }
@@ -219,7 +226,11 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
 }
 
 bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
-    // TODO: PUT THIS ON THE DSP THREAD
+    const juce::ScopedLock lock(superCollider.worldLock);
+
+    if ( superCollider.world == nullptr )
+        return false;
+
     if ( !superCollider.rt_loadSynthDef(&(synthDef->getContent())) )
         return false;
 
@@ -244,6 +255,7 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
             high = defaultValue * 5;
         }
 
+        parameter.setProperty(IDs::pIdx, i, nullptr);
         parameter.setProperty(IDs::pDefaultValue, synthDef->getParametersValues()[i], nullptr);
         parameter.setProperty(IDs::pRangeLow, low, nullptr);
         parameter.setProperty(IDs::pRangeHigh, high, nullptr);
@@ -256,10 +268,27 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
     return true;
 }
 
+void PluginColliderAudioProcessor::recompileMapValue() {
+    precompiledMapValue.clear();
+    juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
+    if ( synth.isValid() ) {
+        juce::ValueTree params = synth.getChildWithName(IDs::parameters);
+        for(int i=0;i<params.getNumChildren();i++) {
+            juce::ValueTree param = params.getChild(i);
+            if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
+                float value = param.getProperty(IDs::pCurrentValue);
+                precompiledMapValue.emplace(i, value);
+            }
+        }
+    }
+
+}
+
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
      if ( property == IDs::pCurrentValue ) {
         juce::String name = treeWhosePropertyHasChanged.getProperty(IDs::pName);
-        superCollider.setNodeValue(kDefaultNodeId, name, treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue));
+        superCollider.setNodeValue(kDefaultGroupId, name, treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue));
+        recompileMapValue();
      }
 
      if ( property == IDs::staticSynth) {
@@ -269,7 +298,7 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
 
 void PluginColliderAudioProcessor::valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
     if ( childWhichHasBeenRemoved.getType() == IDs::synth ) {
-        superCollider.stopNode(kDefaultNodeId);
+        superCollider.rt_freeGroup(kDefaultGroupId);
     }
 }
 

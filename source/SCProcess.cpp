@@ -225,22 +225,6 @@ void SCProcess::showRegistredSynthdef() {
     logger.scprintf("===\n");
 }
 
-bool SCProcess::rt_loadSynthDef(juce::MemoryBlock *block) {
-    const juce::ScopedLock lock(worldLock);
-
-    if (world == nullptr)
-        return false;
-    if ( ! world->mRunning )
-        return false;
-
-    GraphDef *inList = GraphDef_Recv(world, (char *) block->getData(), nullptr);
-    if ( inList != nullptr )
-        GraphDef_Define(world, inList);
-    else 
-        return false;
-    return true;
-}
-
 void SCProcess::run(juce::AudioBuffer<float> &buffer,
                     juce::MidiBuffer &midiMessages) {
     if (world->mRunning) {
@@ -260,15 +244,15 @@ void SCProcess::freeNodes(int rootNodeId) {
 
 void SCProcess::playSynth(juce::String synthName) {
     if (world->mRunning) {
-        juce::OSCMessage msg("/s_new", synthName, kDefaultNodeId);
+        juce::OSCMessage msg("/s_new", synthName, -1);
         OSCMemoryBlock block(msg);
         World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
     }
 }
 
-void SCProcess::playSynthNote(juce::String synthName, int note, int velocity)  {
+void SCProcess::playSynthNote(juce::String synthName, int destNode, int note, int velocity)  {
     if (world->mRunning) {
-        juce::OSCMessage msg("/s_new", synthName, kDefaultNodeId);
+        juce::OSCMessage msg("/s_new", synthName, destNode);
         msg.addString("note");
         msg.addInt32(note);
         msg.addString("velocity");
@@ -280,10 +264,58 @@ void SCProcess::playSynthNote(juce::String synthName, int note, int velocity)  {
 
 void SCProcess::stopNode(int nodeId) {
     if (world->mRunning) {
+        if ( World_GetNode(world, nodeId) == nullptr )
+            return;
+
         juce::OSCMessage msg("/n_free", nodeId);
         OSCMemoryBlock block(msg);
         World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
     }
+}
+
+void SCProcess::setNodeValue(int nodeId, int idx, float value) {
+    if (world->mRunning) {
+        if ( World_GetNode(world, nodeId) == nullptr )
+            return;
+
+        juce::OSCMessage msg("/n_set", nodeId, idx, value);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+    }
+}
+
+void SCProcess::setNodeValue(int nodeId, juce::String name, float value) {
+    if (world->mRunning) {
+        if ( World_GetNode(world, nodeId) == nullptr )
+            return;
+
+        juce::OSCMessage msg("/n_set", nodeId, name, value);
+        OSCMemoryBlock block(msg);
+        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+    }
+}
+
+SCNodeWalker SCProcess::rt_getNode(int destNode) {
+    if ( world == nullptr )
+        throw std::invalid_argument("SC World is null");
+    return SCNodeWalker(World_GetNode(world, destNode));
+}
+
+void SCProcess::rt_freeGroup(int rootGroup) {
+    Group_DeleteAll(rt_getNode(rootGroup).group());
+}
+
+void SCProcess::rt_setNodeValue(int destNode, int idx, float value) {
+    Node_SetControl(rt_getNode(destNode).node(), idx, value);
+}
+
+bool SCProcess::rt_loadSynthDef(juce::MemoryBlock *block) {
+    GraphDef *inList = GraphDef_Recv(world, (char *) block->getData(), nullptr);
+    if ( inList != nullptr ) {
+        GraphDef_Define(world, inList);
+        return true;
+    }
+    return false;
 }
 
 void SCProcess::rt_setControlBusValue(int bus, float value) {
@@ -295,20 +327,36 @@ void SCProcess::rt_setControlBusValue(int bus, float value) {
     world->mControlBus[bus] = value;
 }
 
-void SCProcess::setNodeValue(int nodeId, int idx, float value) {
-    if (world->mRunning) {
-        juce::OSCMessage msg("/n_set", nodeId, idx, value);
-        OSCMemoryBlock block(msg);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
-    }
+void SCProcess::rt_dumpTree() {
+    Group_DumpTreeAndControls(rt_getNode(0).group());
 }
 
-void SCProcess::setNodeValue(int nodeId, juce::String name, float value) {
-    if (world->mRunning) {
-        juce::OSCMessage msg("/n_set", nodeId, name, value);
-        OSCMemoryBlock block(msg);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
+int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
+    char synthName[127] = { 0 };
+    strcpy(synthName, name.toRawUTF8());
+
+    GraphDef* def = World_GetGraphDef(world, (int*) &synthName);
+    if ( def == nullptr ) {
+        logger.scprintf("Syntdef not found: %s\n", name.toRawUTF8());
+        return 0;
     }
+
+    // we create a empty message, we will reconfigure the node afterwards
+    sc_msg_iter msg(0, "");
+
+    Graph* graph = nullptr;
+    int err = Graph_New(world, def, newId, &msg, &graph, true);
+
+    if ( err ) {
+        logger.scprintf("Unable to create instance\n");
+        return 0;
+    }
+
+    if ( destNode != 0 ) {
+        Group_AddTail(rt_getNode(kDefaultGroupId).group(), &graph->mNode);
+    }
+
+    return graph->mNode.mID;
 }
 
 void SCProcess::quit() {
