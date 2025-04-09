@@ -119,11 +119,13 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
         juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
         if ( synth.isValid() ) {
             if ( synth.getProperty(IDs::staticSynth) ) {
-                recompileMapValue();
+                recompileState();
                 playSynth();
             }
         }
     }
+
+    juce::MidiKeyboardState midiKeyboardState;
 
   private:
     juce::String pluginPath;
@@ -148,11 +150,13 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     }
 
     bool bindUdpPort();
-
-    void recompileMapValue();
+    
+    char synthName[127];
     std::map<int, float> precompiledMapValue;
-
-    int boundedVoice[127];
+    int noteTriggerIdx;
+    int velocityTriggerIdx;
+    int boundedMidiVoice[127];
+    void recompileState();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

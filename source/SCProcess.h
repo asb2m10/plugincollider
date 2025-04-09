@@ -200,6 +200,7 @@ public:
     void rt_setControlBusValue(int bus, float value);
     bool rt_loadSynthDef(juce::MemoryBlock *block);
     void rt_freeGroup(int rootGroup);
+    void rt_freeNode(int destNode);
     void rt_setNodeValue(int destNode, int idx, float value);
     int32_t rt_newSynth(juce::String name, int newId, int destNode);
     void rt_dumpTree();

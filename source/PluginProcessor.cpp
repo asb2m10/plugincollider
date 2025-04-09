@@ -187,25 +187,37 @@ void PluginColliderAudioProcessor::processBlock(
         // posInfo.timeInSeconds;
     }
 
-    int midiNote = 60;
-    int velocity = -1;
+    midiKeyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
 
     // keep last midi event
     for (const auto meta : midiMessages) {
         const auto msg = meta.getMessage();
         if ( msg.isAllNotesOff() ) {
-            velocity = 0;
+            break;
         }
-        midiNote = msg.getNoteNumber();
-        velocity = msg.getVelocity();
+
+        int note = msg.getNoteNumber();
+        int velo = msg.getVelocity();
+        if ( velo > 0 ) {
+            if ( synthName[0] == 0 )
+                continue;
+
+            int node = superCollider.rt_newSynth(synthName, -1, kDefaultGroupId);
+            boundedMidiVoice[note] = node;
+            if ( noteTriggerIdx != -1 ) {
+                superCollider.rt_setNodeValue(node, noteTriggerIdx, note);
+            }
+            if ( velocityTriggerIdx != -1 ) {
+                superCollider.rt_setNodeValue(node, velocityTriggerIdx, velo);
+            }
+        } else {
+            if ( boundedMidiVoice[note] != 0 ) {
+                superCollider.rt_freeNode(boundedMidiVoice[note]);
+                boundedMidiVoice[note] = 0;
+            }
+        }
     }
 
-    if ( velocity != -1 )
-        if ( velocity == 0 ) {
-            superCollider.stopNode(kDefaultGroupId);
-        } else {
-            // TODO start synth
-        }
 
     try {
         command.call(*this);
@@ -265,16 +277,29 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
     synth.addChild(parameters, 0, nullptr);
     pluginState.getChildWithName(IDs::synths).addChild(synth, 0, nullptr);
 
+    recompileState();
+
     return true;
 }
 
-void PluginColliderAudioProcessor::recompileMapValue() {
+void PluginColliderAudioProcessor::recompileState() {
     precompiledMapValue.clear();
+    memset(synthName, 0, 127);
+    noteTriggerIdx = -1;
+    velocityTriggerIdx = -1;
     juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
     if ( synth.isValid() ) {
+        juce::String name = synth.getProperty(IDs::synthName);
+        strncpy(synthName, name.toRawUTF8(), 127);
         juce::ValueTree params = synth.getChildWithName(IDs::parameters);
         for(int i=0;i<params.getNumChildren();i++) {
             juce::ValueTree param = params.getChild(i);
+            if ( param.getProperty(IDs::pName) == juce::String("note") ) {
+                noteTriggerIdx = i;
+            }
+            if ( param.getProperty(IDs::pName) == juce::String("velocity") ) {
+                velocityTriggerIdx = i;
+            }
             if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
                 float value = param.getProperty(IDs::pCurrentValue);
                 precompiledMapValue.emplace(i, value);
@@ -288,7 +313,7 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
      if ( property == IDs::pCurrentValue ) {
         juce::String name = treeWhosePropertyHasChanged.getProperty(IDs::pName);
         superCollider.setNodeValue(kDefaultGroupId, name, treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue));
-        recompileMapValue();
+        recompileState();
      }
 
      if ( property == IDs::staticSynth) {

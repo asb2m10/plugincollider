@@ -305,6 +305,10 @@ void SCProcess::rt_freeGroup(int rootGroup) {
     Group_DeleteAll(rt_getNode(rootGroup).group());
 }
 
+void SCProcess::rt_freeNode(int destNode) {
+    Node_Delete(rt_getNode(destNode).node());
+}
+
 void SCProcess::rt_setNodeValue(int destNode, int idx, float value) {
     Node_SetControl(rt_getNode(destNode).node(), idx, value);
 }

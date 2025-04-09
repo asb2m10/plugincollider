@@ -91,6 +91,7 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
 
 //#ifdef DEBUG
     std::unique_ptr<juce::DocumentWindow> value_tree_debugger;
+    std::unique_ptr<juce::DocumentWindow> midikeyboard;
 //#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(

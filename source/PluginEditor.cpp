@@ -18,6 +18,7 @@
 
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
+#include <juce_audio_utils/juce_audio_utils.h>
 #include "ext/value_tree_debugger.h"
 #include "SC_Version.hpp"
 
@@ -182,6 +183,16 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
             ret.addItem("Show internal plugin state", [this] {
                 ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);
                 value_tree_debugger.reset(vtd);
+            });
+
+            ret.addItem("Show midi keyboard", [this] {
+                juce::DocumentWindow *window = new juce::DocumentWindow("Midi Keyboard", juce::Colours::lightgrey, juce::DocumentWindow::allButtons);
+                window->setUsingNativeTitleBar(true);
+                window->setResizable(true, true);
+                window->setVisible(true);
+                window->setBounds(100, 100, 400, 200);
+                window->setContentOwned(new juce::MidiKeyboardComponent(audioProcessor.midiKeyboardState, juce::MidiKeyboardComponent::horizontalKeyboard), true);
+                midikeyboard.reset(window);
             });
             ret.addSeparator();
         //#endif
