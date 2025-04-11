@@ -156,12 +156,16 @@ bool PluginColliderAudioProcessor::isBusesLayoutSupported(
 }
 #endif
 
-void PluginColliderAudioProcessor::playSynth() {
-    juce::ValueTree synths = pluginState.getChild(0);
-    superCollider.rt_newSynth(synths.getChild(0).getProperty(IDs::synthName), -1, kDefaultGroupId);
-    for(const auto &p: precompiledMapValue) {
-        superCollider.rt_setNodeValue(kDefaultGroupId, p.first, p.second);
+int PluginColliderAudioProcessor::rt_playSynth() {
+    if ( synthState.synthName[0] == 0 )
+        return 0;
+    int node = superCollider.rt_newSynth(synthState.synthName, -1, kDefaultGroupId);
+    if ( node != 0 ) {
+        for(const auto &p: synthState.precompiledMapValue) {
+            superCollider.rt_setNodeValue(node, p.first, p.second);
+        }
     }
+    return node;
 }
 
 void PluginColliderAudioProcessor::processBlock(
@@ -170,60 +174,62 @@ void PluginColliderAudioProcessor::processBlock(
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
     // TODO: There is probably something to send to world in term of timing...
-    auto *playhead = getPlayHead();
-    if (playhead != NULL) {
-        juce::AudioPlayHead::CurrentPositionInfo posInfo;
-        playhead->getCurrentPosition(posInfo);
-        // posInfo.timeInSeconds;
-    }
+    // auto *playhead = getPlayHead();
+    // if (playhead != NULL) {
+    //     juce::AudioPlayHead::CurrentPositionInfo posInfo;
+    //     playhead->getCurrentPosition(posInfo);
+    //     // posInfo.timeInSeconds;
+    // }
 
     midiKeyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
 
-    // keep last midi event
-    for (const auto meta : midiMessages) {
-        const auto msg = meta.getMessage();
-        if ( msg.isAllNotesOff() ) {
-            break;
-        }
-
-        int note = msg.getNoteNumber();
-        int velo = msg.getVelocity();
-        if ( velo > 0 ) {
-            if ( synthName[0] == 0 )
-                continue;
-
-            int node = superCollider.rt_newSynth(synthName, -1, kDefaultGroupId);
-            boundedMidiVoice[note] = node;
-            if ( noteTriggerIdx != -1 ) {
-                superCollider.rt_setNodeValue(node, noteTriggerIdx, note);
-            }
-            if ( velocityTriggerIdx != -1 ) {
-                superCollider.rt_setNodeValue(node, velocityTriggerIdx, velo);
-            }
-        } else {
-            if ( boundedMidiVoice[note] != 0 ) {
-                superCollider.rt_freeNode(boundedMidiVoice[note]);
-                boundedMidiVoice[note] = 0;
-            }
-        }
-    }
-
-
+    const juce::ScopedLock lock(superCollider.worldLock);
     try {
+        for (const auto meta : midiMessages) {
+            const auto msg = meta.getMessage();
+
+            if ( msg.isNoteOn() ) {
+                int node = rt_playSynth();
+                if ( node == 0 )
+                    continue;
+
+                int note = msg.getNoteNumber();
+                int lastNode = boundedMidiVoice[note];
+                if ( lastNode != 0 ) {
+                    if ( superCollider.rt_getNode(lastNode).isValid() )
+                        superCollider.rt_freeNode(lastNode);
+                    boundedMidiVoice[note] = 0;
+                }
+
+                boundedMidiVoice[note] = node;
+                if ( synthState.freqIdx != -1 ) {
+                    superCollider.rt_setNodeValue(node, synthState.freqIdx, msg.getMidiNoteInHertz(note));
+                }
+                if ( synthState.velocityIdx != -1 ) {
+                    superCollider.rt_setNodeValue(node, synthState.velocityIdx, msg.getFloatVelocity());
+                }
+            }
+
+            if ( msg.isNoteOff() ) {
+                int note = msg.getNoteNumber();
+                if ( boundedMidiVoice[note] != 0 ) {
+                    if ( synthState.gateIdx != -1 )
+                        superCollider.rt_setNodeValue(boundedMidiVoice[note], synthState.gateIdx, 0);
+                    else
+                        superCollider.rt_freeNode(boundedMidiVoice[note]);
+                    boundedMidiVoice[note] = 0;
+                }
+            }
+        }
         command.call(*this);
     } catch (std::exception e) {
-        logger.scprintf("Catching exception: %s\n", e.what());
+        logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
     }
+
     superCollider.run(buffer, midiMessages);
     buffer.applyGain(*gain);
 }
@@ -283,47 +289,59 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
 }
 
 void PluginColliderAudioProcessor::recompileState() {
-    precompiledMapValue.clear();
-    memset(synthName, 0, 127);
-    noteTriggerIdx = -1;
-    velocityTriggerIdx = -1;
+    synthState.precompiledMapValue.clear();
+    memset(synthState.synthName, 0, 127);
+    synthState.freqIdx = -1;
+    synthState.velocityIdx = -1;
+    synthState.gateIdx = -1;
     juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
     if ( synth.isValid() ) {
         juce::String name = synth.getProperty(IDs::synthName);
-        strncpy(synthName, name.toRawUTF8(), 127);
+        strncpy(synthState.synthName, name.toRawUTF8(), 127);
         juce::ValueTree params = synth.getChildWithName(IDs::parameters);
         for(int i=0;i<params.getNumChildren();i++) {
             juce::ValueTree param = params.getChild(i);
-            if ( param.getProperty(IDs::pName) == juce::String("note") ) {
-                noteTriggerIdx = i;
+
+            if ( synth.getProperty(IDs::staticSynth) == juce::var(false) ) {
+                juce::String pName = param.getProperty(IDs::pName);
+
+                if ( pName == "freq" )
+                    synthState.freqIdx = i;
+                if ( pName == "amp" )
+                    synthState.velocityIdx = i;
+                if ( pName == "gate" )
+                    synthState.gateIdx = i;
             }
-            if ( param.getProperty(IDs::pName) == juce::String("velocity") ) {
-                velocityTriggerIdx = i;
-            }
+
             if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
                 float value = param.getProperty(IDs::pCurrentValue);
-                precompiledMapValue.emplace(i, value);
+                synthState.precompiledMapValue.emplace(i, value);
             }
         }
     }
-
 }
 
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
      if ( property == IDs::pCurrentValue ) {
-        juce::String name = treeWhosePropertyHasChanged.getProperty(IDs::pName);
-        superCollider.setNodeValue(kDefaultGroupId, name, treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue));
+        int idx = treeWhosePropertyHasChanged.getProperty(IDs::pIdx);
+        float value = treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue);
         recompileState();
+        command.push([this, idx, value](PluginColliderAudioProcessor &proc) {
+            superCollider.rt_setNodeValue(kDefaultGroupId, idx, value);
+        });
      }
 
      if ( property == IDs::staticSynth) {
         resetStaticSynth();
+        recompileState();
      }
 }
 
 void PluginColliderAudioProcessor::valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
     if ( childWhichHasBeenRemoved.getType() == IDs::synth ) {
-        superCollider.rt_freeGroup(kDefaultGroupId);
+        command.push([this](PluginColliderAudioProcessor &proc) {
+            superCollider.rt_freeGroup(kDefaultGroupId);
+        });
     }
 }
 

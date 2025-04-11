@@ -22,6 +22,22 @@
 #include "ext/value_tree_debugger.h"
 #include "SC_Version.hpp"
 
+class MidiKeyboardWindow: public juce::DocumentWindow {
+public:
+    MidiKeyboardWindow(juce::MidiKeyboardState &state) : juce::DocumentWindow("Midi Keyboard", juce::Colours::lightgrey, juce::DocumentWindow::allButtons) {
+        auto keyboardComponent = new juce::MidiKeyboardComponent(state, juce::MidiKeyboardComponent::horizontalKeyboard);
+        keyboardComponent->setSize(600, 70);
+        setContentOwned(keyboardComponent, true);
+        setUsingNativeTitleBar(true);
+        setResizable(true, true);
+        setVisible(true);
+    }
+
+    void closeButtonPressed() override {
+        setVisible(false);
+    }
+};
+
 //==============================================================================
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     PluginColliderAudioProcessor &p)
@@ -139,13 +155,21 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         juce::PopupMenu serverLogging;
         juce::PopupMenu logging;
 
-        udpLogging.addItem("Off", true, true, [this] {});
-        udpLogging.addItem("Level 1", true, false, [this] {});
-        udpLogging.addItem("Level 2", true, false, [this] {});
+        int udpLogLevel = audioProcessor.superCollider.getOSCDumpLevel();
+        udpLogging.addItem("Off", true, udpLogLevel == 0,
+            [this] { audioProcessor.superCollider.setOSCDumpLevel(0); });
+        udpLogging.addItem("Level 1", true, udpLogLevel == 1,
+            [this] { audioProcessor.superCollider.setOSCDumpLevel(1); });
+        udpLogging.addItem("Level 2", true, udpLogLevel == 2,
+            [this] { audioProcessor.superCollider.setOSCDumpLevel(2); });
 
-        serverLogging.addItem("Off", true, true, [this] {});
-        serverLogging.addItem("Level 1", true, false, [this] {});
-        serverLogging.addItem("Level 2", true, false, [this] {});
+        int verboseLevel = audioProcessor.superCollider.getVerboseLevel();
+        serverLogging.addItem("Off", true, verboseLevel == 0,
+            [this] { audioProcessor.superCollider.setVerboseLevel(0); });
+        serverLogging.addItem("Level 1", true, verboseLevel == 1,
+            [this] { audioProcessor.superCollider.setVerboseLevel(1); });
+        serverLogging.addItem("Level 2", true, verboseLevel == 2,
+            [this] { audioProcessor.superCollider.setVerboseLevel(2); });
 
         logging.addSubMenu("UDP", udpLogging);
         logging.addSubMenu("Server", serverLogging);
@@ -186,13 +210,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
             });
 
             ret.addItem("Show midi keyboard", [this] {
-                juce::DocumentWindow *window = new juce::DocumentWindow("Midi Keyboard", juce::Colours::lightgrey, juce::DocumentWindow::allButtons);
-                window->setUsingNativeTitleBar(true);
-                window->setResizable(true, true);
-                window->setVisible(true);
-                window->setBounds(100, 100, 400, 200);
-                window->setContentOwned(new juce::MidiKeyboardComponent(audioProcessor.midiKeyboardState, juce::MidiKeyboardComponent::horizontalKeyboard), true);
-                midikeyboard.reset(window);
+                midikeyboard.reset(new MidiKeyboardWindow(audioProcessor.midiKeyboardState));
             });
             ret.addSeparator();
         //#endif

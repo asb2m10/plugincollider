@@ -111,17 +111,18 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
     bool loadSynthDef(SynthDef *def);
-    void playSynth();
+    int rt_playSynth();
     void stopSynth();
 
     void resetStaticSynth() {
-        superCollider.rt_freeGroup(kDefaultGroupId);
         juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
+        bool isStaticSynth = synth.getProperty(IDs::staticSynth);
         if ( synth.isValid() ) {
-            if ( synth.getProperty(IDs::staticSynth) ) {
-                recompileState();
-                playSynth();
-            }
+            command.push([this, isStaticSynth](PluginColliderAudioProcessor &proc) {
+                superCollider.rt_freeGroup(kDefaultGroupId);
+                if ( isStaticSynth )
+                    rt_playSynth();
+            });
         }
     }
 
@@ -142,7 +143,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     void parameterValueChanged (int parameterIndex, float newValue) override {
         command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
-            this->superCollider.rt_setControlBusValue(parameterIndex-1, newValue);
+            superCollider.rt_setControlBusValue(parameterIndex-1, newValue);
         });
     }
 
@@ -150,11 +151,16 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     }
 
     bool bindUdpPort();
-    
-    char synthName[127];
-    std::map<int, float> precompiledMapValue;
-    int noteTriggerIdx;
-    int velocityTriggerIdx;
+
+    struct SynthState {
+        char synthName[127];
+        std::map<int, float> precompiledMapValue;
+        int freqIdx;
+        int velocityIdx;
+        int gateIdx;
+    };
+    SynthState synthState;
+
     int boundedMidiVoice[127];
     void recompileState();
 

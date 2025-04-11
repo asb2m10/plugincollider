@@ -172,7 +172,7 @@ juce_add_plugin(PluginCollider
     # ICON_SMALL ...
     COMPANY_NAME "Digital Suburban"                 # Specify the name of the plugin's author
 	BUNDLE_ID "com.digitalsuburban.PluginCollider"  # The bundle identifier for the plugin, if it should be a standalone bundle
-    IS_SYNTH FALSE                                  # Is this a synth or an effect?
+    IS_SYNTH TRUE                                  # Is this a synth or an effect?
     NEEDS_MIDI_INPUT TRUE                           # Does the plugin need midi input?
     # NEEDS_MIDI_OUTPUT TRUE/FALSE                  # Does the plugin need midi output?
     # IS_MIDI_EFFECT TRUE/FALSE                     # Is this plugin a MIDI effect?

@@ -242,59 +242,6 @@ void SCProcess::freeNodes(int rootNodeId) {
     }
 }
 
-void SCProcess::playSynth(juce::String synthName) {
-    if (world->mRunning) {
-        juce::OSCMessage msg("/s_new", synthName, -1);
-        OSCMemoryBlock block(msg);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
-    }
-}
-
-void SCProcess::playSynthNote(juce::String synthName, int destNode, int note, int velocity)  {
-    if (world->mRunning) {
-        juce::OSCMessage msg("/s_new", synthName, destNode);
-        msg.addString("note");
-        msg.addInt32(note);
-        msg.addString("velocity");
-        msg.addInt32(velocity);
-        OSCMemoryBlock block(msg);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
-    }
-}
-
-void SCProcess::stopNode(int nodeId) {
-    if (world->mRunning) {
-        if ( World_GetNode(world, nodeId) == nullptr )
-            return;
-
-        juce::OSCMessage msg("/n_free", nodeId);
-        OSCMemoryBlock block(msg);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
-    }
-}
-
-void SCProcess::setNodeValue(int nodeId, int idx, float value) {
-    if (world->mRunning) {
-        if ( World_GetNode(world, nodeId) == nullptr )
-            return;
-
-        juce::OSCMessage msg("/n_set", nodeId, idx, value);
-        OSCMemoryBlock block(msg);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
-    }
-}
-
-void SCProcess::setNodeValue(int nodeId, juce::String name, float value) {
-    if (world->mRunning) {
-        if ( World_GetNode(world, nodeId) == nullptr )
-            return;
-
-        juce::OSCMessage msg("/n_set", nodeId, name, value);
-        OSCMemoryBlock block(msg);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
-    }
-}
-
 SCNodeWalker SCProcess::rt_getNode(int destNode) {
     if ( world == nullptr )
         throw std::invalid_argument("SC World is null");

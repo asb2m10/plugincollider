@@ -171,8 +171,7 @@ public:
     void reboot();
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
-    void setNodeValue(int nodeId, int idx, float value);
-    void setNodeValue(int nodeId, juce::String parmName, float value);
+    //void setNodeValue(int nodeId, juce::String parmName, float value);
 
     WorldStats getWorldStats() {
         const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(worldLock);
@@ -187,12 +186,8 @@ public:
         return stats;
     }
 
-    void playSynth(juce::String name);
-    void stopNode(int nodeId);
     void freeNodes(int rootNodeId = 0);
     void showRegistredSynthdef();
-
-    void playSynthNote(juce::String name, int destNode, int note, int velocity);
 
     // Anything rt_ should be called from the audio thread since the worldLock is already aquired
     // ======================
@@ -205,6 +200,24 @@ public:
     int32_t rt_newSynth(juce::String name, int newId, int destNode);
     void rt_dumpTree();
     // ======================
+
+    int getVerboseLevel() {
+        return world != nullptr ? world->mVerbosity : 0;
+    }
+
+    int getOSCDumpLevel() {
+        return world != nullptr ? world->mDumpOSC : 0;
+    }
+
+    void setVerboseLevel(int level) {
+        if ( world != nullptr )
+            world->mVerbosity = level;
+    }
+
+    void setOSCDumpLevel(int level) {
+        if ( world != nullptr )
+            world->mDumpOSC = level;
+    }
 
 private:
     friend class PluginColliderAudioProcessor;

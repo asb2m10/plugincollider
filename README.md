@@ -22,13 +22,25 @@ Plugincollider can be used as a standard SuperCollider server by using the SC ID
 
 ## Usage - SynthDefs files
 
-Plugincollider can load previously compiled [SynthDefs](scsyndef) (*.scsyndef) that will be saved within the DAW plugin state. No installation/usage of Supercollider is required if you want to exclusively use scsyndef files.
+Plugincollider can load previously compiled [SynthDefs](scsyndef) (*.scsyndef) that will be saved within the DAW plugin state. No installation/usage of Supercollider afterwards is required if you want to exclusively use scsyndef files.
 
 If the SynthDef has arguments, they will be exposed to the plugin and the user can set the lower and upper values for each arguments. The user can then easily change them from the Plugincollider UI.
 
 ### FX Mode
 
-If there is a SynthDef loaded, the plugin can be put in "FX Mode" that will run this SynthDef on a single node every time the plugin is running. This can be useful if you want to use the plugin as an effect.
+If there is a SynthDef loaded, the plugin can be put in "FX Mode" that will run this SynthDef on a single node every time the plugin is running. This can be useful if you want to use the plugin as an effect or a drone/noodle.
+
+### Non-Fx Mode (Synth Mode)
+
+In this mode (and when a SynthDef is loaded), everytime Plugincollider receives a midi node, it will trigger this synth based on those parameters:
+
+| Midi Event         | ScSynDef args | Conversion                                                          |
+| ------------------ | ------------- | ------------------------------------------------------------------- |
+| note-on midi note  | freq          | Converts midi node (0-127) to frequency (hz)                        |
+| note-on velocity   | amp           | Converts midi velocity (0-127) to amp(0.0-1.0), linearly (for now). |
+| note-off           | gate          | Sends gate=0 on midi note off                                       |
+
+If for example your SynthDef doesn't have the gate arguments, the node will be freed once the note off is triggered.
 
 # Known issues
 
@@ -38,7 +50,7 @@ If there is a SynthDef loaded, the plugin can be put in "FX Mode" that will run 
 # TODO
 
 - [ ] more accurate handling of "WorldLock" - espacially for OSC messages
-- [ ] implement /midi and /velocity from DAW midi message
+- [x] implement /note and /amp from DAW midi message
 - [ ] more accurate OSC DAW timing
 - [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed
 - [x] *Windows* bundle sndfile.dll within the plugin installation
