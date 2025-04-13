@@ -140,7 +140,8 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
         logViewer.moveCaretToEnd();
     }
 
-    SCProcess::WorldStats worldStats = audioProcessor.superCollider.getWorldStats();
+    SCProcess::WorldStats worldStats;
+    audioProcessor.superCollider.getWorldStats(&worldStats);
     stats.setText(juce::String::formatted(
                       "units: %i graph: %i groups: %i", worldStats.mNumUnits,
                       worldStats.mNumGraphs, worldStats.mNumGroups),

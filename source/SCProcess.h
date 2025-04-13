@@ -173,17 +173,15 @@ public:
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
     //void setNodeValue(int nodeId, juce::String parmName, float value);
 
-    WorldStats getWorldStats() {
+    void getWorldStats(WorldStats *stats) {
         const juce::GenericScopedTryLock<juce::CriticalSection> scopeLock(worldLock);
-        WorldStats stats;
         if (scopeLock.isLocked()) {
             if (world != nullptr) {
-                stats.mNumUnits = world->mNumUnits;
-                stats.mNumGraphs = world->mNumGraphs;
-                stats.mNumGroups = world->mNumGroups;
+                stats->mNumUnits = world->mNumUnits;
+                stats->mNumGraphs = world->mNumGraphs;
+                stats->mNumGroups = world->mNumGroups;
             }
         }
-        return stats;
     }
 
     void freeNodes(int rootNodeId = 0);
