@@ -78,6 +78,7 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::TextEditor udpPort;
     juce::TextButton setUdpPortButton;
     std::unique_ptr<juce::FileChooser> scsynthChooser;
+    SCProcess::WorldStats worldStats;
 
     int logLines = 0;
     juce::Label stats;

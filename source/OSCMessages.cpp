@@ -169,3 +169,4 @@ OSCMemoryBlock::OSCMemoryBlock(juce::OSCMessage &msg) {
     OSCOutputStream outStream(block);
     outStream.writeMessage(msg);
 }
+

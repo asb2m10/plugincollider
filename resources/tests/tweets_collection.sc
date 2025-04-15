@@ -1,8 +1,3 @@
-
-// First set remote pluginCollider server
-o = ServerOptions.new;
-s = Server.remote(\pluginCollider, NetAddr("127.0.0.1", 8898), o);
-
 // Collection of Supercollider tweets (from https://sccode.org/1-4RA)
 
 {n=LFNoise0.ar(_);f=[60,61];tanh(BBandPass.ar(max(max(n.(4),l=n.(6)),SinOsc.ar(f*ceil(l*9).lag(0.1))*0.7),f,n.(1).abs/2)*700*l.lag(1))}.play(s)
@@ -75,5 +70,4 @@ d={|l,h,f,p|({Ringz.ar(LFPulse.ar(f,p,0.01),exprand(l,h),0.5)}!20).sum};{d.(50,1
 {a = PMOsc;b= SinOsc;c=RLPF;d=440;c.ar(a.ar(c.kr(b.kr(20,0,d),b.kr(0.2,0,d))),b.kr(0.01,b.kr(0.1),1).range(d,d*32))}.play(s)
 
 // BUG; this one doesn't work
-
-{f={|o,i|if(i>0,{SinOsc.ar([i,i+1e-4]**2*f.(o,i-1),f.(o,i-1)*1e-4,f.(o,i-1))},o)};f.(60,6)/60}.play(s)
+// {f={|o,i|if(i>0,{SinOsc.ar([i,i+1e-4]**2*f.(o,i-1),f.(o,i-1)*1e-4,f.(o,i-1))},o)};f.(60,6)/60}.play(s)

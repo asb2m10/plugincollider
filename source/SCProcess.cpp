@@ -28,6 +28,7 @@
 #include "sc_msg_iter.h"
 #include "SC_PlugIn.h"
 #include "SC_GraphDef.h"
+#include "SC_Group.h"
 
 const int kDefaultPortNumber = 9989;
 const int kDefaultBlockSize = 64;
@@ -198,10 +199,7 @@ void SCProcess::bootServer() {
     world->mDumpOSC = 0;
 
     if (world) {
-        juce::OSCMessage initTree("/g_new", 1);
-        OSCMemoryBlock block(initTree);
-        World_SendPacket(world, block.getSize(), block.getData(), null_reply_func);
-
+        rt_newGroup(0, kDefaultGroupId);
         logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
                 options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
@@ -249,15 +247,36 @@ SCNodeWalker SCProcess::rt_getNode(int destNode) {
 }
 
 void SCProcess::rt_freeGroup(int rootGroup) {
-    Group_DeleteAll(rt_getNode(rootGroup).group());
+    SCNodeWalker node = rt_getNode(rootGroup);
+    if ( node.isValid() && node.isGroup() )
+        Group_DeleteAll(node.group());
 }
 
 void SCProcess::rt_freeNode(int destNode) {
-    Node_Delete(rt_getNode(destNode).node());
+    SCNodeWalker node = rt_getNode(destNode);
+    if ( node.isValid() )
+        Node_Delete(node.node());
 }
 
 void SCProcess::rt_setNodeValue(int destNode, int idx, float value) {
     Node_SetControl(rt_getNode(destNode).node(), idx, value);
+}
+
+SCErr SCProcess::rt_newGroup(int parentNode, int destGroup) {
+    Group *parent = rt_getNode(parentNode).group();
+    Group* newGroup = nullptr;
+    SCErr err = Group_New(world, destGroup, &newGroup);
+    if (err) {
+        if (err == kSCErr_DuplicateNodeID) {
+            newGroup = World_GetGroup(world, destGroup);
+            if (!newGroup || !newGroup->mNode.mParent || newGroup->mNode.mParent != parent)
+                return err;
+        } else
+            return err;
+    } else {
+        Group_AddHead(parent, &newGroup->mNode);
+    }
+    return 0;
 }
 
 bool SCProcess::rt_loadSynthDef(juce::MemoryBlock *block) {

@@ -131,14 +131,15 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath) ) {
-    //     juce::var ret = pluginState.getProperty(IDs::synthdef);
-    //     if ( ! ret.isBinaryData() )
-    //         return;
-    //     juce::MemoryBlock *mb = ret.getBinaryData();
-
-    //    synthDef.reset(SynthDef::fromMemory(*mb));
-    //    logger.scprintf("Loading %s\n", synthDef->getName().toRawUTF8());
-    //    superCollider.loadSynthdef(synthDef->getContent());
+        juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
+        if ( synth.isValid() ) {
+            if ( synth.hasProperty(IDs::synthBlob) && synth.getProperty(IDs::synthBlob).isBinaryData() ) {
+                superCollider.rt_loadSynthDef(synth.getProperty(IDs::synthBlob).getBinaryData());
+                recompileState();
+                if ( synth.getProperty(IDs::staticSynth) )
+                    rt_playSynth();
+            }
+        }
     }
 }
 
@@ -157,6 +158,10 @@ bool PluginColliderAudioProcessor::isBusesLayoutSupported(
 #endif
 
 int PluginColliderAudioProcessor::rt_playSynth() {
+    if ( !superCollider.rt_getNode(kDefaultGroupId).isValid() ) {
+        logger.scprintf("Plugincollider default group (1) was removed !\n");
+        return 0;
+    }
     if ( synthState.synthName[0] == 0 )
         return 0;
     int node = superCollider.rt_newSynth(synthState.synthName, -1, kDefaultGroupId);
@@ -212,16 +217,17 @@ void PluginColliderAudioProcessor::processBlock(
                 if ( synthState.velocityIdx != -1 ) {
                     superCollider.rt_setNodeValue(node, synthState.velocityIdx, msg.getFloatVelocity());
                 }
-            }
-
-            if ( msg.isNoteOff() ) {
+            } else if ( msg.isNoteOff() ) {
                 int note = msg.getNoteNumber();
                 if ( boundedMidiVoice[note] != 0 ) {
-                    if ( synthState.gateIdx != -1 )
-                        superCollider.rt_setNodeValue(boundedMidiVoice[note], synthState.gateIdx, 0);
-                    else
-                        superCollider.rt_freeNode(boundedMidiVoice[note]);
-                    boundedMidiVoice[note] = 0;
+                    if ( superCollider.rt_getNode(boundedMidiVoice[note]).isValid() ) {
+                        if ( synthState.gateIdx != -1 )
+                            superCollider.rt_setNodeValue(boundedMidiVoice[note], synthState.gateIdx, 0);
+                        // else {
+                        //     superCollider.rt_freeNode(boundedMidiVoice[note]);
+                        //     boundedMidiVoice[note] = 0;
+                        // }
+                    }
                 }
             }
         }
@@ -284,7 +290,6 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
     pluginState.getChildWithName(IDs::synths).addChild(synth, 0, nullptr);
 
     recompileState();
-
     return true;
 }
 
@@ -304,13 +309,18 @@ void PluginColliderAudioProcessor::recompileState() {
 
             if ( synth.getProperty(IDs::staticSynth) == juce::var(false) ) {
                 juce::String pName = param.getProperty(IDs::pName);
-
-                if ( pName == "freq" )
+                if ( pName == "freq" ) {
                     synthState.freqIdx = i;
-                if ( pName == "amp" )
+                    continue;
+                }
+                if ( pName == "amp" ) {
                     synthState.velocityIdx = i;
-                if ( pName == "gate" )
+                    continue;
+                }
+                if ( pName == "gate" ) {
                     synthState.gateIdx = i;
+                    continue;
+                }
             }
 
             if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
@@ -352,8 +362,8 @@ void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destDa
 }
 
 void PluginColliderAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
-    //std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
-    //pluginState = juce::ValueTree::fromXml(*xmlState);
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
+    pluginState = juce::ValueTree::fromXml(*xmlState);
 }
 
 bool PluginColliderAudioProcessor::getActivityMonitor() {

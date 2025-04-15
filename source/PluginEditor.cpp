@@ -64,7 +64,7 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     configButton.setBounds(10, 38, 130, 25);
 
     configButton.onClick = [ this ] {
-        settingsWindow = new juce::AlertWindow("PluginCollider settings", "", juce::AlertWindow::NoIcon);
+        settingsWindow = new juce::AlertWindow("Plugincollider settings", "", juce::AlertWindow::NoIcon);
 
         settingsWindow->addTextBlock("Plugin path");
         settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);
@@ -140,7 +140,6 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
         logViewer.moveCaretToEnd();
     }
 
-    SCProcess::WorldStats worldStats;
     audioProcessor.superCollider.getWorldStats(&worldStats);
     stats.setText(juce::String::formatted(
                       "units: %i graph: %i groups: %i", worldStats.mNumUnits,
@@ -187,7 +186,19 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
     case 1:
         ret.addItem("Clear plugin assigned synthdef", true, false, [this] {
             audioProcessor.pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
+            audioProcessor.recompileState();
             synthDefPanel.refresh();
+        });
+        ret.addItem("Reset Synthdef default values", true, false, [this] {
+            juce::ValueTree params = audioProcessor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getChildWithName(IDs::parameters);
+            if ( params.isValid() ) {
+                for(int i=0;i<params.getNumChildren();i++) {
+                    juce::ValueTree param = params.getChild(i);
+                    param.removeProperty(IDs::pCurrentValue, nullptr);
+                    audioProcessor.recompileState();
+                    synthDefPanel.refresh();
+                }
+            }
         });
         ret.addSeparator();
         ret.addItem("Show registred synthdefs on scserver", true, false, [this] {
@@ -196,11 +207,18 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         break;
     case 2:
         ret.addItem("Dump Tree", true, false, [this] {
-            audioProcessor.superCollider.rt_dumpTree();
+            audioProcessor.command.push([this](PluginColliderAudioProcessor &proc) {
+                proc.superCollider.rt_dumpTree();
+            });
         });
         ret.addSeparator();
+        ret.addItem("Stop Plugincollider group", true, false, [this] {
+            audioProcessor.command.push([this](PluginColliderAudioProcessor &proc) {
+                proc.superCollider.rt_freeGroup(kDefaultGroupId);
+            });
+        });
         ret.addItem("Stop all running nodes", true, false, [this] {
-            audioProcessor.superCollider.freeNodes();
+                audioProcessor.superCollider.freeNodes();
         });
         break;
     case 3:

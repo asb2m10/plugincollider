@@ -20,6 +20,9 @@
 
 #include "PluginProcessor.h"
 
+const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
+
+
 class ParameterTable : public juce::Component, public juce::TableListBoxModel {
     juce::ValueTree &vt;
 public:
@@ -78,7 +81,7 @@ public:
         g.fillRect(width - 1, 0, 1, height);
     }
 
-    juce::Component* refreshComponentForCell (int rowNumber, int columnId, 
+    juce::Component* refreshComponentForCell (int rowNumber, int columnId,
                                               bool isRowSelected, juce::Component* existingComponentToUpdate) override {
         switch(columnId) {
             case 2 : {
@@ -92,10 +95,10 @@ public:
                     paramSlider = new ParamSlider();
                 }
 
-                int min = params.getProperty(IDs::pRangeLow);
-                int max = params.getProperty(IDs::pRangeHigh);
+                paramSlider->setEnabled(!disabledControl(params.getProperty(IDs::pName)));
+                // paramSlider->setValueTree(params);
 
-                paramSlider->setRange(min, max, juce::NotificationType::dontSendNotification);
+                paramSlider->setRange(params.getProperty(IDs::pRangeLow), params.getProperty(IDs::pRangeHigh));
                 if ( params.hasProperty(IDs::pCurrentValue) ) {
                     paramSlider->setValue(params.getProperty(IDs::pCurrentValue), juce::NotificationType::dontSendNotification);
                 } else {
@@ -134,7 +137,7 @@ public:
                 auto* comboBox = static_cast<juce::ComboBox*>(existingComponentToUpdate);
                 if ( comboBox == nullptr ) {
                     comboBox = new juce::ComboBox();
-                    comboBox->addItemList({"None", "Control Bus 1", "Control Bus 2", "Control Bus 3", "Control Bus 4", "Control Bus 5", "Control Bus 6", "Control Bus 7", "Control Bus 8"}, 1);
+                    comboBox->addItemList({"None", "This", "is", "not", "yet", "fonctional", "Control Bus 6", "Control Bus 7", "Control Bus 8"}, 1);
                 }
                 return comboBox;
             }
@@ -160,7 +163,6 @@ public:
                     return vt.getProperty(IDs::pRangeHigh);
             }
         }
-        return "";
     }
 
     void setText(const int columnNumber, const int rowNumber, const juce::String& newText) {
@@ -190,12 +192,18 @@ private:
         return vt.getChildWithName(IDs::synths).getChild(0).getChildWithName(IDs::parameters).getChild(rowNumber);
     }
 
-    //==============================================================================
+    bool disabledControl(juce::String name) {
+        if ( synthParmsToMidi.contains(name, false) ) {
+            if ( ! vt.getChildWithName(IDs::synths).getChild(0).getProperty(IDs::staticSynth) )
+                return true;
+        }
+        return false;
+    }
+
     class ParamSlider : public juce::Slider {
     public:
         ParamSlider() {
             setSliderStyle(juce::Slider::LinearBar);
-            //setTextBoxStyle(juce::Slider::TextBoxRight, false, 30, 20);
         }
     };
 
@@ -264,6 +272,7 @@ public:
             juce::ValueTree synth = this->vt.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
             if ( synth.isValid() ) {
                 synth.setProperty(IDs::staticSynth, staticSynth.getToggleState(), nullptr);
+                refresh();
             }
         };
 

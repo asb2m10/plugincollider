@@ -26,8 +26,7 @@
 
 class PluginColliderAudioProcessorEditor;
 
-namespace IDs
-{
+namespace IDs {
 #define DECLARE_ID(name) const juce::Identifier name (#name);
     DECLARE_ID(root)
 
@@ -48,9 +47,6 @@ namespace IDs
     DECLARE_ID(pControlBus)
     DECLARE_ID(pRangeLow)
     DECLARE_ID(pRangeHigh)
-
-    DECLARE_ID(tMidiNote)
-    DECLARE_ID(tFreq)
 };
 
 //==============================================================================
@@ -127,6 +123,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     }
 
     juce::MidiKeyboardState midiKeyboardState;
+    CommandFifo<PluginColliderAudioProcessor> command;
+
 
   private:
     juce::String pluginPath;
@@ -135,7 +133,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     juce::AudioParameterFloat *gain;
     juce::AudioParameterFloat *controlBus[32];
-    CommandFifo<PluginColliderAudioProcessor> command;
 
     bool curActivity;
 
