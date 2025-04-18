@@ -96,8 +96,6 @@ public:
                 }
 
                 paramSlider->setEnabled(!disabledControl(params.getProperty(IDs::pName)));
-                // paramSlider->setValueTree(params);
-
                 paramSlider->setRange(params.getProperty(IDs::pRangeLow), params.getProperty(IDs::pRangeHigh));
                 if ( params.hasProperty(IDs::pCurrentValue) ) {
                     paramSlider->setValue(params.getProperty(IDs::pCurrentValue), juce::NotificationType::dontSendNotification);
@@ -137,7 +135,7 @@ public:
                 auto* comboBox = static_cast<juce::ComboBox*>(existingComponentToUpdate);
                 if ( comboBox == nullptr ) {
                     comboBox = new juce::ComboBox();
-                    comboBox->addItemList({"None", "This", "is", "not", "yet", "fonctional", "Control Bus 6", "Control Bus 7", "Control Bus 8"}, 1);
+                    comboBox->addItemList({"None", "This", "is", "not", "yet", "functional", "Control Bus 6", "Control Bus 7", "Control Bus 8"}, 1);
                 }
                 return comboBox;
             }

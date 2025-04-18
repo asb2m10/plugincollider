@@ -91,6 +91,3 @@ Be sure to install SuperCollider and JUCE dependencies; dont forget [sndfile](ht
     cd build
     cmake ..       # add `-G Xcode` if you want to use Xcode
     make
-
-In order to test the plugin, with sclang execute this code (replace port 8898 where the server port is actually running):
-
