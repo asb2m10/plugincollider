@@ -48,18 +48,17 @@ If for example your SynthDef doesn't have the gate arguments, the node will be f
 
 * Be sure to set your DAW latency size to a power of two (256, 512, 1024) otherwise some SC plugins might not work properly.
 * If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve this issue.
+* PluginCollider is currently built with "static" SC-plugin. It is great because you don't need any SuperCollider installation but it cannot load additional SC-plugins. This will be resolved when we will be able to package the plugin on any platform. (you can disable this by building PluginCollider with the SC_DYNAMIC_PLUGINS directive)
 
 # TODO
-- [ ] add [CLAP](https://github.com/free-audio/clap) support
-- [x] implement /note and /amp from DAW midi message
-- [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed
+- [ ] add [CLAP](https://github.com/free-audio/clap) plugin format
+- [ ] assign scsyndef parameters to controlbus (and plug parameters values)
+- [ ] multi scsyndef support
+- [x] implement /freq and /amp from DAW midi message
+- [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed (handle notarization)
 - [x] *Windows* bundle sndfile.dll within the plugin installation
 - [ ] more accurate OSC DAW timing
 
-
-### macOS notes
-
-macOS makes it harder to use shared libraries from SuperCollider to Plugincollider. It is easier to build it from your computer for now. I will check how I can do this without having to repackage everything in the plugin within the distribution.
 
 # Interacting with SuperCollider server (scsynth) from DAW
 
