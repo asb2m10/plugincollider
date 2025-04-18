@@ -11,6 +11,7 @@ on:
 
 jobs:
   build-linux:
+    if: false
     runs-on: ubuntu-latest
 
     steps:
@@ -54,6 +55,7 @@ jobs:
           ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/Standalone/*
 
   build-macos:
+    if: false
     runs-on: macos-latest
   # environment: PRD
 
@@ -143,3 +145,4 @@ jobs:
           ${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/VST3/*.vst3/**
           ${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/CLAP/*.clap/**
           ${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/Standalone/*.exe
+          ${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/Standalone/*.pdb
