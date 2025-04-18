@@ -3,6 +3,8 @@ Plugincollider
 
 Plugincollider is a generic (cross-platform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual.
 
+![plugincollider screenshot](resources/ui/screenshot_bitwig.png)
+
 Now support Linux, macOS and Windows.
 
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
@@ -22,7 +24,7 @@ Plugincollider can be used as a standard SuperCollider server by using the SC ID
 
 ## Usage - SynthDefs files
 
-Plugincollider can load previously compiled [SynthDefs](scsyndef) (*.scsyndef) that will be saved within the DAW plugin state. No installation/usage of Supercollider afterwards is required if you want to exclusively use scsyndef files.
+Plugincollider can load previously compiled [SynthDefs](resources/scsyndef) (*.scsyndef) that will be saved within the DAW plugin state. No installation/usage of Supercollider afterwards is required if you want to exclusively use scsyndef files.
 
 If the SynthDef has arguments, they will be exposed to the plugin and the user can set the lower and upper values for each arguments. The user can then easily change them from the Plugincollider UI.
 
@@ -48,12 +50,12 @@ If for example your SynthDef doesn't have the gate arguments, the node will be f
 * If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve this issue.
 
 # TODO
-
-- [ ] more accurate handling of "WorldLock" - espacially for OSC messages
+- [ ] add [CLAP](https://github.com/free-audio/clap) support
 - [x] implement /note and /amp from DAW midi message
-- [ ] more accurate OSC DAW timing
 - [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed
 - [x] *Windows* bundle sndfile.dll within the plugin installation
+- [ ] more accurate OSC DAW timing
+
 
 ### macOS notes
 

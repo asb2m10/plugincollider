@@ -137,8 +137,8 @@ if(MSVC)
     set(${flag} "${${flag}} /wd4996") # The POSIX name for this item is deprecated.
   endforeach()
 
-# this flag causes MSVC to correctly report __cplusplus, which prevents a compiler error 
-# caused by some versions of libsndfile's C++ header redefining nullptr as NULL. 
+# this flag causes MSVC to correctly report __cplusplus, which prevents a compiler error
+# caused by some versions of libsndfile's C++ header redefining nullptr as NULL.
 # See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
   add_compile_options("/Zc:__cplusplus")
 
@@ -163,7 +163,7 @@ endif()
 
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS c)
 
-project(PluginCollider VERSION 0.1.0)
+project(PluginCollider VERSION 0.2.0)
 
 add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory called JUCE
 

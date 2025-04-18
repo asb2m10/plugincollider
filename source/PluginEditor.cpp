@@ -87,8 +87,8 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
     synthDefPanel.loaddef.onClick = [this] () {
         scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-                                            juce::File("/home/asb2m10/src/plugincollider/scsyndef"), "*.scsyndef");
-        auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles; 
+                                            juce::File(), "*.scsyndef");
+        auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
         scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
             juce::File scfile (chooser.getResult());
             if ( !scfile.exists() )
