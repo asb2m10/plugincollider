@@ -141,11 +141,14 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
             }
         }
     }
+
+    loadMeasurer.reset(sampleRate, samplesPerBlock);
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    loadMeasurer.reset();
     superCollider.quit();
 }
 
@@ -178,6 +181,8 @@ void PluginColliderAudioProcessor::processBlock(
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+    juce::AudioProcessLoadMeasurer::ScopedTimer timer (loadMeasurer, buffer.getNumSamples());
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());

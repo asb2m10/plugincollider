@@ -141,9 +141,10 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
     }
 
     audioProcessor.superCollider.getWorldStats(&worldStats);
+    juce::AudioProcessLoadMeasurer *load = audioProcessor.getLoadMeasurer();
     stats.setText(juce::String::formatted(
-                      "units: %i graph: %i groups: %i", worldStats.mNumUnits,
-                      worldStats.mNumGraphs, worldStats.mNumGroups),
+                      "units: %i graph: %i groups: %i cpu(%0.3f) xrun(%d)", worldStats.mNumUnits,
+                      worldStats.mNumGraphs, worldStats.mNumGroups, load->getLoadAsPercentage(), load->getXRunCount()),
                   juce::dontSendNotification);
 }
 

@@ -125,6 +125,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     juce::MidiKeyboardState midiKeyboardState;
     CommandFifo<PluginColliderAudioProcessor> command;
 
+    juce::AudioProcessLoadMeasurer *getLoadMeasurer() {
+        return &loadMeasurer;
+    }
 
   private:
     juce::String pluginPath;
@@ -133,6 +136,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     juce::AudioParameterFloat *gain;
     juce::AudioParameterFloat *controlBus[32];
+
+    juce::AudioProcessLoadMeasurer loadMeasurer;
 
     bool curActivity;
 
