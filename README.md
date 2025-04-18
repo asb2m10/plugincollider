@@ -49,6 +49,7 @@ If for example your SynthDef doesn't have the gate arguments, the node will be f
 * Be sure to set your DAW latency size to a power of two (256, 512, 1024) otherwise some SC plugins might not work properly.
 * If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve this issue.
 * PluginCollider is currently built with "static" SC-plugin. It is great because you don't need any SuperCollider installation but it cannot load additional SC-plugins. This will be resolved when we will be able to package the plugin on any platform. (you can disable this by building PluginCollider with the SC_DYNAMIC_PLUGINS directive)
+* On Windows, if you are using the github releases, be sure to update the [MSVC Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022) to the latest version
 
 # TODO
 - [ ] add [CLAP](https://github.com/free-audio/clap) plugin format
