@@ -201,7 +201,6 @@ void PluginColliderAudioProcessor::processBlock(
     try {
         for (const auto meta : midiMessages) {
             const auto msg = meta.getMessage();
-
             if ( msg.isNoteOn() ) {
                 int node = rt_playSynth();
                 if ( node == 0 )
@@ -369,6 +368,11 @@ void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destDa
 void PluginColliderAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
     pluginState = juce::ValueTree::fromXml(*xmlState);
+
+    if ( ! pluginState.getChildWithName(IDs::synths).isValid() ) {
+        pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
+        recompileState();
+    }
 }
 
 bool PluginColliderAudioProcessor::getActivityMonitor() {
