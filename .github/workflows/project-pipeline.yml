@@ -143,3 +143,4 @@ jobs:
           ${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/VST3/*.vst3/**
           ${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/CLAP/*.clap/**
           ${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/Standalone/*.exe
+          #${{github.workspace}}/build/*_artefacts/${{ env.BUILD_TYPE }}/Standalone/*.pdb

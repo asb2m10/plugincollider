@@ -41,6 +41,7 @@ set_property(SOURCE ${SC_DIR}/common/SC_Filesystem_macos.cpp PROPERTY COMPILE_FL
 
 set(CMAKE_MODULE_PATH ${SC_DIR}/cmake_modules)
 include (${SC_DIR}/cmake_modules/FinalFile.cmake)
+
 if (NOT APPLE AND NOT WIN32)
 	set(SNDFILE_INCLUDE_DIR ${SC_DIR}/external_libraries/libsndfile)
 	include (${SC_DIR}/cmake_modules/FindSndfile.cmake)
@@ -51,7 +52,7 @@ else()
 	FetchContent_Declare(
     	sndfile
     	GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
-    	GIT_TAG 17a19ab264fcf238f46104cea9af9a0a5ca3786d
+    	GIT_TAG ea9ff560b4c2086c2f1cae3f02287768a0de4673
     	GIT_PROGRESS TRUE
     	GIT_SHALLOW TRUE
 	)
@@ -87,7 +88,7 @@ include_directories(${SC_DIR}/external_libraries
 	${SC_DIR}/include/plugin_interface
     ${SC_DIR}/server/scsynth/
 	${SC_DIR}/server/common
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    ${CMAKE_CURRENT_SOURCE_DIR}/source
 	)
 
 # This is a hack since we will define our own Driver
@@ -136,8 +137,8 @@ if(MSVC)
     set(${flag} "${${flag}} /wd4996") # The POSIX name for this item is deprecated.
   endforeach()
 
-# this flag causes MSVC to correctly report __cplusplus, which prevents a compiler error 
-# caused by some versions of libsndfile's C++ header redefining nullptr as NULL. 
+# this flag causes MSVC to correctly report __cplusplus, which prevents a compiler error
+# caused by some versions of libsndfile's C++ header redefining nullptr as NULL.
 # See https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
   add_compile_options("/Zc:__cplusplus")
 
@@ -152,7 +153,7 @@ endif(MSVC)
 IF (EXISTS ${SC_DIR}/build/common)
 	include_directories(${SC_DIR}/build/common)
 ELSE()
-	include_directories(Source/generated)
+	include_directories(source/generated)
 ENDIF()
 
 if (NOT Boost_FOUND)
@@ -162,17 +163,17 @@ endif()
 
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS c)
 
-project(PluginCollider VERSION 0.1.0)
+project(PluginCollider VERSION 0.2.0)
 
 add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory called JUCE
 
 juce_add_plugin(PluginCollider
     # VERSION ...                               # Set this if the plugin version is different to the project version
-     ICON_BIG  Resources/ui/plugincollider_256x256.png
+     ICON_BIG  resources/ui/plugincollider_256x256.png
     # ICON_SMALL ...
     COMPANY_NAME "Digital Suburban"                 # Specify the name of the plugin's author
 	BUNDLE_ID "com.digitalsuburban.PluginCollider"  # The bundle identifier for the plugin, if it should be a standalone bundle
-    IS_SYNTH FALSE                                  # Is this a synth or an effect?
+    IS_SYNTH TRUE                                  # Is this a synth or an effect?
     NEEDS_MIDI_INPUT TRUE                           # Does the plugin need midi input?
     # NEEDS_MIDI_OUTPUT TRUE/FALSE                  # Does the plugin need midi output?
     # IS_MIDI_EFFECT TRUE/FALSE                     # Is this plugin a MIDI effect?
@@ -204,6 +205,10 @@ if (WIN32)
 	PRIVATE
 	${SC_DIR}/common/SC_Filesystem_win.cpp)
 endif (WIN32)
+
+target_sources(PluginCollider
+PRIVATE
+source/ext/value_tree_debugger.cpp)
 
 if (NOT SC_DYNAMIC_PLUGINS)
 target_sources(PluginCollider
@@ -271,12 +276,12 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_World.cpp
 
 	# plugincollider itself =============================
-	Source/UDPPort.cpp 
-	Source/OSCMessages.cpp
-    Source/PluginEditor.cpp
-    Source/PluginProcessor.cpp
-	Source/SCProcess.cpp
-	Source/SCPluginDriver.cpp
+	source/UDPPort.cpp
+	source/OSCMessages.cpp
+    source/PluginEditor.cpp
+    source/PluginProcessor.cpp
+	source/SCProcess.cpp
+	source/SCPluginDriver.cpp
 
 	${boost_system_sources}
 	${boost_filesystem_sources})
@@ -294,6 +299,7 @@ target_link_libraries(PluginCollider
     PRIVATE
         # AudioPluginData           # If we'd created a binary data target, we'd link to it here
         juce::juce_audio_utils
+		juce::juce_osc
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
