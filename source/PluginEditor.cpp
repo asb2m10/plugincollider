@@ -61,29 +61,29 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
     configButton.setButtonText("Configure");
     //addAndMakeVisible(configButton);
-    configButton.setBounds(10, 38, 130, 25);
+    // configButton.setBounds(10, 38, 130, 25);
 
-    configButton.onClick = [ this ] {
-        settingsWindow = new juce::AlertWindow("Plugincollider settings", "", juce::AlertWindow::NoIcon);
+    // configButton.onClick = [ this ] {
+    //     settingsWindow = new juce::AlertWindow("Plugincollider settings", "", juce::AlertWindow::NoIcon);
 
-        settingsWindow->addTextBlock("Plugin path");
-        settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);
-        settingsWindow->addTextBlock("Scsynth path");
-        settingsWindow->addTextEditor("synthPath", audioProcessor.synthPath);
-        settingsWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
-        settingsWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
+    //     settingsWindow->addTextBlock("Plugin path");
+    //     settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);
+    //     settingsWindow->addTextBlock("Scsynth path");
+    //     settingsWindow->addTextEditor("synthPath", audioProcessor.synthPath);
+    //     settingsWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
+    //     settingsWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
 
-        settingsWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
-            if (r) {
-                scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
-                juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
-                prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
-                prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("synthPath"));
-                audioProcessor.appProp.saveIfNeeded();
-            }
-        }), true);
+    //     settingsWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
+    //         if (r) {
+    //             scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
+    //             juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
+    //             prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
+    //             prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("synthPath"));
+    //             audioProcessor.appProp.saveIfNeeded();
+    //         }
+    //     }), true);
 
-    };
+    // };
 
     synthDefPanel.loaddef.onClick = [this] () {
         scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
@@ -143,7 +143,7 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
     audioProcessor.superCollider.getWorldStats(&worldStats);
     juce::AudioProcessLoadMeasurer *load = audioProcessor.getLoadMeasurer();
     stats.setText(juce::String::formatted(
-                      "units: %i graph: %i groups: %i cpu(%0.3f) xrun(%d)", worldStats.mNumUnits,
+                      "units: %i graph: %i groups: %i cpu: %0.3f xrun: %d", worldStats.mNumUnits,
                       worldStats.mNumGraphs, worldStats.mNumGroups, load->getLoadAsPercentage(), load->getXRunCount()),
                   juce::dontSendNotification);
 }
@@ -175,7 +175,24 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         logging.addSubMenu("UDP", udpLogging);
         logging.addSubMenu("Server", serverLogging);
 
-#ifdef SC_DYNAMIC_PLUGINS
+        ret.addItem("Configure scplugin path...", true, false, [this] {
+            settingsWindow = new juce::AlertWindow("SCSynDef path", "", juce::AlertWindow::NoIcon);
+            settingsWindow->addTextBlock("SCSynDef path");
+            settingsWindow->addTextEditor("scsynthdef", audioProcessor.synthPath);
+            settingsWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
+            settingsWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
+
+            settingsWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
+                if (r) {
+                    audioProcessor.logger.scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
+                    juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
+                    prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("scsynthdef"));
+                    audioProcessor.appProp.saveIfNeeded();
+                }
+            }), true);
+        });
+
+#ifndef STATIC_PLUGINS
         ret.addItem("Configure plugin path...", true, false, [this] {
             settingsWindow = new juce::AlertWindow("Plugin path", "", juce::AlertWindow::NoIcon);
             settingsWindow->addTextBlock("Plugin path");
@@ -192,8 +209,8 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
                 }
             }), true);
         });
-        ret.addSeparator();
 #endif
+        ret.addSeparator();
         ret.addSubMenu("Logging", logging);
         ret.addSeparator();
         ret.addItem("Reboot server", true, false, [this] {
