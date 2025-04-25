@@ -41,6 +41,10 @@ public:
         //table.setRowHeight(40);
     }
 
+    ~ParameterTable() override {
+        table.setModel(nullptr);
+    }
+
     int getNumColumns() {
         return 5;
     }

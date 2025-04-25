@@ -9,6 +9,10 @@ Now support Linux, macOS and Windows.
 
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
+# Changelob
+## Version 0.2.1
+* Fixed crash on pluginwindow close: https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162
+
 ## State of the project
 
 SuperCollider is a highly modular ecosystem (sc-plugins, scsynth definitions) that needs to be adapted for each platform from the VST3/clap component. For now consider this as a vanilla scsynth implementation with no external plugins.
