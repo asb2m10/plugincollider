@@ -9,7 +9,7 @@ Now support Linux, macOS and Windows.
 
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
-# Changelob
+# Changelog
 ## Version 0.2.1
 * Fixed crash on pluginwindow close: https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162
 
