@@ -82,7 +82,6 @@ jobs:
         cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
 
     - name: Package
-      if: github.ref == 'refs/heads/develop'
       env:
         MAC_SIGNING_CERT: ${{ secrets.MAC_SIGNING_CERT }}
         MAC_SIGNING_B64: ${{ secrets.MAC_SIGNING_B64 }}
