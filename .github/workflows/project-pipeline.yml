@@ -104,7 +104,7 @@ jobs:
           ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/CLAP/*.clap/**
           ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/AU/*.component/**
           ${{github.workspace}}/build/*_artefacts/${{env.BUILD_TYPE}}/Standalone/*.app/**
-    #     ${{github.workspace}}/output_bin/*.dmg
+          ${{github.workspace}}/output_bin/*.dmg
 
   build-windows:
     runs-on: windows-latest
