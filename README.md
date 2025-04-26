@@ -11,32 +11,33 @@ Now support Linux, macOS and Windows.
 
 # Changelog
 ## Version 0.2.1
-* Fixed crash on pluginwindow close: https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162
+* Fixed [crash](https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162) on pluginwindow close
+* Avoid sending midi notes events if the plugin is in FX mode
 
-## State of the project
+# State of the project
 
 SuperCollider is a highly modular ecosystem (sc-plugins, scsynth definitions) that needs to be adapted for each platform from the VST3/clap component. For now consider this as a vanilla scsynth implementation with no external plugins.
 
 Latest build are available from [https://github.com/asb2m10/plugincollider/actions](https://github.com/asb2m10/plugincollider/actions)
 
-## Usage - Supercollider server
+# Usage - Supercollider server
 Plugincollider can be used as a standard SuperCollider server by using the SC IDE (or any other sclang client). You can test the plugin by using this SC code (where Plugincollider is running at 127.0.0.1:8898) :
 
     o = ServerOptions.new;
     s = Server.remote(\Plugincollider, NetAddr("127.0.0.1", 8898), o);
     { [SinOsc.ar(439, 0, 0.2), SinOsc.ar(444, 0, 0.2)] }.play(s);
 
-## Usage - SynthDefs files
+# Usage - SynthDefs files
 
 Plugincollider can load previously compiled [SynthDefs](resources/scsyndef) (*.scsyndef) that will be saved within the DAW plugin state. No installation/usage of Supercollider afterwards is required if you want to exclusively use scsyndef files.
 
 If the SynthDef has arguments, they will be exposed to the plugin and the user can set the lower and upper values for each arguments. The user can then easily change them from the Plugincollider UI.
 
-### FX Mode
+## FX Mode
 
 If there is a SynthDef loaded, the plugin can be put in "FX Mode" that will run this SynthDef on a single node every time the plugin is running. This can be useful if you want to use the plugin as an effect or a drone/noodle.
 
-### Non-Fx Mode (Synth Mode)
+## Non-Fx Mode (Synth Mode)
 
 In this mode (and when a SynthDef is loaded), everytime Plugincollider receives a midi node, it will trigger this synth based on those parameters:
 

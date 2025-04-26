@@ -199,38 +199,40 @@ void PluginColliderAudioProcessor::processBlock(
 
     const juce::ScopedLock lock(superCollider.worldLock);
     try {
-        for (const auto meta : midiMessages) {
-            const auto msg = meta.getMessage();
-            if ( msg.isNoteOn() ) {
-                int node = rt_playSynth();
-                if ( node == 0 )
-                    continue;
+        if ( ! synthState.isStaticSynth ) {
+            for (const auto meta : midiMessages) {
+                const auto msg = meta.getMessage();
+                if ( msg.isNoteOn() ) {
+                    int node = rt_playSynth();
+                    if ( node == 0 )
+                        continue;
 
-                int note = msg.getNoteNumber();
-                int lastNode = boundedMidiVoice[note];
-                if ( lastNode != 0 ) {
-                    if ( superCollider.rt_getNode(lastNode).isValid() )
-                        superCollider.rt_freeNode(lastNode);
-                    boundedMidiVoice[note] = 0;
-                }
+                    int note = msg.getNoteNumber();
+                    int lastNode = boundedMidiVoice[note];
+                    if ( lastNode != 0 ) {
+                        if ( superCollider.rt_getNode(lastNode).isValid() )
+                            superCollider.rt_freeNode(lastNode);
+                        boundedMidiVoice[note] = 0;
+                    }
 
-                boundedMidiVoice[note] = node;
-                if ( synthState.freqIdx != -1 ) {
-                    superCollider.rt_setNodeValue(node, synthState.freqIdx, msg.getMidiNoteInHertz(note));
-                }
-                if ( synthState.velocityIdx != -1 ) {
-                    superCollider.rt_setNodeValue(node, synthState.velocityIdx, msg.getFloatVelocity());
-                }
-            } else if ( msg.isNoteOff() ) {
-                int note = msg.getNoteNumber();
-                if ( boundedMidiVoice[note] != 0 ) {
-                    if ( superCollider.rt_getNode(boundedMidiVoice[note]).isValid() ) {
-                        if ( synthState.gateIdx != -1 )
-                            superCollider.rt_setNodeValue(boundedMidiVoice[note], synthState.gateIdx, 0);
-                        // else {
-                        //     superCollider.rt_freeNode(boundedMidiVoice[note]);
-                        //     boundedMidiVoice[note] = 0;
-                        // }
+                    boundedMidiVoice[note] = node;
+                    if ( synthState.freqIdx != -1 ) {
+                        superCollider.rt_setNodeValue(node, synthState.freqIdx, msg.getMidiNoteInHertz(note));
+                    }
+                    if ( synthState.velocityIdx != -1 ) {
+                        superCollider.rt_setNodeValue(node, synthState.velocityIdx, msg.getFloatVelocity());
+                    }
+                } else if ( msg.isNoteOff() ) {
+                    int note = msg.getNoteNumber();
+                    if ( boundedMidiVoice[note] != 0 ) {
+                        if ( superCollider.rt_getNode(boundedMidiVoice[note]).isValid() ) {
+                            if ( synthState.gateIdx != -1 )
+                                superCollider.rt_setNodeValue(boundedMidiVoice[note], synthState.gateIdx, 0);
+                            // else {
+                            //     superCollider.rt_freeNode(boundedMidiVoice[note]);
+                            //     boundedMidiVoice[note] = 0;
+                            // }
+                        }
                     }
                 }
             }
@@ -305,13 +307,14 @@ void PluginColliderAudioProcessor::recompileState() {
     synthState.gateIdx = -1;
     juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
     if ( synth.isValid() ) {
+        synthState.isStaticSynth = synth.getProperty(IDs::staticSynth);
         juce::String name = synth.getProperty(IDs::synthName);
         strncpy(synthState.synthName, name.toRawUTF8(), 127);
         juce::ValueTree params = synth.getChildWithName(IDs::parameters);
         for(int i=0;i<params.getNumChildren();i++) {
             juce::ValueTree param = params.getChild(i);
 
-            if ( synth.getProperty(IDs::staticSynth) == juce::var(false) ) {
+            if ( ! synthState.isStaticSynth ) {
                 juce::String pName = param.getProperty(IDs::pName);
                 if ( pName == "freq" ) {
                     synthState.freqIdx = i;

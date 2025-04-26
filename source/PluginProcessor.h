@@ -132,7 +132,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
   private:
     juce::String pluginPath;
     juce::String synthPath;
-    juce::ValueTree synths;
 
     juce::AudioParameterFloat *gain;
     juce::AudioParameterFloat *controlBus[32];
@@ -160,6 +159,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
         int freqIdx;
         int velocityIdx;
         int gateIdx;
+        bool isStaticSynth;
     };
     SynthState synthState;
 
