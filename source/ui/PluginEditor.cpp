@@ -20,13 +20,14 @@
 #include "PluginProcessor.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "ext/value_tree_debugger.h"
+#include "TreeViewItems.h"
 #include "SC_Version.hpp"
 
 class MidiKeyboardWindow: public juce::DocumentWindow {
 public:
     MidiKeyboardWindow(juce::MidiKeyboardState &state) : juce::DocumentWindow("Midi Keyboard", juce::Colours::lightgrey, juce::DocumentWindow::allButtons) {
         auto keyboardComponent = new juce::MidiKeyboardComponent(state, juce::MidiKeyboardComponent::horizontalKeyboard);
-        keyboardComponent->setSize(600, 70);
+        keyboardComponent->setSize(600, 30);
         setContentOwned(keyboardComponent, true);
         setUsingNativeTitleBar(true);
         setResizable(true, true);
@@ -42,11 +43,13 @@ public:
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     PluginColliderAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
-      logViewer(&(p.logger.content)), synthDefPanel(p.pluginState) {
+      logViewer(&(p.logger.content)), synthDefPanel(p.pluginState), 
+      layoutResizer (&layout, 1, true) {
 
     menuBar.reset(new juce::MenuBarComponent(this));
     addAndMakeVisible(menuBar.get());
 
+    addAndMakeVisible(treeView);
     addAndMakeVisible(udpPort);
     addAndMakeVisible(setUdpPortButton);
 
@@ -119,14 +122,23 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     juce::AudioParameterFloat *parameter = p.controlBus[0];
     cb1Attachment.reset(new juce::SliderParameterAttachment(*parameter, cb1, nullptr));
 
-    addAndMakeVisible(synthDefPanel);
-    addAndMakeVisible(logViewer);
+    addAndMakeVisible(treeView);
+    treeView.setRootItemVisible(false);
+    treeView.setRootItem(new RootItem(audioProcessor));
+    addAndMakeVisible(rightPane);
+    rightPane.addAndMakeVisible(logViewer);
+    rightPane.addAndMakeVisible(synthDefPanel);
+    addAndMakeVisible(layoutResizer);
     addAndMakeVisible(stats);
     stats.setJustificationType(juce::Justification::centredRight);
 
+    layout.setItemLayout(0, -0.1, -0.9, -0.3);
+    layout.setItemLayout(1, 5, 5, 5);
+    layout.setItemLayout(2, -0.1, -0.9, -0.7);
+
     startTimer(400);
-    //setResizable(true, true);
-    setSize(700, 450);
+    setResizable(true, true);
+    setSize(800, 550);
 }
 
 PluginColliderAudioProcessorEditor::~PluginColliderAudioProcessorEditor() {
@@ -241,33 +253,18 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         });
         break;
     case 2:
-        ret.addItem("Dump Tree", true, false, [this] {
-            audioProcessor.command.push([this](PluginColliderAudioProcessor &proc) {
-                proc.superCollider.rt_dumpTree();
-            });
+        ret.addItem("Midi keyboard", [this] {
+            midikeyboard.reset(new MidiKeyboardWindow(audioProcessor.midiKeyboardState));
+        });
+        ret.addItem("Mouse canvas", [this] {
         });
         ret.addSeparator();
-        ret.addItem("Stop Plugincollider group", true, false, [this] {
-            audioProcessor.command.push([this](PluginColliderAudioProcessor &proc) {
-                proc.superCollider.rt_freeGroup(kDefaultGroupId);
-            });
-        });
-        ret.addItem("Stop all running nodes", true, false, [this] {
-                audioProcessor.superCollider.freeNodes();
+        ret.addItem("Internal plugin state (advanced debugging)", [this] {
+            ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);
+            value_tree_debugger.reset(vtd);
         });
         break;
     case 3:
-        //#ifdef DEBUG
-            ret.addItem("Show internal plugin state", [this] {
-                ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);
-                value_tree_debugger.reset(vtd);
-            });
-
-            ret.addItem("Show midi keyboard", [this] {
-                midikeyboard.reset(new MidiKeyboardWindow(audioProcessor.midiKeyboardState));
-            });
-            ret.addSeparator();
-        //#endif
         ret.addItem("About...", [this] {
             auto opts = juce::MessageBoxOptions().withTitle("Info").withMessage(juce::String("PluginCollider using SuperCollider ") + SC_VersionString() ).withButton("OK");
             juce::AlertWindow::showAsync(opts, [](int res) {});
@@ -276,11 +273,6 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
     return ret;
 }
 
-void PluginColliderAudioProcessorEditor::menuItemSelected(int x, int y) {
-    //
-}
-
-//==============================================================================
 void PluginColliderAudioProcessorEditor::paint(juce::Graphics &g) {
     // (Our component is opaque, so we must completely fill the background with
     // a solid colour)
@@ -296,7 +288,16 @@ void PluginColliderAudioProcessorEditor::resized() {
     menuBar->setBounds(0, 0, getWidth(), menuSize);
     udpPort.setBounds(10, 8 + menuSize, 70, 25);
     setUdpPortButton.setBounds(70, 8 + menuSize, 100, 25);
-    stats.setBounds(394, 8 + menuSize, 300, 25);
-    synthDefPanel.setBounds(10, 60, 680, 220);
-    logViewer.setBounds(10, 295, 680, 145);
+    stats.setBounds(194, 8 + menuSize, getWidth() - 194, 25);
+
+    Component* comps[] = { &treeView, &layoutResizer, &rightPane };
+    layout.layOutComponents(comps, 3,  0, 8 + menuSize + 35, getWidth(), getHeight() - (8+menuSize+35), false, true);    
+
+    auto area = rightPane.getLocalBounds();
+    logViewer.setBounds(area.removeFromBottom(200));
+    synthDefPanel.setBounds(area);
+}
+
+//==============================================================================
+void PluginColliderAudioProcessorEditor::menuItemSelected(int x, int y) {
 }

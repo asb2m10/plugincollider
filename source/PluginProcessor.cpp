@@ -18,7 +18,7 @@
 
 
 #include "PluginProcessor.h"
-#include "PluginEditor.h"
+#include "ui/PluginEditor.h"
 #include "UDPPort.h"
 
 //==============================================================================
