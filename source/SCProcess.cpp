@@ -29,6 +29,7 @@
 #include "SC_PlugIn.h"
 #include "SC_GraphDef.h"
 #include "SC_Group.h"
+#include "SC_UnitDef.h"
 
 const int kDefaultPortNumber = 9989;
 const int kDefaultBlockSize = 64;
@@ -200,6 +201,11 @@ void SCProcess::bootServer() {
 
     if (world) {
         rt_newGroup(0, kDefaultGroupId);
+        rt_newGroup(kDefaultGroupId, 1001);
+        rt_newGroup(kDefaultGroupId, 1002);
+        rt_newGroup(1002, 1110);
+        rt_newGroup(1110, 1111);
+
         logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
                 options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
@@ -327,6 +333,49 @@ int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
     }
 
     return graph->mNode.mID;
+}
+
+extern HashTable<struct UnitDef, Malloc>* gUnitDefLib;
+juce::StringArray SCProcess::getRegistredUnits() {
+    juce::StringArray ret;
+    if ( world != nullptr ) {
+        for(int i=0;i<gUnitDefLib->TableSize();i++) {
+            UnitDef *unit = gUnitDefLib->AtIndex(i);
+            if ( unit != nullptr ) {
+                ret.add((char *) unit->mUnitDefName);
+            }
+        }
+    }
+    return ret;
+}
+
+SCErr SCProcess::rt_queryTree(int rootGroup, big_scpacket *packet, bool flagParameters) {
+    Group *group = rt_getNode(rootGroup).group();
+    if (group == nullptr) {
+        return kSCErr_GroupNotFound;
+    }
+    packet->adds("/reply");
+    if ( flagParameters ) {
+        // first count the total number of nodes to know how many tags the packet should have
+        int numNodes = 1; // include this one
+        int numControlsAndDefs = 0;
+        Group_CountNodeAndControlTags(group, &numNodes, &numControlsAndDefs);
+        // nodeID and numChildren + numControlsAndDefs + controlFlag
+        packet->maketags(numNodes * 2 + numControlsAndDefs + 2);
+        packet->addtag(',');
+        packet->addtag('i');
+        packet->addi(1); // include controls flag
+        Group_QueryTreeAndControls(group, packet);
+    } else {
+        int numNodeTags = 2; // include this one
+        Group_CountNodeTags(group, &numNodeTags);
+        packet->maketags(numNodeTags + 2); // nodeID and numChildren
+        packet->addtag(',');
+        packet->addtag('i');
+        packet->addi(0); // include controls flag
+        Group_QueryTree(group, packet);
+    }
+    return 0;
 }
 
 void SCProcess::quit() {

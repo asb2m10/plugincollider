@@ -29,6 +29,7 @@
 #include "sc_msg_iter.h"
 #include "SCPluginDriver.h"
 #include "SC_Node.h"
+#include "scsynthsend.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_osc/juce_osc.h>
@@ -161,7 +162,6 @@ public:
     };
 
     SCProcess(SuperLogger &logger);
-    SCProcess();
     ~SCProcess();
     void quit();
 
@@ -186,6 +186,7 @@ public:
 
     void freeNodes(int rootNodeId = 0);
     void showRegistredSynthdef();
+    juce::StringArray getRegistredUnits();
 
     // Anything rt_ should be called from the audio thread since the worldLock is already aquired
     // ======================
@@ -197,6 +198,7 @@ public:
     void rt_setNodeValue(int destNode, int idx, float value);
     SCErr rt_newGroup(int parentNode, int destGroup);
     int32_t rt_newSynth(juce::String name, int newId, int destNode);
+    SCErr rt_queryTree(int rootGroup, big_scpacket *packet, bool flagParameters = false);
     void rt_dumpTree();
     // ======================
 

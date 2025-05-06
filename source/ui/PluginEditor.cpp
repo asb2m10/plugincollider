@@ -266,7 +266,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         break;
     case 3:
         ret.addItem("About...", [this] {
-            auto opts = juce::MessageBoxOptions().withTitle("Info").withMessage(juce::String("PluginCollider using SuperCollider ") + SC_VersionString() ).withButton("OK");
+            auto opts = juce::MessageBoxOptions().withTitle("Info").withMessage(juce::String("PluginCollider\n\nUsing SuperCollider ") + SC_VersionString() + "\n\nBuilt on " +  __DATE__).withButton("OK");
             juce::AlertWindow::showAsync(opts, [](int res) {});
         });
     }

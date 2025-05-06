@@ -1,14 +1,49 @@
+/*
+    PluginCollider Copyright (c) 2025 Pascal Gauthier.
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
 #pragma once
 
 #include "TreeViewItems.h"
+#include "SC_OscUtils.hpp"
 
-class RootPCGroup : public PCTreeItem {
+class ProjectSynthDefItem : public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
 public:
-    RootPCGroup() {
-        itemName = "1 - Root group";
-        PCTreeItem *group = new PCTreeItem("5 - Fx group");
-        group->addSubItem(new PCTreeItem("10 - Midi note group"));
-        addSubItem(group);
+    ProjectSynthDefItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
+        itemName = "SynthDefs";
+    }
+
+    void itemOpennessChanged(bool isNowOpen) {
+        if ( isNowOpen ) {
+            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths);
+
+            if ( vt.isValid() ) {
+                for(int i=0;i<vt.getNumChildren();i++) {
+                    juce::ValueTree synth = vt.getChild(i);
+                    if ( synth.hasType(IDs::synth) ) {
+                        juce::String name = synth.getProperty(IDs::synthName);
+                        addSubItem(new PCTreeItem(name, false));
+                    }
+                }
+            }
+        } else {
+            clearSubItems();
+        }
     }
 };
 
@@ -18,13 +53,15 @@ public:
     ProjectItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
         itemName = "Project";
 
-        PCTreeItem *rootGroup = new RootPCGroup();
-        PCTreeItem *group = new PCTreeItem("Groups setup");
-        group->addSubItem(rootGroup);
+        PCTreeItem *group = new PCTreeItem("Node 1 - Root Group");
+        PCTreeItem *fx = new PCTreeItem("Node 5 - Fx group");
+        group->addSubItem(fx);
+        fx->addSubItem(new PCTreeItem("10 - Midi note group"));
 
         addSubItem(new PCTreeItem("Buffers"));
+        addSubItem(new PCTreeItem("Control Busses"));
         addSubItem(group);
-        addSubItem(new PCTreeItem("SynthDefs"));
+        addSubItem(new ProjectSynthDefItem(p));
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
@@ -42,6 +79,100 @@ public:
     }
 };    
 
+class UnitItem : public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
+public:
+    UnitItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
+        itemName = "Unit";
+    }
+
+    void itemOpennessChanged(bool isNowOpen) {
+        if ( isNowOpen ) {
+            juce::StringArray units = audioProcessor.superCollider.getRegistredUnits();
+            units.sort(true);
+            for(int i=0;i<units.size();i++)
+                addSubItem(new PCTreeItem(units[i], false));
+        } else {
+            clearSubItems();
+        }
+    }
+};
+
+class NodeTreeItem : public PCTreeItem {
+    juce::OSCArgument **args;
+    juce::OSCArgument *ends;
+
+public:
+    NodeTreeItem(juce::OSCArgument **args, juce::OSCArgument *ends) : args(args), ends(ends) {
+        int nodeId = (*args)->getInt32();
+        (*args)++;
+
+        int numberOfChild = (*args)->getInt32();
+        (*args)++;
+
+        if ( numberOfChild < 0 ) {
+            itemName = "Node " + juce::String(nodeId);
+
+            juce::String synthDefName = (*args)->getString();
+            (*args)++;
+            addSubItem(new PCTreeItem(synthDefName, false));
+        } else {
+            itemName = "Group " + juce::String(nodeId);
+
+            for(int i=0;i<numberOfChild;i++) {
+                addSubItem(new NodeTreeItem(args, ends));
+            }
+        }
+    }
+
+    void itemClicked(const juce::MouseEvent&event) override {
+        if (event.mods.isPopupMenu()) {
+            juce::PopupMenu menu;
+            menu.addItem("Set value...", true, false, [this] {
+            });
+            menu.addItem("Map to control bus...", true, false, [this] {
+            });
+            menu.addSeparator();
+            menu.addItem("Free node", true, false, [this] {
+            });
+            menu.showMenuAsync(juce::PopupMenu::Options());
+        }
+    }
+};
+
+class NodeTreeRoot : public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
+public:
+    NodeTreeRoot(PluginColliderAudioProcessor &p) : audioProcessor(p)  {
+        itemName = "Nodes";
+    }
+
+    void itemOpennessChanged(bool isNowOpen) {
+        if ( isNowOpen ) {
+            ASyncReply<big_scpacket> reply;
+            audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
+                reply.rc = proc.superCollider.rt_queryTree(0, &reply.content, false);
+                reply.notify();
+            });
+            reply.wait();
+            if ( reply.rc == 0 ) {
+                juce::OSCMessage msg = OSCMemoryBlock::parseMessage(reply.content.data(), reply.content.size());
+                juce::OSCArgument *args = msg.begin();
+                juce::OSCArgument *ends = msg.end();
+                // if synthControl value included
+                args++;
+                // node id of the request group
+                args++;
+                // num of child
+                args++;
+                addSubItem(new NodeTreeItem(&args, ends));
+            }
+        } else {
+            clearSubItems();
+        }
+    }
+};
+
 class ServerItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
 public:
@@ -49,9 +180,9 @@ public:
         itemName = "Server";
 
         addSubItem(new PCTreeItem("Buffers"));
-        addSubItem(new PCTreeItem("Nodes"));
+        addSubItem(new NodeTreeRoot(p));
         addSubItem(new PCTreeItem("SynthDefs"));
-        addSubItem(new PCTreeItem("Units"));
+        addSubItem(new UnitItem(p));
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
@@ -68,7 +199,6 @@ public:
 
 RootItem::RootItem(PluginColliderAudioProcessor &p) {
     setOpen(true);
-
     addSubItem(new ProjectItem(p));
     addSubItem(new ServerItem(p));
 }

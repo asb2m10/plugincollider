@@ -42,7 +42,6 @@ public:
     }
 
     void processReply(struct ReplyAddress *addr, char *msg, int size) {
-        jassert(socket);
         if ( socket == nullptr )  {
             scprintf("Cannot reply since server socket closed\n");
             return;

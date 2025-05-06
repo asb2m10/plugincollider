@@ -1,3 +1,9 @@
+/**
+ * @file CommandFifo.h
+ * @brief CommandFifo class for sending commands to the audio thread.
+ * @author JUCE examples (see the Sampler)
+ */
+
 // CommandFifo.h
 // We want to send type-erased commands to the audio thread, but we also
 // want those commands to contain move-only resources, so that we can
@@ -67,4 +73,33 @@ private:
 
     std::vector<std::unique_ptr<Command<Proc>>> buffer;
     juce::AbstractFifo abstractFifo;
+};
+
+/**
+ * @brief Helper class to wait for a reply from the audio thread.
+ * The goal is to allocate the reply object from the UI thread and let the audio thread fill it.
+ *
+ * This could be done with a std::promise, but we want to avoid the overhead of std::future that would 
+ * allocte from the audio thread.
+ */
+template <class T>
+class ASyncReply {
+    std::condition_variable cv;
+    std::mutex cv_m;
+    std::unique_lock<std::mutex> lk;
+
+public:
+    T content;
+    int rc = -1;
+
+    ASyncReply() : lk(cv_m) {
+    }
+
+    void wait() {
+        cv.wait(lk);
+    }
+
+    void notify() {
+        cv.notify_one();
+    }
 };

@@ -1,7 +1,7 @@
 Plugincollider
 ==============
 
-Plugincollider is a generic (cross-platform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a VST3 or AU plugin. The embedded server may be controlled over OSC as usual.
+Plugincollider is a generic (cross-platform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a VST3 plugin. The embedded server may be controlled over OSC as usual.
 
 ![plugincollider screenshot](resources/ui/screenshot_bitwig.png)
 
@@ -10,6 +10,9 @@ Now support Linux, macOS and Windows.
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
+## Version 0.2.2
+* Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it wil be the editor to edit the desired node hierarchy.
+
 ## Version 0.2.1
 * Fixed [crash](https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162) on pluginwindow close
 * Avoid sending midi notes events if the plugin is in FX mode
