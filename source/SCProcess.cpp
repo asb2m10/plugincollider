@@ -31,9 +31,6 @@
 #include "SC_Group.h"
 #include "SC_UnitDef.h"
 
-const int kDefaultPortNumber = 9989;
-const int kDefaultBlockSize = 64;
-const int kDefaultBeatDiv = 1;
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
@@ -187,7 +184,7 @@ void SCProcess::bootServer() {
     options.mVerbosity = 2;
     options.mMaxLogins = 32;
 #if STATIC_PLUGINS
-    logger.scprintf("SC_PLUGIN_PATH is ignored since plugincollider is compiled with SC static plugins\n");
+    logger.scprintf("SC_PLUGIN_PATH is ignored since PluginCollider is compiled with SC static plugins\n");
 #else
     options.mUGensPluginPath = pluginPath.toRawUTF8();
 #endif
@@ -317,7 +314,7 @@ int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
         return 0;
     }
 
-    // we create a empty message, we will reconfigure the node afterwards
+    // we create a empty message, we will reconfigure the node afterward
     sc_msg_iter msg(0, "");
 
     Graph* graph = nullptr;
@@ -406,7 +403,7 @@ bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) 
     if (!lock.isLocked())
         return true;
 
-    if (world == NULL)
+    if (world == nullptr)
         return true;
 
     if (!world->mRunning)

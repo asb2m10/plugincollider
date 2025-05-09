@@ -26,11 +26,21 @@
 
 class PluginColliderAudioProcessorEditor;
 
+#define IDS_VERSION "A"
+
 namespace IDs {
 #define DECLARE_ID(name) const juce::Identifier name (#name);
     DECLARE_ID(root)
-
+    DECLARE_ID(version)
     DECLARE_ID(udpport)
+
+    DECLARE_ID(controlbuses)
+    DECLARE_ID(controlbus)
+    DECLARE_ID(cbName)
+    DECLARE_ID(cbLow)
+    DECLARE_ID(cbHigh)
+    DECLARE_ID(cbStep)
+
     DECLARE_ID(synths)
     DECLARE_ID(synth)
     DECLARE_ID(staticSynth)
@@ -45,8 +55,8 @@ namespace IDs {
     DECLARE_ID(pCurrentValue)
     DECLARE_ID(pDefaultValue)
     DECLARE_ID(pControlBus)
-    DECLARE_ID(pRangeLow)
-    DECLARE_ID(pRangeHigh)
+    DECLARE_ID(pLow)
+    DECLARE_ID(pHigh)
 };
 
 //==============================================================================
@@ -57,6 +67,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
   public:
     SCProcess superCollider;
     UDPPort udpPort;
+
+    void resetPluginState();
 
     //==============================================================================
     PluginColliderAudioProcessor();

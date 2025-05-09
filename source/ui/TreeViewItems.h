@@ -22,7 +22,7 @@
 
 /**
  * PluginCollider TreeViewItem base class.
- * 
+ *
  * \brief Base class for tree view items in the PluginCollider editor.
  */
 class PCTreeItem : public juce::TreeViewItem {
@@ -48,7 +48,7 @@ public:
     virtual void refresh() {
     }
 
-    void paintItem (juce::Graphics& g, int width, int height) {
+    void paintItem (juce::Graphics& g, int width, int height) override {
         g.setColour(getOwnerView()->findColour(juce::Label::textColourId));
         g.setFont(height * 0.7f);
         g.drawText(itemName, 4, 0, width - 4, height, juce::Justification::centredLeft, true);

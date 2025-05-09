@@ -188,7 +188,7 @@ public:
     void showRegistredSynthdef();
     juce::StringArray getRegistredUnits();
 
-    // Anything rt_ should be called from the audio thread since the worldLock is already aquired
+    // Anything rt_ should be called from the audio thread since the worldLock is already acquired
     // ======================
     SCNodeWalker rt_getNode(int destNode);
     void rt_setControlBusValue(int bus, float value);

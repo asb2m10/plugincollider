@@ -72,8 +72,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     };
 
     pluginState = juce::ValueTree(IDs::root);
-    pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
-    pluginState.addListener(this);
+    resetPluginState();
 
     if ( ! bindUdpPort() ) {
         logger.scprintf("Unable to bind to UDP port");
@@ -90,10 +89,10 @@ bool PluginColliderAudioProcessor::bindUdpPort() {
     if ( pluginState.hasProperty(IDs::udpport)) {
         int targetPort = pluginState.getProperty(IDs::udpport);
         if ( udpPort.connectToPort(targetPort) ) {
-            logger.scprintf("Server listning to port %d\n", targetPort);
+            logger.scprintf("Server listening to port %d\n", targetPort);
             return true;
         }
-        logger.scprintf("Unable to bind to registred port %d, seeking random available port\n", targetPort);
+        logger.scprintf("Unable to bind to registered port %d, seeking random available port\n", targetPort);
     }
 
     if ( ! udpPort.connectToNextFreePort(8898) ) {
@@ -102,7 +101,7 @@ bool PluginColliderAudioProcessor::bindUdpPort() {
     }
 
     int newPort = udpPort.getListenPort();
-    logger.scprintf("Server listning to port %d\n", newPort);
+    logger.scprintf("Server listening to port %d\n", newPort);
     pluginState.setProperty(IDs::udpport, newPort, nullptr);
     return true;
 }
@@ -162,7 +161,7 @@ bool PluginColliderAudioProcessor::isBusesLayoutSupported(
 
 int PluginColliderAudioProcessor::rt_playSynth() {
     if ( !superCollider.rt_getNode(kDefaultGroupId).isValid() ) {
-        logger.scprintf("Plugincollider default group (1) was removed !\n");
+        logger.scprintf("PluginCollider default group (1) was removed !\n");
         return 0;
     }
     if ( synthState.synthName[0] == 0 )
@@ -238,7 +237,7 @@ void PluginColliderAudioProcessor::processBlock(
             }
         }
         command.call(*this);
-    } catch (std::exception e) {
+    } catch (std::exception &e) {
         logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
     }
 
@@ -276,7 +275,8 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
         parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
 
         // we do our best to find the best low / high values based on the defaultValue
-        int low, high, defaultValue = synthDef->getParametersValues()[i];
+        int low, high;
+        float defaultValue = synthDef->getParametersValues()[i];
         if ( defaultValue == 0 ) {
             low = -1;
             high = 1;
@@ -287,8 +287,8 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
 
         parameter.setProperty(IDs::pIdx, i, nullptr);
         parameter.setProperty(IDs::pDefaultValue, synthDef->getParametersValues()[i], nullptr);
-        parameter.setProperty(IDs::pRangeLow, low, nullptr);
-        parameter.setProperty(IDs::pRangeHigh, high, nullptr);
+        parameter.setProperty(IDs::pLow, low, nullptr);
+        parameter.setProperty(IDs::pHigh, high, nullptr);
         parameter.setProperty(IDs::pControlBus, -1, nullptr);
         parameters.addChild(parameter, i, nullptr);
     }
@@ -376,6 +376,13 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
         pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
         recompileState();
     }
+}
+
+void PluginColliderAudioProcessor::resetPluginState() {
+    pluginState.removeListener(this);
+    pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
+    pluginState.setProperty(IDs::version, IDS_VERSION, nullptr);
+    pluginState.addListener(this);
 }
 
 bool PluginColliderAudioProcessor::getActivityMonitor() {

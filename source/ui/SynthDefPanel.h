@@ -100,7 +100,7 @@ public:
                 }
 
                 paramSlider->setEnabled(!disabledControl(params.getProperty(IDs::pName)));
-                paramSlider->setRange(params.getProperty(IDs::pRangeLow), params.getProperty(IDs::pRangeHigh));
+                paramSlider->setRange(params.getProperty(IDs::pLow), params.getProperty(IDs::pHigh));
                 if ( params.hasProperty(IDs::pCurrentValue) ) {
                     paramSlider->setValue(params.getProperty(IDs::pCurrentValue), juce::NotificationType::dontSendNotification);
                 } else {
@@ -160,9 +160,9 @@ public:
         if ( vt.isValid() ) {
             switch (columnNumber) {
                 case 3:
-                    return vt.getProperty(IDs::pRangeLow);
+                    return vt.getProperty(IDs::pLow);
                 case 4:
-                    return vt.getProperty(IDs::pRangeHigh);
+                    return vt.getProperty(IDs::pHigh);
             }
         }
     }
@@ -175,11 +175,11 @@ public:
         if ( vt.isValid() ) {
             switch (columnNumber) {
                 case 3:
-                    vt.setProperty(IDs::pRangeLow, value, nullptr);
+                    vt.setProperty(IDs::pLow, value, nullptr);
                     refresh();
                     break;
                 case 4:
-                    vt.setProperty(IDs::pRangeHigh, value, nullptr);
+                    vt.setProperty(IDs::pHigh, value, nullptr);
                     refresh();
                     break;
             }
