@@ -370,17 +370,35 @@ void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destDa
 
 void PluginColliderAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
-    pluginState = juce::ValueTree::fromXml(*xmlState);
+    juce::ValueTree tmpState = juce::ValueTree::fromXml(*xmlState);
 
-    if ( ! pluginState.getChildWithName(IDs::synths).isValid() ) {
-        pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
-        recompileState();
-    }
+    resetPluginState();
+
+    // if ( tmpState.getProperty(IDs::version) != IDS_VERSION ) {
+    //     resetPluginState();
+    //     recompileState();
+    // } else {
+    //     pluginState = tmpState;
+    // }
 }
 
 void PluginColliderAudioProcessor::resetPluginState() {
     pluginState.removeListener(this);
+    pluginState.removeAllChildren(nullptr);
     pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
+
+    juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);
+    for(int i=0;i<NUMBER_OF_CONTROL_BUSES;i++) {
+        juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
+        controlBus.setProperty(IDs::cbName, juce::String("Control Bus ") + juce::String(i+1), nullptr);
+        controlBus.setProperty(IDs::cbLow, 0.0f, nullptr);
+        controlBus.setProperty(IDs::cbHigh, 1.0f, nullptr);
+        controlBus.setProperty(IDs::cbStep, 0.1f, nullptr);        
+        controlBusses.addChild(controlBus, i, nullptr);
+    }
+    pluginState.addChild(controlBusses, 0, nullptr);
+    juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
+
     pluginState.setProperty(IDs::version, IDS_VERSION, nullptr);
     pluginState.addListener(this);
 }

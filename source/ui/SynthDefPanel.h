@@ -20,8 +20,151 @@
 
 #include "PluginProcessor.h"
 
-const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
+class VTTableList : public juce::Component, public juce::TableListBoxModel {
+protected:
+    std::vector<juce::Identifier> columnIds;
+    juce::ValueTree vt;    
+    juce::TableListBox table;
+    juce::Font font { juce::FontOptions { 14.0f } };
+public:
+    VTTableList(juce::ValueTree vt) : vt(vt) {
+        addAndMakeVisible (table);
+        table.setModel(this);
+        int flags = juce::TableHeaderComponent::ColumnPropertyFlags::visible;
+        table.getHeader().setStretchToFitActive(true);
+    }
 
+    ~VTTableList() override {
+        table.setModel(nullptr);
+    }
+
+    void addColumn(juce::Identifier id, const juce::String& name, int width) {
+        columnIds.push_back(id);
+        table.getHeader().addColumn(name, columnIds.size(), width, width, width, juce::TableHeaderComponent::ColumnPropertyFlags::visible);
+    }
+
+    int getNumColumns() {
+        return table.getHeader().getNumColumns(true);
+    }
+
+    int getNumRows() {
+        if ( ! vt.isValid() )
+            return 0;
+        return vt.getNumChildren();
+    }
+
+    void resized() override {
+        table.setBounds(getLocalBounds());
+    }
+
+    juce::String getCellText(const int columnNumber, const int rowNumber) {
+        return vt.getChild(rowNumber).getProperty(columnIds[columnNumber - 1]);
+    }
+
+    void setCellText(const int columnNumber, const int rowNumber, const juce::String& newText) {
+        vt.getChild(rowNumber).setProperty(columnIds[columnNumber - 1], newText, nullptr);
+    }
+
+    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override {
+        g.setColour(getLookAndFeel().findColour(juce::ListBox::textColourId));
+        g.setFont(font);
+        g.drawText(getCellText(columnId, rowNumber), 2, 0, width - 4, height, juce::Justification::centredLeft, true);
+        g.setColour(getLookAndFeel().findColour (juce::ListBox::backgroundColourId));
+        g.fillRect(width - 1, 0, 1, height);
+    }
+
+    void paintRowBackground(juce::Graphics& g, int rowNumber, int /*width*/, int /*height*/, bool rowIsSelected) override {
+    }
+
+protected:
+    class ParamSlider : public juce::Slider {
+    public:
+        ParamSlider() {
+            setSliderStyle(juce::Slider::LinearBar);
+        }
+    };
+
+    class EditableTextCustomComponent final : public juce::Label  {
+    public:
+        EditableTextCustomComponent (VTTableList& td)  : owner (td)  {
+            setEditable (false, true, false);
+        }
+
+        void mouseDown (const juce::MouseEvent& event) override {
+            owner.table.selectRowsBasedOnModifierKeys(row, event.mods, false);
+            juce::Label::mouseDown(event);
+        }
+
+        void textWasEdited() override {
+            owner.setCellText(columnId, row, getText());
+        }
+
+        void setRowAndColumn(const int newRow, const int newColumn) {
+            row = newRow;
+            columnId = newColumn;
+            setText(owner.getCellText(columnId, row), juce::NotificationType::dontSendNotification);
+        }
+
+        void paint (juce::Graphics& g) override {
+            auto& lf = getLookAndFeel();
+            if (! dynamic_cast<juce::LookAndFeel_V4*> (&lf))
+                lf.setColour (textColourId, juce::Colours::black);
+            Label::paint (g);
+        }
+
+    private:
+        VTTableList& owner;
+        int row, columnId;
+        juce::Colour textColour;
+    };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VTTableList)
+};
+
+class ControlBusTable : public VTTableList { 
+public:
+    ControlBusTable(juce::ValueTree vt) : VTTableList(vt) {
+        addColumn(IDs::cbName, "Name", 200);
+        addColumn(IDs::cbLow, "Low", 70);
+        addColumn(IDs::cbHigh, "High", 70);
+        addColumn(IDs::cbStep, "Step", 70);
+    }
+
+    juce::Component* refreshComponentForCell (int rowNumber, int columnId,
+                                            bool isRowSelected, juce::Component* existingComponentToUpdate) override {
+        juce::Identifier targetId = columnIds[columnId - 1];
+
+        auto* textEditor = static_cast<EditableTextCustomComponent*>(existingComponentToUpdate);
+        if ( textEditor == nullptr ) {
+            textEditor = new EditableTextCustomComponent(*this);
+        }
+        textEditor->setRowAndColumn(rowNumber, columnId);
+        return textEditor;
+    }
+};
+
+class ControlBusPanel : public juce::Component {
+    juce::ValueTree &vt;
+    juce::Label label;
+    ControlBusTable table;
+public:
+    ControlBusPanel(juce::ValueTree vt) : vt(vt), table(vt) {
+        addAndMakeVisible(label);
+        label.setText("Control Busses", juce::dontSendNotification);
+        addAndMakeVisible(table);
+        table.setBounds(getLocalBounds());
+    }
+
+    void resized() override {
+        auto bounds = getBounds();
+        bounds.removeFromTop(10);
+        label.setBounds(bounds.removeFromTop(20));
+        bounds.removeFromTop(5);
+        table.setBounds(bounds);
+    }
+};
+
+const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
 
 class ParameterTable : public juce::Component, public juce::TableListBoxModel {
     juce::ValueTree &vt;

@@ -10,8 +10,8 @@ Now support Linux, macOS and Windows.
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
-## Version 0.2.2
-* Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it wil be the editor to edit the desired node hierarchy.
+## Version 0.2.2 (IN DEVELOPMENT)
+* Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it will be the editor to push the desired node hierarchy.
 
 ## Version 0.2.1
 * Fixed [crash](https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162) on pluginwindow close

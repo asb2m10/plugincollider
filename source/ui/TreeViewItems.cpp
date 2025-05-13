@@ -47,21 +47,41 @@ public:
     }
 };
 
+class ControlBusItem : public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
+    DynamicViewPanel &panel;
+public:
+    ControlBusItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
+        itemName = "Control Busses";
+        containsSubItems = false;
+    }
+
+    void itemSelectionChanged(bool isNowSelected) {
+        if ( isNowSelected ) {
+            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::controlbuses);
+            panel.setEditableItem(vt);
+        } else {
+            panel.clearEditableItem();
+        }
+    }
+};
+
 class ProjectItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
+    DynamicViewPanel &panel;
 public:
-    ProjectItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
+    ProjectItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
         itemName = "Project";
 
         PCTreeItem *group = new PCTreeItem("Node 1 - Root Group");
         PCTreeItem *fx = new PCTreeItem("Node 5 - Fx group");
         group->addSubItem(fx);
-        fx->addSubItem(new PCTreeItem("10 - Midi note group"));
+        fx->addSubItem(new PCTreeItem("Node 10 - Midi note group"));
 
         addSubItem(new PCTreeItem("Buffers"));
-        addSubItem(new PCTreeItem("Control Busses"));
+        addSubItem(new ControlBusItem(processor, panel));
         addSubItem(group);
-        addSubItem(new ProjectSynthDefItem(p));
+        addSubItem(new ProjectSynthDefItem(processor));
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
@@ -99,28 +119,30 @@ public:
 };
 
 class NodeTreeItem : public PCTreeItem {
-    juce::OSCArgument **args;
-    juce::OSCArgument *ends;
-
+    OSCArgumentWalker walker;
+    PluginColliderAudioProcessor &processor;
+    int nodeId;
 public:
-    NodeTreeItem(juce::OSCArgument **args, juce::OSCArgument *ends) : args(args), ends(ends) {
-        int nodeId = (*args)->getInt32();
-        (*args)++;
+    NodeTreeItem(PluginColliderAudioProcessor &processor, OSCArgumentWalker &walker) : processor(processor), walker(walker) {
 
-        int numberOfChild = (*args)->getInt32();
-        (*args)++;
+
+        nodeId = walker.getInt();
+        walker.next();
+
+        int numberOfChild = walker.getInt();
+        walker.next();
 
         if ( numberOfChild < 0 ) {
             itemName = "Node " + juce::String(nodeId);
 
-            juce::String synthDefName = (*args)->getString();
-            (*args)++;
+            juce::String synthDefName = walker.getString();
+            walker.next();
             addSubItem(new PCTreeItem(synthDefName, false));
         } else {
             itemName = "Group " + juce::String(nodeId);
 
             for(int i=0;i<numberOfChild;i++) {
-                addSubItem(new NodeTreeItem(args, ends));
+                addSubItem(new NodeTreeItem(processor, walker));
             }
         }
     }
@@ -134,6 +156,10 @@ public:
             });
             menu.addSeparator();
             menu.addItem("Free node", true, false, [this] {
+                processor.command.push([this](PluginColliderAudioProcessor &proc) {
+                    proc.superCollider.rt_freeNode(nodeId);
+                });
+                getParentItem()->setOpen(false);
             });
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
@@ -157,15 +183,14 @@ public:
             reply.wait();
             if ( reply.rc == 0 ) {
                 juce::OSCMessage msg = OSCMemoryBlock::parseMessage(reply.content.data(), reply.content.size());
-                juce::OSCArgument *args = msg.begin();
-                juce::OSCArgument *ends = msg.end();
+                OSCArgumentWalker walker(msg);
                 // if synthControl value included
-                args++;
+                walker.next();
                 // node id of the request group
-                args++;
+                walker.next();
                 // num of child
-                args++;
-                addSubItem(new NodeTreeItem(&args, ends));
+                walker.next();
+                addSubItem(new NodeTreeItem(audioProcessor, walker));
             }
         } else {
             clearSubItems();
@@ -197,8 +222,8 @@ public:
     }
 };
 
-RootItem::RootItem(PluginColliderAudioProcessor &p) {
+RootItem::RootItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) {
     setOpen(true);
-    addSubItem(new ProjectItem(p));
-    addSubItem(new ServerItem(p));
+    addSubItem(new ProjectItem(processor, panel));
+    addSubItem(new ServerItem(processor));
 }

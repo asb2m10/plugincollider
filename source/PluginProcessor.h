@@ -18,7 +18,6 @@
 
 #pragma once
 
-//#include <JuceHeader.h>
 #include "SCProcess.h"
 #include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -27,6 +26,7 @@
 class PluginColliderAudioProcessorEditor;
 
 #define IDS_VERSION "A"
+const int NUMBER_OF_CONTROL_BUSES = 32;
 
 namespace IDs {
 #define DECLARE_ID(name) const juce::Identifier name (#name);
@@ -114,7 +114,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     friend PluginColliderAudioProcessorEditor;
     juce::ValueTree pluginState;
-
+    
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
     void valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
@@ -146,7 +146,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     juce::String synthPath;
 
     juce::AudioParameterFloat *gain;
-    juce::AudioParameterFloat *controlBus[32];
+    juce::AudioParameterFloat *controlBus[NUMBER_OF_CONTROL_BUSES];
 
     juce::AudioProcessLoadMeasurer loadMeasurer;
 

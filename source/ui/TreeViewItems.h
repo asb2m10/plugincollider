@@ -19,6 +19,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "DynamicViewPanel.h"
 
 /**
  * PluginCollider TreeViewItem base class.
@@ -51,11 +52,16 @@ public:
     void paintItem (juce::Graphics& g, int width, int height) override {
         g.setColour(getOwnerView()->findColour(juce::Label::textColourId));
         g.setFont(height * 0.7f);
+        if ( isSelected() ) {
+            juce::Font font = g.getCurrentFont();
+            font.setBold(true);
+            g.setFont(font);
+        }
         g.drawText(itemName, 4, 0, width - 4, height, juce::Justification::centredLeft, true);
     }
 };
 
 class RootItem : public PCTreeItem {
 public:
-    RootItem(PluginColliderAudioProcessor &p);
+    RootItem(PluginColliderAudioProcessor &p, DynamicViewPanel &panel);
 };

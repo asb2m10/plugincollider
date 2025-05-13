@@ -19,9 +19,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "SynthDefPanel.h"
-
-
+#include "DynamicViewPanel.h"
 
 class LogViewer : public juce::TextEditor {
     juce::StringArray *log;
@@ -51,6 +49,7 @@ public:
             juce::TextEditor::performPopupMenuAction(menuItemID);
     }
 };
+
 
 //==============================================================================
 /**
@@ -93,8 +92,8 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     // For now this is for debugging
     juce::Slider cb1;
     std::unique_ptr<juce::SliderParameterAttachment> cb1Attachment;
-    SynthDefPanel synthDefPanel;
 
+    DynamicViewPanel dynamicViewPanel;
     juce::Component rightPane;
     juce::TreeView treeView;
 

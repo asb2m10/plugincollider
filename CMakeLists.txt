@@ -283,6 +283,7 @@ target_sources(PluginCollider
 	source/SCPluginDriver.cpp
 	source/ui/PluginEditor.cpp
 	source/ui/TreeViewItems.cpp
+	source/ui/DynamicViewPanel.cpp
 
 	${boost_system_sources}
 	${boost_filesystem_sources})

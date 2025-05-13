@@ -64,7 +64,7 @@ public:
         return args->getFloat32();
     }
 
-    void operator++() {
+    void next() {
         if ( args != ends ) {
             args++;
         } else {
