@@ -255,8 +255,6 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         ret.addItem("Midi keyboard", [this] {
             midikeyboard.reset(new MidiKeyboardWindow(audioProcessor.midiKeyboardState));
         });
-        ret.addItem("Mouse canvas", [this] {
-        });
         ret.addSeparator();
         ret.addItem("Internal plugin state (advanced debugging)", [this] {
             ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);

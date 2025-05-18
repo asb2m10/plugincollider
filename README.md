@@ -12,6 +12,7 @@ Now support Linux, macOS and Windows.
 # Changelog
 ## Version 0.2.2 (IN DEVELOPMENT)
 * Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it will be the editor to push the desired node hierarchy.
+* UIUGen units (MouseX, MouseY, MouseButton) are now available by using JUCE events
 
 ## Version 0.2.1
 * Fixed [crash](https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162) on pluginwindow close
