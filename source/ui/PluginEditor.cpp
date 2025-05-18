@@ -16,17 +16,17 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "PluginEditor.h"
-#include "PluginProcessor.h"
 #include <juce_audio_utils/juce_audio_utils.h>
+#include "PluginEditor.h"
 #include "ext/value_tree_debugger.h"
+#include "TreeViewItems.h"
 #include "SC_Version.hpp"
 
 class MidiKeyboardWindow: public juce::DocumentWindow {
 public:
     MidiKeyboardWindow(juce::MidiKeyboardState &state) : juce::DocumentWindow("Midi Keyboard", juce::Colours::lightgrey, juce::DocumentWindow::allButtons) {
         auto keyboardComponent = new juce::MidiKeyboardComponent(state, juce::MidiKeyboardComponent::horizontalKeyboard);
-        keyboardComponent->setSize(600, 70);
+        keyboardComponent->setSize(600, 30);
         setContentOwned(keyboardComponent, true);
         setUsingNativeTitleBar(true);
         setResizable(true, true);
@@ -42,11 +42,12 @@ public:
 PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     PluginColliderAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
-      logViewer(&(p.logger.content)), synthDefPanel(p.pluginState) {
+      logViewer(&(p.logger.content)), layoutResizer (&layout, 1, true) {
 
     menuBar.reset(new juce::MenuBarComponent(this));
     addAndMakeVisible(menuBar.get());
 
+    addAndMakeVisible(treeView);
     addAndMakeVisible(udpPort);
     addAndMakeVisible(setUdpPortButton);
 
@@ -85,31 +86,31 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 
     // };
 
-    synthDefPanel.loaddef.onClick = [this] () {
-        scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-                                            juce::File(), "*.scsyndef");
-        auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
-        scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
-            juce::File scfile (chooser.getResult());
-            if ( !scfile.exists() )
-                return;
+    // synthDefPanel.loaddef.onClick = [this] () {
+    //     scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
+    //                                         juce::File(), "*.scsyndef");
+    //     auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+    //     scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
+    //         juce::File scfile (chooser.getResult());
+    //         if ( !scfile.exists() )
+    //             return;
 
-            std::unique_ptr<SynthDef> def;
-            def.reset(SynthDef::fromFile(scfile));
+    //         std::unique_ptr<SynthDef> def;
+    //         def.reset(SynthDef::fromFile(scfile));
 
-            if ( def != nullptr ) {
-                if ( !audioProcessor.loadSynthDef(def.get()) ) {
-                    auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
-                    juce::AlertWindow::showAsync(opts, [](int res) {});
-                    return;
-                }
-                synthDefPanel.refresh();
-            } else {
-                auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("Unable to read Synthdef file").withButton("OK");
-                juce::AlertWindow::showAsync(opts, [](int res) {});
-            }
-        });
-    };
+    //         if ( def != nullptr ) {
+    //             if ( !audioProcessor.loadSynthDef(def.get()) ) {
+    //                 auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
+    //                 juce::AlertWindow::showAsync(opts, [](int res) {});
+    //                 return;
+    //             }
+    //             synthDefPanel.refresh();
+    //         } else {
+    //             auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("Unable to read Synthdef file").withButton("OK");
+    //             juce::AlertWindow::showAsync(opts, [](int res) {});
+    //         }
+    //     });
+    // };
 
     // For now this is for debugging
     //addAndMakeVisible(cb1);
@@ -119,17 +120,27 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     juce::AudioParameterFloat *parameter = p.controlBus[0];
     cb1Attachment.reset(new juce::SliderParameterAttachment(*parameter, cb1, nullptr));
 
-    addAndMakeVisible(synthDefPanel);
-    addAndMakeVisible(logViewer);
+    addAndMakeVisible(treeView);
+    treeView.setRootItemVisible(false);
+    treeView.setRootItem(new RootItem(audioProcessor, dynamicViewPanel));
+    addAndMakeVisible(rightPane);
+    rightPane.addAndMakeVisible(logViewer);
+    rightPane.addAndMakeVisible(dynamicViewPanel);
+    addAndMakeVisible(layoutResizer);
     addAndMakeVisible(stats);
     stats.setJustificationType(juce::Justification::centredRight);
 
+    layout.setItemLayout(0, -0.1, -0.9, -0.3);
+    layout.setItemLayout(1, 5, 5, 5);
+    layout.setItemLayout(2, -0.1, -0.9, -0.7);
+
     startTimer(400);
-    //setResizable(true, true);
-    setSize(700, 450);
+    setResizable(true, true);
+    setSize(800, 550);
 }
 
 PluginColliderAudioProcessorEditor::~PluginColliderAudioProcessorEditor() {
+    treeView.deleteRootItem();
     stopTimer();
 }
 
@@ -222,7 +233,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         ret.addItem("Clear plugin assigned synthdef", true, false, [this] {
             audioProcessor.pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
             audioProcessor.recompileState();
-            synthDefPanel.refresh();
+            //synthDefPanel.refresh();
         });
         ret.addItem("Reset Synthdef default values", true, false, [this] {
             juce::ValueTree params = audioProcessor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getChildWithName(IDs::parameters);
@@ -231,7 +242,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
                     juce::ValueTree param = params.getChild(i);
                     param.removeProperty(IDs::pCurrentValue, nullptr);
                     audioProcessor.recompileState();
-                    synthDefPanel.refresh();
+                    //synthDefPanel.refresh();
                 }
             }
         });
@@ -241,46 +252,26 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         });
         break;
     case 2:
-        ret.addItem("Dump Tree", true, false, [this] {
-            audioProcessor.command.push([this](PluginColliderAudioProcessor &proc) {
-                proc.superCollider.rt_dumpTree();
-            });
+        ret.addItem("Midi keyboard", [this] {
+            midikeyboard.reset(new MidiKeyboardWindow(audioProcessor.midiKeyboardState));
+        });
+        ret.addItem("Mouse canvas", [this] {
         });
         ret.addSeparator();
-        ret.addItem("Stop Plugincollider group", true, false, [this] {
-            audioProcessor.command.push([this](PluginColliderAudioProcessor &proc) {
-                proc.superCollider.rt_freeGroup(kDefaultGroupId);
-            });
-        });
-        ret.addItem("Stop all running nodes", true, false, [this] {
-                audioProcessor.superCollider.freeNodes();
+        ret.addItem("Internal plugin state (advanced debugging)", [this] {
+            ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);
+            value_tree_debugger.reset(vtd);
         });
         break;
     case 3:
-        //#ifdef DEBUG
-            ret.addItem("Show internal plugin state", [this] {
-                ValueTreeDebugger *vtd = new ValueTreeDebugger(audioProcessor.pluginState);
-                value_tree_debugger.reset(vtd);
-            });
-
-            ret.addItem("Show midi keyboard", [this] {
-                midikeyboard.reset(new MidiKeyboardWindow(audioProcessor.midiKeyboardState));
-            });
-            ret.addSeparator();
-        //#endif
         ret.addItem("About...", [this] {
-            auto opts = juce::MessageBoxOptions().withTitle("Info").withMessage(juce::String("PluginCollider using SuperCollider ") + SC_VersionString() ).withButton("OK");
+            auto opts = juce::MessageBoxOptions().withTitle("Info").withMessage(juce::String("PluginCollider\n\nUsing SuperCollider ") + SC_VersionString() + "\n\nBuilt on " +  __DATE__).withButton("OK");
             juce::AlertWindow::showAsync(opts, [](int res) {});
         });
     }
     return ret;
 }
 
-void PluginColliderAudioProcessorEditor::menuItemSelected(int x, int y) {
-    //
-}
-
-//==============================================================================
 void PluginColliderAudioProcessorEditor::paint(juce::Graphics &g) {
     // (Our component is opaque, so we must completely fill the background with
     // a solid colour)
@@ -296,7 +287,16 @@ void PluginColliderAudioProcessorEditor::resized() {
     menuBar->setBounds(0, 0, getWidth(), menuSize);
     udpPort.setBounds(10, 8 + menuSize, 70, 25);
     setUdpPortButton.setBounds(70, 8 + menuSize, 100, 25);
-    stats.setBounds(394, 8 + menuSize, 300, 25);
-    synthDefPanel.setBounds(10, 60, 680, 220);
-    logViewer.setBounds(10, 295, 680, 145);
+    stats.setBounds(194, 8 + menuSize, getWidth() - 194, 25);
+
+    Component* comps[] = { &treeView, &layoutResizer, &rightPane };
+    layout.layOutComponents(comps, 3,  0, 8 + menuSize + 35, getWidth(), getHeight() - (8+menuSize+35), false, true);    
+
+    auto area = rightPane.getLocalBounds();
+    logViewer.setBounds(area.removeFromBottom(200));
+    dynamicViewPanel.setBounds(area);
+}
+
+//==============================================================================
+void PluginColliderAudioProcessorEditor::menuItemSelected(int x, int y) {
 }

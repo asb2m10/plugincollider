@@ -29,10 +29,8 @@
 #include "SC_PlugIn.h"
 #include "SC_GraphDef.h"
 #include "SC_Group.h"
+#include "SC_UnitDef.h"
 
-const int kDefaultPortNumber = 9989;
-const int kDefaultBlockSize = 64;
-const int kDefaultBeatDiv = 1;
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
@@ -186,7 +184,7 @@ void SCProcess::bootServer() {
     options.mVerbosity = 2;
     options.mMaxLogins = 32;
 #if STATIC_PLUGINS
-    logger.scprintf("SC_PLUGIN_PATH is ignored since plugincollider is compiled with SC static plugins\n");
+    logger.scprintf("SC_PLUGIN_PATH is ignored since PluginCollider is compiled with SC static plugins\n");
 #else
     options.mUGensPluginPath = pluginPath.toRawUTF8();
 #endif
@@ -200,6 +198,7 @@ void SCProcess::bootServer() {
 
     if (world) {
         rt_newGroup(0, kDefaultGroupId);
+
         logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
                 options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
@@ -311,7 +310,7 @@ int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
         return 0;
     }
 
-    // we create a empty message, we will reconfigure the node afterwards
+    // we create a empty message, we will reconfigure the node afterward
     sc_msg_iter msg(0, "");
 
     Graph* graph = nullptr;
@@ -327,6 +326,49 @@ int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
     }
 
     return graph->mNode.mID;
+}
+
+extern HashTable<struct UnitDef, Malloc>* gUnitDefLib;
+juce::StringArray SCProcess::getRegistredUnits() {
+    juce::StringArray ret;
+    if ( world != nullptr ) {
+        for(int i=0;i<gUnitDefLib->TableSize();i++) {
+            UnitDef *unit = gUnitDefLib->AtIndex(i);
+            if ( unit != nullptr ) {
+                ret.add((char *) unit->mUnitDefName);
+            }
+        }
+    }
+    return ret;
+}
+
+SCErr SCProcess::rt_queryTree(int rootGroup, big_scpacket *packet, bool flagParameters) {
+    Group *group = rt_getNode(rootGroup).group();
+    if (group == nullptr) {
+        return kSCErr_GroupNotFound;
+    }
+    packet->adds("/reply");
+    if ( flagParameters ) {
+        // first count the total number of nodes to know how many tags the packet should have
+        int numNodes = 1; // include this one
+        int numControlsAndDefs = 0;
+        Group_CountNodeAndControlTags(group, &numNodes, &numControlsAndDefs);
+        // nodeID and numChildren + numControlsAndDefs + controlFlag
+        packet->maketags(numNodes * 2 + numControlsAndDefs + 2);
+        packet->addtag(',');
+        packet->addtag('i');
+        packet->addi(1); // include controls flag
+        Group_QueryTreeAndControls(group, packet);
+    } else {
+        int numNodeTags = 2; // include this one
+        Group_CountNodeTags(group, &numNodeTags);
+        packet->maketags(numNodeTags + 2); // nodeID and numChildren
+        packet->addtag(',');
+        packet->addtag('i');
+        packet->addi(0); // include controls flag
+        Group_QueryTree(group, packet);
+    }
+    return 0;
 }
 
 void SCProcess::quit() {
@@ -357,7 +399,7 @@ bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) 
     if (!lock.isLocked())
         return true;
 
-    if (world == NULL)
+    if (world == nullptr)
         return true;
 
     if (!world->mRunning)

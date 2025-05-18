@@ -20,6 +20,7 @@
 
 #pragma once
 #include <juce_osc/juce_osc.h>
+#include "SCProcess.h"
 #include "SC_Types.h"
 
 //static int kDefaultNodeId = 1000;
@@ -35,5 +36,39 @@ public:
     }
     int getSize() {
         return block.getSize();
+    }
+
+    static juce::OSCMessage parseMessage(const void* sourceData, size_t sourceDataSize);
+};
+
+juce::String argument2String(juce::OSCArgument *arg);
+
+class OSCArgumentWalker {
+    juce::OSCArgument *args;
+    juce::OSCArgument *ends;
+public:
+    OSCArgumentWalker(juce::OSCMessage &msg) {
+        args = msg.begin();
+        ends = msg.end();
+    }
+
+    juce::String getString() {
+        return args->getString();
+    }
+
+    int getInt() {
+        return args->getInt32();
+    }
+
+    float getFloat() {
+        return args->getFloat32();
+    }
+
+    void next() {
+        if ( args != ends ) {
+            args++;
+        } else {
+            scprintf("Warning: unexpected end of argument from OSC message\n");
+        }
     }
 };

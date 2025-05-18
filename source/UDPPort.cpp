@@ -20,9 +20,14 @@
 #include "SC_WorldOptions.h"
 #include "sc_msg_iter.h"
 #include "UDPPort.h"
+#include "SC_OscUtils.hpp"
 
 static void udp_reply_func(struct ReplyAddress *addr, char *msg, int size) {
     UDPPort *udpPort = reinterpret_cast<UDPPort *>(addr->mReplyData);
+    // if ( strncmp("/status.reply", msg, 13) == 0 ) {
+    //     return;
+    // }
+    // dumpOSCmsg(size, msg, false);
     udpPort->processReply(addr, msg, size);
 }
 

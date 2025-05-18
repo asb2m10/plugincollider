@@ -19,7 +19,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
-#include "SynthDefPanel.h"
+#include "DynamicViewPanel.h"
 
 class LogViewer : public juce::TextEditor {
     juce::StringArray *log;
@@ -50,6 +50,7 @@ public:
     }
 };
 
+
 //==============================================================================
 /**
  */
@@ -68,7 +69,7 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& str) override;
     void menuItemSelected(int, int) override;
     juce::StringArray getMenuBarNames() {
-        return juce::StringArray({"Server", "SynthDef", "Node", "Help" });
+        return juce::StringArray({"Server", "SynthDef", "Tools", "Help" });
     }
 
   private:
@@ -77,7 +78,6 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::TextButton configButton;
     juce::TextEditor udpPort;
     juce::TextButton setUdpPortButton;
-    std::unique_ptr<juce::FileChooser> scsynthChooser;
     SCProcess::WorldStats worldStats;
 
     int logLines = 0;
@@ -85,10 +85,16 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::AlertWindow *settingsWindow;
     std::unique_ptr<juce::MenuBarComponent> menuBar;
 
+    juce::StretchableLayoutManager layout;
+    juce::StretchableLayoutResizerBar layoutResizer;
+
     // For now this is for debugging
     juce::Slider cb1;
     std::unique_ptr<juce::SliderParameterAttachment> cb1Attachment;
-    SynthDefPanel synthDefPanel;
+
+    DynamicViewPanel dynamicViewPanel;
+    juce::Component rightPane;
+    juce::TreeView treeView;
 
 //#ifdef DEBUG
     std::unique_ptr<juce::DocumentWindow> value_tree_debugger;
