@@ -140,6 +140,7 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
 }
 
 PluginColliderAudioProcessorEditor::~PluginColliderAudioProcessorEditor() {
+    treeView.deleteRootItem();
     stopTimer();
 }
 

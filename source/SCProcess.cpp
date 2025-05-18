@@ -198,10 +198,6 @@ void SCProcess::bootServer() {
 
     if (world) {
         rt_newGroup(0, kDefaultGroupId);
-        rt_newGroup(kDefaultGroupId, 1001);
-        rt_newGroup(kDefaultGroupId, 1002);
-        rt_newGroup(1002, 1110);
-        rt_newGroup(1110, 1111);
 
         logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",

@@ -38,10 +38,6 @@ public:
         this->containsSubItems = containsSubItem;
     }
 
-    ~PCTreeItem() override {
-        clearSubItems();
-    }
-
     bool mightContainSubItems() override { 
         return containsSubItems;
     }

@@ -28,7 +28,7 @@ public:
         itemName = "SynthDefs";
     }
 
-    void itemOpennessChanged(bool isNowOpen) {
+    void itemOpennessChanged(bool isNowOpen) override {
         if ( isNowOpen ) {
             juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths);
 
@@ -52,14 +52,33 @@ class ControlBusItem : public PCTreeItem {
     DynamicViewPanel &panel;
 public:
     ControlBusItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
-        itemName = "Control Busses";
+        itemName = "Control Bus";
         containsSubItems = false;
     }
 
-    void itemSelectionChanged(bool isNowSelected) {
+    void itemSelectionChanged(bool isNowSelected) override {
         if ( isNowSelected ) {
             juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::controlbuses);
-            panel.setEditableItem(vt);
+            panel.setEditableItem(vt, audioProcessor);
+        } else {
+            panel.clearEditableItem();
+        }
+    }
+};
+
+class SynthEditItem: public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
+    DynamicViewPanel &panel;
+public:
+    SynthEditItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
+        itemName = "Synthdef";
+        containsSubItems = false;
+    }
+
+    void itemSelectionChanged(bool isNowSelected) override {
+        if ( isNowSelected ) {
+            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths);
+            panel.setEditableItem(vt, audioProcessor);
         } else {
             panel.clearEditableItem();
         }
@@ -72,16 +91,18 @@ class ProjectItem : public PCTreeItem {
 public:
     ProjectItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
         itemName = "Project";
-
+        /*
+        * Mock up 
         PCTreeItem *group = new PCTreeItem("Node 1 - Root Group");
         PCTreeItem *fx = new PCTreeItem("Node 5 - Fx group");
         group->addSubItem(fx);
         fx->addSubItem(new PCTreeItem("Node 10 - Midi note group"));
+        */
 
-        addSubItem(new PCTreeItem("Buffers"));
+        //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new ControlBusItem(processor, panel));
-        addSubItem(group);
-        addSubItem(new ProjectSynthDefItem(processor));
+        addSubItem(new SynthEditItem(processor, panel));
+        // addSubItem(new ProjectSynthDefItem(processor));
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
@@ -97,7 +118,7 @@ public:
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
     }
-};    
+};
 
 class UnitItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
@@ -124,8 +145,6 @@ class NodeTreeItem : public PCTreeItem {
     int nodeId;
 public:
     NodeTreeItem(PluginColliderAudioProcessor &processor, OSCArgumentWalker &walker) : processor(processor), walker(walker) {
-
-
         nodeId = walker.getInt();
         walker.next();
 
@@ -204,7 +223,7 @@ public:
     ServerItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
         itemName = "Server";
 
-        addSubItem(new PCTreeItem("Buffers"));
+        //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new NodeTreeRoot(p));
         addSubItem(new PCTreeItem("SynthDefs"));
         addSubItem(new UnitItem(p));

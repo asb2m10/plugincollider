@@ -277,7 +277,7 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
         // we do our best to find the best low / high values based on the defaultValue
         int low, high;
         float defaultValue = synthDef->getParametersValues()[i];
-        if ( defaultValue == 0 ) {
+        if ( defaultValue > -1 && defaultValue < 1 ) {
             low = -1;
             high = 1;
         } else {
@@ -385,7 +385,10 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
 void PluginColliderAudioProcessor::resetPluginState() {
     pluginState.removeListener(this);
     pluginState.removeAllChildren(nullptr);
-    pluginState.addChild(juce::ValueTree(IDs::synths), 1, nullptr);
+
+    juce::ValueTree synths = juce::ValueTree(IDs::synths);
+    pluginState.addChild(synths, 1, nullptr);
+    synths.addChild(juce::ValueTree(IDs::synth), 1, nullptr);
 
     juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);
     for(int i=0;i<NUMBER_OF_CONTROL_BUSES;i++) {
@@ -393,7 +396,7 @@ void PluginColliderAudioProcessor::resetPluginState() {
         controlBus.setProperty(IDs::cbName, juce::String("Control Bus ") + juce::String(i+1), nullptr);
         controlBus.setProperty(IDs::cbLow, 0.0f, nullptr);
         controlBus.setProperty(IDs::cbHigh, 1.0f, nullptr);
-        controlBus.setProperty(IDs::cbStep, 0.1f, nullptr);        
+        controlBus.setProperty(IDs::cbStep, 0.1f, nullptr);
         controlBusses.addChild(controlBus, i, nullptr);
     }
     pluginState.addChild(controlBusses, 0, nullptr);
