@@ -52,7 +52,7 @@ else()
 	FetchContent_Declare(
     	sndfile
     	GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
-    	GIT_TAG 17a19ab264fcf238f46104cea9af9a0a5ca3786d
+    	GIT_TAG 52b803f57a1f4d23471f5c5f77e1a21e0721ea0e
     	GIT_PROGRESS TRUE
     	GIT_SHALLOW TRUE
 	)
