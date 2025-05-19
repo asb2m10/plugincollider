@@ -1,7 +1,7 @@
 Plugincollider
 ==============
 
-Plugincollider is a generic (cross-platform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a VST3 plugin. The embedded server may be controlled over OSC as usual.
+Plugincollider is a generic (cross-platform/plugin format) wrapper that allows using a [SuperCollider](https://supercollider.github.io/) server inside a CLAP, VST3 plugin. The embedded server may be controlled over OSC as usual.
 
 ![plugincollider screenshot](resources/ui/screenshot_bitwig.png)
 
@@ -12,6 +12,7 @@ Now support Linux, macOS and Windows.
 # Changelog
 ## Version 0.2.2 (IN DEVELOPMENT)
 * Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it will be the editor to push the desired node hierarchy.
+* PluginCollider now available in [CLAP](https://github.com/free-audio/clap) format
 
 ## Version 0.2.1
 * Fixed [crash](https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162) on pluginwindow close
@@ -60,7 +61,7 @@ If for example your SynthDef doesn't have the gate arguments, the node will be f
 * On Windows, if you are using the github releases, be sure to update the [MSVC Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022) to the latest version
 
 # TODO
-- [ ] add [CLAP](https://github.com/free-audio/clap) plugin format
+- [x] add [CLAP](https://github.com/free-audio/clap) plugin format
 - [ ] assign scsyndef parameters to controlbus (and plug parameters values)
 - [ ] multi scsyndef support
 - [x] implement /freq and /amp from DAW midi message
