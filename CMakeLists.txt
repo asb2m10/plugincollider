@@ -163,9 +163,10 @@ endif()
 
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS c)
 
-project(PluginCollider VERSION 0.2.1)
+project(PluginCollider VERSION 0.2.2)
 
-add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory called JUCE
+add_subdirectory(libs/JUCE)
+add_subdirectory(libs/clap-juce-extensions EXCLUDE_FROM_ALL) 
 
 juce_add_plugin(PluginCollider
     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -186,6 +187,10 @@ juce_add_plugin(PluginCollider
     PRODUCT_NAME "PluginCollider")                  # The name of the final executable, which can differ from the target name
 
 	# juce_generate_juce_header(PluginCollider)
+
+clap_juce_extensions_plugin(TARGET PluginCollider
+	CLAP_ID "com.digitalsuburban.PluginCollider"
+	CLAP_FEATURES synthesizer "multi-effects" utility)
 
 if (APPLE)
 	target_sources(PluginCollider
