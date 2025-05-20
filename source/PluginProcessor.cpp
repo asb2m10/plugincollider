@@ -41,11 +41,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     juce::Logger::setCurrentLogger(&logger);
 
     for(int i=0;i<32;i++) {
-        addParameter(controlBus[i] = new juce::AudioParameterFloat(juce::String("cb") + juce::String(i), // parameterID
-                                                      juce::String("ControlBus-")+juce::String(i+1), // parameter name
-                                                      0.0f,   // minimum value
-                                                      1.0f,   // maximum value
-                                                      0.5f)); // default value
+        addParameter(controlBus[i] = new ParameterControlBus(i)); // default value
         controlBus[i]->addListener(this);
     }
 
@@ -352,6 +348,16 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
         resetStaticSynth();
         recompileState();
      }
+
+    if ( property == IDs::cbName) {
+        int idx = treeWhosePropertyHasChanged.getProperty(IDs::cbIdx);
+        juce::String name = treeWhosePropertyHasChanged.getProperty(IDs::cbName);
+        PluginColliderRange range(treeWhosePropertyHasChanged.getProperty(IDs::cbStep));
+        controlBus[idx]->setName(name);
+        controlBus[idx]->setRange(range);
+        const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
+        updateHostDisplay(details);
+    }
 }
 
 void PluginColliderAudioProcessor::valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
@@ -394,9 +400,13 @@ void PluginColliderAudioProcessor::resetPluginState() {
     for(int i=0;i<NUMBER_OF_CONTROL_BUSES;i++) {
         juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
         controlBus.setProperty(IDs::cbName, juce::String("Control Bus ") + juce::String(i+1), nullptr);
+        controlBus.setProperty(IDs::cbIdx, i, nullptr);
         controlBus.setProperty(IDs::cbLow, 0.0f, nullptr);
         controlBus.setProperty(IDs::cbHigh, 1.0f, nullptr);
-        controlBus.setProperty(IDs::cbStep, 0.1f, nullptr);
+        //controlBus.setProperty(IDs::cbStep, 0.1f, nullptr);
+
+        PluginColliderRange range;
+        controlBus.setProperty(IDs::cbStep, range.toVar(), nullptr);
         controlBusses.addChild(controlBus, i, nullptr);
     }
     pluginState.addChild(controlBusses, 0, nullptr);

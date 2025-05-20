@@ -18,10 +18,12 @@
 
 #pragma once
 
+#include "ExtendedParameters.h"
 #include "SCProcess.h"
 #include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "UDPPort.h"
+
 
 class PluginColliderAudioProcessorEditor;
 
@@ -40,6 +42,7 @@ namespace IDs {
     DECLARE_ID(cbLow)
     DECLARE_ID(cbHigh)
     DECLARE_ID(cbStep)
+    DECLARE_ID(cbIdx)
 
     DECLARE_ID(synths)
     DECLARE_ID(synth)
@@ -146,7 +149,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     juce::String synthPath;
 
     juce::AudioParameterFloat *gain;
-    juce::AudioParameterFloat *controlBus[NUMBER_OF_CONTROL_BUSES];
+    ParameterControlBus *controlBus[NUMBER_OF_CONTROL_BUSES];
 
     juce::AudioProcessLoadMeasurer loadMeasurer;
 
