@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "../ExtendedParameters.h"
 #include "DynamicViewPanel.h"
 #include "SynthDefPanel.h"
 

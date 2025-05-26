@@ -1,5 +1,5 @@
 /*
-PluginCollider Copyright (c) 2025 Pascal Gauthier.
+    PluginCollider Copyright (c) 2025 Pascal Gauthier.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,6 +19,82 @@ PluginCollider Copyright (c) 2025 Pascal Gauthier.
 #pragma once
 
 #include "PluginProcessor.h"
+
+class RangeEditor : public juce::Component {
+    const int GLOBAL_RANGE = 100000;
+    juce::ValueTree vt;
+    const juce::Identifier paramId;
+
+    juce::Slider low;
+    juce::Label label;
+    juce::Slider high;
+    juce::Label stepLabel;
+    juce::Slider step;
+
+    void publishRange() {
+        juce::String value = juce::String::formatted("%f %f %f", low.getValue(), high.getValue(), step.getValue());
+        if ( vt.isValid() ) {
+            vt.setProperty(paramId, value, nullptr);
+        }
+    }
+
+public:
+    RangeEditor(juce::ValueTree vt, juce::Identifier paramId) : vt(vt), paramId(paramId) {
+        low.setRange(-GLOBAL_RANGE, GLOBAL_RANGE, 0.1);
+        low.setSliderStyle(juce::Slider::SliderStyle::LinearBarVertical);
+        low.setSliderSnapsToMousePosition(false);
+        low.setColour(juce::Slider::trackColourId, juce::Colours::transparentBlack);
+        addAndMakeVisible(low);
+        
+        label.setText(" - ", juce::NotificationType::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(label);
+        
+        high.setRange(-GLOBAL_RANGE, GLOBAL_RANGE, 0.1);
+        high.setValue(1, juce::NotificationType::dontSendNotification);
+        high.setSliderStyle(juce::Slider::SliderStyle::LinearBarVertical);
+        high.setSliderSnapsToMousePosition(false);
+        high.setColour(juce::Slider::trackColourId, juce::Colours::transparentBlack);        
+        addAndMakeVisible(high);
+
+        stepLabel.setText("Step", juce::NotificationType::dontSendNotification);
+        stepLabel.setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(stepLabel);
+        
+        step.setSliderStyle(juce::Slider::SliderStyle::LinearBarVertical);
+        step.setSliderSnapsToMousePosition(false);
+        step.setColour(juce::Slider::trackColourId, juce::Colours::transparentBlack);                
+        step.setRange(0.001, 5.0, 0.001);
+        addAndMakeVisible(step);
+
+        low.onValueChange = [this]() {
+            if ( low.getValue() > high.getValue() ) {
+                low.setValue(high.getValue() - 1, juce::NotificationType::sendNotificationSync);
+            }
+            publishRange();
+        };
+
+        high.onValueChange = [this]() {
+            if (  high.getValue() < low.getValue() ) {
+                high.setValue(low.getValue() + 1, juce::NotificationType::sendNotificationSync);
+            }
+            publishRange();
+        };
+
+        step.onValueChange = [this]() {
+            publishRange();
+        };
+    }
+
+    void resized() override {
+        auto bounds = getLocalBounds();
+        low.setBounds(bounds.removeFromLeft(70));
+        label.setBounds(bounds.removeFromLeft(25));
+        high.setBounds(bounds.removeFromLeft(70));
+        stepLabel.setBounds(bounds.removeFromLeft(40));
+        step.setBounds(bounds.removeFromLeft(50));
+    }
+};
 
 class VTTableList : public juce::Component, public juce::TableListBoxModel {
 protected:

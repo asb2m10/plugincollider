@@ -39,9 +39,7 @@ namespace IDs {
     DECLARE_ID(controlbuses)
     DECLARE_ID(controlbus)
     DECLARE_ID(cbName)
-    DECLARE_ID(cbLow)
-    DECLARE_ID(cbHigh)
-    DECLARE_ID(cbStep)
+    DECLARE_ID(cbRange)
     DECLARE_ID(cbIdx)
 
     DECLARE_ID(synths)
@@ -119,7 +117,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     juce::ValueTree pluginState;
     
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
-    void valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
+    void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
     bool loadSynthDef(SynthDef *def);
     int rt_playSynth();
@@ -157,12 +155,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     juce::ApplicationProperties appProp;
 
-    void parameterValueChanged (int parameterIndex, float newValue) override {
-        command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
-            superCollider.rt_setControlBusValue(parameterIndex-1, newValue);
-        });
-    }
-
+    void parameterValueChanged (int parameterIndex, float newValue) override;
     void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override {
     }
 

@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class PluginColliderRange : public juce::NormalisableRange<float> {
@@ -28,7 +26,7 @@ public:
 
     explicit PluginColliderRange(const juce::var v) {
         juce::StringArray token;
-        token.addTokens(juce::String(v), false);
+        token.addTokens(v.toString(), false);
         if ( token.size() == 3 ) {
             start = token[0].getFloatValue();
             end = token[1].getFloatValue();
@@ -58,7 +56,7 @@ public:
         juce::ScopedTryLock lock(updateLock);
         if ( lock.isLocked() )
             return name.substring(0, maximumStringLength);
-        return "Updating";
+        return "Updating...";
     }
 
     void setName(const juce::String &newName) {
@@ -71,6 +69,13 @@ public:
         currentRange = range;
     }
 
+    float getRangedValue(float dawValue) {
+        juce::ScopedTryLock lock(updateLock);
+        if ( lock.isLocked() ) {
+            return currentRange.convertFrom0to1(dawValue);
+        }
+        return 0.5;
+    }
     const juce::NormalisableRange<float>& getNormalisableRange() const override {
         juce::ScopedTryLock lock(updateLock);
         if ( lock.isLocked() ) {

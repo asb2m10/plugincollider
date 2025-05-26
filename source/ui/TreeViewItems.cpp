@@ -139,6 +139,25 @@ public:
     }
 };
 
+class NodeSynthTreeItem : public PCTreeItem {
+    PluginColliderAudioProcessor &processor;
+    int nodeId;
+
+public:
+    NodeSynthTreeItem(PluginColliderAudioProcessor &processor,  OSCArgumentWalker &walker, int nodeId) : processor(processor), nodeId(nodeId) {
+        itemName = juce::String("Synth ") + walker.getString();
+        walker.next();
+
+        int numberItems = walker.getInt();
+        walker.next();
+        for(int i=0;i<numberItems;i++) {
+            addSubItem(new PCTreeItem(walker.getString(), false));
+            walker.next();
+            walker.next();
+        }
+    }
+};
+
 class NodeTreeItem : public PCTreeItem {
     OSCArgumentWalker walker;
     PluginColliderAudioProcessor &processor;
@@ -153,10 +172,7 @@ public:
 
         if ( numberOfChild < 0 ) {
             itemName = "Node " + juce::String(nodeId);
-
-            juce::String synthDefName = walker.getString();
-            walker.next();
-            addSubItem(new PCTreeItem(synthDefName, false));
+            addSubItem(new NodeSynthTreeItem(processor, walker, nodeId));
         } else {
             itemName = "Group " + juce::String(nodeId);
 
@@ -171,8 +187,20 @@ public:
             juce::PopupMenu menu;
             menu.addItem("Set value...", true, false, [this] {
             });
-            menu.addItem("Map to control bus...", true, false, [this] {
-            });
+
+            juce::PopupMenu controlBusSelection;
+            juce::ValueTree cbVt = processor.pluginState.getChildWithName(IDs::controlbuses);
+            for(int i=0;i<cbVt.getNumChildren();i++) {
+                juce::ValueTree cb = cbVt.getChild(i);
+                juce::String name = cb.getProperty(IDs::cbName);
+                int idx = cb.getProperty(IDs::cbIdx);
+                controlBusSelection.addItem(name, true, false, [this, idx] {
+                    processor.command.push([this, idx](PluginColliderAudioProcessor &proc) {
+                        proc.superCollider.rt_assignControlBus(idx, nodeId);
+                    });
+                });
+            }
+            menu.addSubMenu("Map to control bus...", controlBusSelection);
             menu.addSeparator();
             menu.addItem("Free node", true, false, [this] {
                 processor.command.push([this](PluginColliderAudioProcessor &proc) {
@@ -196,7 +224,7 @@ public:
         if ( isNowOpen ) {
             ASyncReply<big_scpacket> reply;
             audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
-                reply.rc = proc.superCollider.rt_queryTree(0, &reply.content, false);
+                reply.rc = proc.superCollider.rt_queryTree(0, &reply.content, true);
                 reply.notify();
             });
             reply.wait();

@@ -196,22 +196,30 @@ class ControlBusTable : public VTTableList {
 public:
     ControlBusTable(juce::ValueTree vt) {
         addColumn(IDs::cbName, "Name", 200);
-        addColumn(IDs::cbLow, "Low", 70);
-        addColumn(IDs::cbHigh, "High", 70);
-        addColumn(IDs::cbStep, "Step", 70);
-
+        addColumn(IDs::cbRange, "Range", 400);
         setContent(vt);
     }
 
     juce::Component* refreshComponentForCell (int rowNumber, int columnId,
                                             bool isRowSelected, juce::Component* existingComponentToUpdate) override {
-        juce::Identifier targetId = columnIds[columnId - 1];
-        auto* textEditor = static_cast<EditableTextCustomComponent*>(existingComponentToUpdate);
-        if ( textEditor == nullptr ) {
-            textEditor = new EditableTextCustomComponent(*this);
+
+        if ( columnId == 1 ) {
+            juce::Identifier targetId = columnIds[columnId - 1];
+            auto* textEditor = static_cast<EditableTextCustomComponent*>(existingComponentToUpdate);
+            if ( textEditor == nullptr ) {
+                textEditor = new EditableTextCustomComponent(*this);
+            }
+            textEditor->setRowAndColumn(rowNumber, columnId);
+            return textEditor;
         }
-        textEditor->setRowAndColumn(rowNumber, columnId);
-        return textEditor;
+
+        if ( columnId == 2 ) {
+            auto* rangeEditor = static_cast<RangeEditor*>(existingComponentToUpdate);
+            if ( rangeEditor == nullptr ) {
+                rangeEditor = new RangeEditor(vt.getChild(rowNumber), IDs::cbRange);
+            }
+            return rangeEditor;
+        }
     }
 };
 
