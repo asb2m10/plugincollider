@@ -372,14 +372,14 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary(data, sizeInBytes));
     juce::ValueTree tmpState = juce::ValueTree::fromXml(*xmlState);
 
-    resetPluginState();
+    // resetPluginState();
 
-    // if ( tmpState.getProperty(IDs::version) != IDS_VERSION ) {
-    //     resetPluginState();
-    //     recompileState();
-    // } else {
-    //     pluginState = tmpState;
-    // }
+    if ( tmpState.getProperty(IDs::version) != IDS_VERSION ) {
+        resetPluginState();
+    } else {
+        pluginState = tmpState;
+    }
+    recompileState();    
 }
 
 void PluginColliderAudioProcessor::resetPluginState() {
