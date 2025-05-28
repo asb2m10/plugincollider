@@ -4,3 +4,6 @@
 [submodule "libs/supercollider"]
 	path = libs/supercollider
 	url = https://github.com/supercollider/supercollider.git
+[submodule "libs/clap-juce-extensions"]
+	path = libs/clap-juce-extensions
+	url = https://github.com/free-audio/clap-juce-extensions.git
