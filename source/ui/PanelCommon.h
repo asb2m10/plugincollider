@@ -18,12 +18,9 @@
 
 #pragma once
 
-#include "PluginProcessor.h"
-
 class RangeEditor : public juce::Component {
     const int GLOBAL_RANGE = 100000;
-    juce::ValueTree vt;
-    const juce::Identifier paramId;
+    juce::Value refValue;
 
     juce::Slider low;
     juce::Label label;
@@ -33,20 +30,20 @@ class RangeEditor : public juce::Component {
 
     void publishRange() {
         juce::String value = juce::String::formatted("%f %f %f", low.getValue(), high.getValue(), step.getValue());
-        if ( vt.isValid() ) {
-            vt.setProperty(paramId, value, nullptr);
+        if ( ! refValue.getValue().isVoid() ) {
+            refValue.setValue(value);
         }
     }
 
 public:
-    RangeEditor(juce::ValueTree vt, juce::Identifier paramId) : vt(vt), paramId(paramId) {
+    RangeEditor() {
         low.setRange(-GLOBAL_RANGE, GLOBAL_RANGE, 0.1);
         low.setSliderStyle(juce::Slider::SliderStyle::LinearBarVertical);
         low.setSliderSnapsToMousePosition(false);
         low.setColour(juce::Slider::trackColourId, juce::Colours::transparentBlack);
         addAndMakeVisible(low);
         
-        label.setText(" - ", juce::NotificationType::dontSendNotification);
+        label.setText("-", juce::NotificationType::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
         addAndMakeVisible(label);
         
@@ -75,7 +72,7 @@ public:
         };
 
         high.onValueChange = [this]() {
-            if (  high.getValue() < low.getValue() ) {
+            if ( high.getValue() < low.getValue() ) {
                 high.setValue(low.getValue() + 1, juce::NotificationType::sendNotificationSync);
             }
             publishRange();
@@ -84,6 +81,20 @@ public:
         step.onValueChange = [this]() {
             publishRange();
         };
+    }
+
+    void assignValueTree(juce::ValueTree vt, juce::Identifier paramId) {
+        if ( vt.isValid() && vt.hasProperty(paramId) ) {
+            refValue.referTo(vt.getPropertyAsValue(paramId, nullptr));
+
+            PluginColliderRange range(vt.getProperty(paramId));
+            low.setValue(range.start, juce::NotificationType::sendNotificationSync);
+            high.setValue(range.end, juce::NotificationType::sendNotificationSync);
+            if ( high.getValue() <= low.getValue() ) {
+                high.setValue(low.getValue() + 1, juce::NotificationType::sendNotificationSync);
+            }
+            step.setValue(range.interval, juce::NotificationType::sendNotificationSync);
+        }
     }
 
     void resized() override {
@@ -96,18 +107,44 @@ public:
     }
 };
 
+class SliderRangeAware : public juce::Slider, public juce::Value::Listener {
+    juce::Value value;
+
+    void readRange() {
+        PluginColliderRange range(value);
+        setRange(range.start, range.end, range.interval);
+        float currentValue = getValue();
+        if (currentValue < range.start || currentValue > range.end) {
+            setValue(range.start, juce::NotificationType::sendNotification);
+        }
+    }
+
+public:
+    void setRangeProperty(juce::ValueTree vt, juce::Identifier paramId) {
+        if (vt.isValid() && vt.hasProperty(paramId)) {
+            value = vt.getPropertyAsValue(paramId, nullptr);
+            value.addListener(this);
+            value.referTo(vt.getPropertyAsValue(paramId, nullptr));
+            readRange();
+        }
+    }
+
+    void valueChanged(juce::Value& value) override {
+        readRange();
+    }
+};
+
 class VTTableList : public juce::Component, public juce::TableListBoxModel {
 protected:
     std::vector<juce::Identifier> columnIds;
     juce::TableListBox table;
     juce::Font font { juce::FontOptions { 14.0f } };
-public:
+    int creationFlags = juce::TableHeaderComponent::ColumnPropertyFlags::visible | juce::TableHeaderComponent::ColumnPropertyFlags::resizable;
     juce::ValueTree vt;
-
+public:
     VTTableList() {
         addAndMakeVisible (table);
         table.setModel(this);
-        int flags = juce::TableHeaderComponent::ColumnPropertyFlags::visible;
         table.getHeader().setStretchToFitActive(true);
     }
 
@@ -122,7 +159,7 @@ public:
 
     void addColumn(juce::Identifier id, const juce::String& name, int width) {
         columnIds.push_back(id);
-        table.getHeader().addColumn(name, columnIds.size(), width, width, width, juce::TableHeaderComponent::ColumnPropertyFlags::visible);
+        table.getHeader().addColumn(name, columnIds.size(), width, 0.25*width, 3*width, creationFlags);
     }
 
     int getNumColumns() {
@@ -163,20 +200,13 @@ public:
     }
 
 protected:
-    class ParamSlider : public juce::Slider {
-    public:
-        ParamSlider() {
-            setSliderStyle(juce::Slider::LinearBar);
-        }
-    };
-
     class EditableTextCustomComponent final : public juce::Label  {
     public:
-        EditableTextCustomComponent (VTTableList& td)  : owner (td)  {
+        EditableTextCustomComponent(VTTableList& td)  : owner (td)  {
             setEditable (false, true, false);
         }
 
-        void mouseDown (const juce::MouseEvent& event) override {
+        void mouseDown(const juce::MouseEvent& event) override {
             owner.table.selectRowsBasedOnModifierKeys(row, event.mods, false);
             juce::Label::mouseDown(event);
         }
@@ -191,7 +221,7 @@ protected:
             setText(owner.getCellText(columnId, row), juce::NotificationType::dontSendNotification);
         }
 
-        void paint (juce::Graphics& g) override {
+        void paint(juce::Graphics& g) override {
             auto& lf = getLookAndFeel();
             if (! dynamic_cast<juce::LookAndFeel_V4*> (&lf))
                 lf.setColour (textColourId, juce::Colours::black);

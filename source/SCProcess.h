@@ -70,6 +70,38 @@ public:
     float* getParametersValues() {
         return parametersValues.get();
     }
+
+    juce::String guessParameterRange(int idx) {
+        if ( idx < 0 || idx >= parameters.size() )
+            return "0 1 0.001"; // default range
+
+        juce::String name = parameters[idx];
+        if ( name == "gate" ) {
+            return "0 1 1"; // gate is always 0 or 1
+        } else if ( name == "freq" ) {
+            return "20 22000 0.1"; // frequency range
+        } else if ( name == "amp" ) {
+            return "0 1 0.001"; // amplitude range
+        } else if ( name == "pan" ) {
+            return "-1 1 0.001"; // pan range
+        } else if ( name == "pitch" ) {
+            return "-12 12 0.01"; // pitch range
+        } else if ( name == "out" ) {
+            return "1 16 1";
+        }
+
+        // we do our best to find the best low / high values based on the defaultValue
+        int low, high;
+        float defaultValue = parametersValues[idx];
+        if ( defaultValue > -1 && defaultValue < 1 ) {
+            low = -1;
+            high = 1;
+        } else {
+            low = defaultValue / 5;
+            high = defaultValue * 5;
+        }
+        return juce::String(low) + " " + juce::String(high) + " 0.001";
+    }
 };
 
 

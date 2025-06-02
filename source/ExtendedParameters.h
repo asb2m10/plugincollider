@@ -76,6 +76,7 @@ public:
         }
         return 0.5;
     }
+
     const juce::NormalisableRange<float>& getNormalisableRange() const override {
         juce::ScopedTryLock lock(updateLock);
         if ( lock.isLocked() ) {

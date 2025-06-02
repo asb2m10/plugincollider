@@ -77,7 +77,7 @@ public:
 
     void itemSelectionChanged(bool isNowSelected) override {
         if ( isNowSelected ) {
-            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths);
+            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths).getChild(0);
             panel.setEditableItem(vt, audioProcessor);
         } else {
             panel.clearEditableItem();

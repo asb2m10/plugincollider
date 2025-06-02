@@ -18,38 +18,30 @@
 
 #pragma once
 
-#include "CommonPanelView.h"
+#include "PanelCommon.h"
 
 const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
 
 class SynthDefTable : public VTTableList {
-
     juce::ValueTree getRowParameter(int rowNumber) {
         return vt.getChild(rowNumber);
     }
 
     bool disabledControl(juce::String name) {
         if ( synthParmsToMidi.contains(name, false) ) {
-            if ( ! rootTree.getProperty(IDs::staticSynth) )
+            if ( ! vt.getProperty(IDs::staticSynth) )
                 return true;
         }
         return false;
     }
-
 public:
-    juce::ValueTree rootTree;
+    juce::ValueTree vtControlBuses;
 
     SynthDefTable() {
         addColumn(IDs::pName, "Argument", 70);
         addColumn(IDs::pCurrentValue, "Value", 200);
-        addColumn(IDs::pLow, "Low", 70);
-        addColumn(IDs::pHigh, "High", 70);
+        addColumn(IDs::pRange, "Low", 200);
         addColumn(IDs::pControlBus, "Control Bus", 70);
-    }
-
-    void setContent(juce::ValueTree vt) override {
-        rootTree = vt;
-        VTTableList::setContent(vt.getChildWithName(IDs::parameters));
     }
 
     juce::Component* refreshComponentForCell (int rowNumber, int columnId,
@@ -61,13 +53,14 @@ public:
                     return nullptr;
                 }
 
-                auto* paramSlider = static_cast<ParamSlider*>(existingComponentToUpdate);
+                auto* paramSlider = static_cast<SliderRangeAware*>(existingComponentToUpdate);
                 if ( paramSlider == nullptr ) {
-                    paramSlider = new ParamSlider();
+                    paramSlider = new SliderRangeAware();
+                    paramSlider->setSliderStyle(juce::Slider::LinearBar);
+                    paramSlider->setRangeProperty(params, IDs::pRange);
                 }
 
                 paramSlider->setEnabled(!disabledControl(params.getProperty(IDs::pName)));
-                paramSlider->setRange(params.getProperty(IDs::pLow), params.getProperty(IDs::pHigh));
                 if ( params.hasProperty(IDs::pCurrentValue) ) {
                     paramSlider->setValue(params.getProperty(IDs::pCurrentValue), juce::NotificationType::dontSendNotification);
                 } else {
@@ -80,51 +73,63 @@ public:
                 return paramSlider;
             }
 
-            case 3:
-            case 4: {
+            case 3: {
                 juce::ValueTree params = getRowParameter(rowNumber);
                 if ( ! params.isValid() ) {
                     return nullptr;
                 }
 
-                auto* textEditor = static_cast<EditableTextCustomComponent*>(existingComponentToUpdate);
-                if ( textEditor == nullptr ) {
-                    textEditor = new EditableTextCustomComponent(*this);
+                auto* rangeEditor = static_cast<RangeEditor*>(existingComponentToUpdate);
+                if ( rangeEditor == nullptr ) {
+                    rangeEditor = new RangeEditor();
                 }
-                textEditor->setRowAndColumn(rowNumber, columnId);
+                rangeEditor->assignValueTree(params, IDs::pRange);
+                if ( static_cast<int>(params.getProperty(IDs::pControlBus)) != -1 ) {
+                    rangeEditor->setEnabled(true);
+                } else {
+                    rangeEditor->setEnabled(false);
+                }
 
-                return textEditor;
+                return rangeEditor;
             }
 
-            case 5: {
+            case 4 : {
                 juce::ValueTree params = getRowParameter(rowNumber);
                 if ( ! params.isValid() ) {
                     return nullptr;
                 }
 
-                auto* comboBox = static_cast<juce::ComboBox*>(existingComponentToUpdate);
-                if ( comboBox == nullptr ) {
-                    comboBox = new juce::ComboBox();
-                    comboBox->addItemList({"None", "This", "is", "not", "yet", "functional", "Control Bus 6", "Control Bus 7", "Control Bus 8"}, 1);
+                auto* cbSelector = static_cast<juce::TextButton*>(existingComponentToUpdate);
+                if ( cbSelector == nullptr ) {
+                    cbSelector = new juce::TextButton();
                 }
-                return comboBox;
+                int cbIdx = params.getProperty(IDs::pControlBus, -1);
+
+                if ( cbIdx == -1 ) {
+                    cbSelector->setButtonText("Assign...");
+                } else {
+                    juce::ValueTree cbConf = vtControlBuses.getChild(cbIdx);
+                    if ( cbConf.isValid() ) {
+                        cbSelector->setButtonText(cbConf.getProperty(IDs::cbName));
+                    }
+                }
+                return cbSelector;
             }
         }
         return nullptr;
     }
 };
 
-class SynthDefPanel : public juce::Component {
+class PanelSynthDef : public juce::Component {
     PluginColliderAudioProcessor &processor;
     juce::Label synthname;
-    //ParameterTable parmModel;
     SynthDefTable table;
     juce::ToggleButton staticSynth;
     std::unique_ptr<juce::FileChooser> scsynthChooser;
     juce::TextButton loaddef;
     juce::ValueTree vt;
 public:
-    SynthDefPanel(juce::ValueTree vt, PluginColliderAudioProcessor &processor) :  vt(vt), processor(processor) {
+    PanelSynthDef(juce::ValueTree vt, PluginColliderAudioProcessor &processor) :  vt(vt), processor(processor) {
         addAndMakeVisible(loaddef);
         loaddef.setButtonText("Load");
 
@@ -136,8 +141,8 @@ public:
         addAndMakeVisible(table);
 
         staticSynth.onClick = [this] {
-            if ( table.rootTree.isValid() ) {
-                table.rootTree.setProperty(IDs::staticSynth, staticSynth.getToggleState(), nullptr);
+            if ( this->vt.isValid() ) {
+                this->vt.setProperty(IDs::staticSynth, staticSynth.getToggleState(), nullptr);
                 refresh();
             }
         };
@@ -160,7 +165,12 @@ public:
                         juce::AlertWindow::showAsync(opts, [](int res) {});
                         return;
                     }
-                    this->table.setContent(this->vt.getChildWithName(IDs::synth));
+
+                    // This is te be replaced once PluginCollider supports multiple synths; and the synth won't be
+                    // loaded on the panel
+                    this->vt = this->processor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
+
+                    this->table.setContent(this->vt.getChildWithName(IDs::parameters));
                     this->refresh();
                 } else {
                     auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("Unable to read Synthdef file").withButton("OK");
@@ -169,17 +179,17 @@ public:
             });
         };
 
-        table.setContent(vt.getChildWithName(IDs::synth));
+        table.setContent(vt.getChildWithName(IDs::parameters));
         refresh();
     }
 
     void refresh() {
-        juce::String synthName = table.rootTree.getProperty(IDs::synthName);
+        juce::String synthName = vt.getProperty(IDs::synthName);
         if ( synthName == "" )
             synthName = "No synthDef loaded";
         table.refresh();
         synthname.setText(juce::String("Synth: ") + synthName, juce::NotificationType::dontSendNotification);
-        staticSynth.setToggleState(table.rootTree.getProperty(IDs::staticSynth), juce::NotificationType::dontSendNotification);
+        staticSynth.setToggleState(vt.getProperty(IDs::staticSynth), juce::NotificationType::dontSendNotification);
     }
 
     void resized() override {
@@ -189,57 +199,5 @@ public:
         loaddef.setBounds(0, 5, 50, 25);
         staticSynth.setBounds(60, 5, 200, 25);
         table.setBounds(0, 40, bounds.getWidth(), bounds.getHeight() - 40);
-    }
-};
-
-class ControlBusTable : public VTTableList {
-public:
-    ControlBusTable(juce::ValueTree vt) {
-        addColumn(IDs::cbName, "Name", 200);
-        addColumn(IDs::cbRange, "Range", 400);
-        setContent(vt);
-    }
-
-    juce::Component* refreshComponentForCell (int rowNumber, int columnId,
-                                            bool isRowSelected, juce::Component* existingComponentToUpdate) override {
-
-        if ( columnId == 1 ) {
-            juce::Identifier targetId = columnIds[columnId - 1];
-            auto* textEditor = static_cast<EditableTextCustomComponent*>(existingComponentToUpdate);
-            if ( textEditor == nullptr ) {
-                textEditor = new EditableTextCustomComponent(*this);
-            }
-            textEditor->setRowAndColumn(rowNumber, columnId);
-            return textEditor;
-        }
-
-        if ( columnId == 2 ) {
-            auto* rangeEditor = static_cast<RangeEditor*>(existingComponentToUpdate);
-            if ( rangeEditor == nullptr ) {
-                rangeEditor = new RangeEditor(vt.getChild(rowNumber), IDs::cbRange);
-            }
-            return rangeEditor;
-        }
-    }
-};
-
-class ControlBusPanel : public juce::Component {
-    juce::ValueTree &vt;
-    juce::Label label;
-    ControlBusTable table;
-public:
-    ControlBusPanel(juce::ValueTree vt) : vt(vt), table(vt) {
-        addAndMakeVisible(label);
-        label.setText("Control Bus", juce::dontSendNotification);
-        addAndMakeVisible(table);
-        table.setBounds(getLocalBounds());
-    }
-
-    void resized() override {
-        auto bounds = getBounds();
-        bounds.removeFromTop(10);
-        label.setBounds(bounds.removeFromTop(20));
-        bounds.removeFromTop(5);
-        table.setBounds(bounds);
     }
 };

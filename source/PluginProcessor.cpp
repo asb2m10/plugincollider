@@ -276,22 +276,9 @@ bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
     for(int i=0;i<synthDef->getParameters().size();i++) {
         juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
         parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
-
-        // we do our best to find the best low / high values based on the defaultValue
-        int low, high;
-        float defaultValue = synthDef->getParametersValues()[i];
-        if ( defaultValue > -1 && defaultValue < 1 ) {
-            low = -1;
-            high = 1;
-        } else {
-            low = defaultValue / 5;
-            high = defaultValue * 5;
-        }
-
         parameter.setProperty(IDs::pIdx, i, nullptr);
         parameter.setProperty(IDs::pDefaultValue, synthDef->getParametersValues()[i], nullptr);
-        parameter.setProperty(IDs::pLow, low, nullptr);
-        parameter.setProperty(IDs::pHigh, high, nullptr);
+        parameter.setProperty(IDs::pRange, synthDef->guessParameterRange(i), nullptr);
         parameter.setProperty(IDs::pControlBus, -1, nullptr);
         parameters.addChild(parameter, i, nullptr);
     }

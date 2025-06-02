@@ -56,8 +56,7 @@ namespace IDs {
     DECLARE_ID(pCurrentValue)
     DECLARE_ID(pDefaultValue)
     DECLARE_ID(pControlBus)
-    DECLARE_ID(pLow)
-    DECLARE_ID(pHigh)
+    DECLARE_ID(pRange)
 };
 
 //==============================================================================
