@@ -232,7 +232,7 @@ public:
     int32_t rt_newSynth(juce::String name, int newId, int destNode);
     SCErr rt_queryTree(int rootGroup, big_scpacket *packet, bool flagParameters = false);
     void rt_dumpTree();
-    void rt_assignControlBus(int bus, int nodeId);
+    void rt_assignControlBus(int nodeId, int nodeParamIdx, int busIdx);
     // ======================
 
     int getVerboseLevel() {

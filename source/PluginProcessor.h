@@ -146,7 +146,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     juce::String synthPath;
 
     juce::AudioParameterFloat *gain;
-    ParameterControlBus *controlBus[NUMBER_OF_CONTROL_BUSES];
+    ControlBusParameter *controlBus[NUMBER_OF_CONTROL_BUSES];
 
     juce::AudioProcessLoadMeasurer loadMeasurer;
 
@@ -163,6 +163,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     struct SynthState {
         char synthName[127];
         std::map<int, float> precompiledMapValue;
+        std::map<int, int> controlBusMap;
         int freqIdx;
         int velocityIdx;
         int gateIdx;

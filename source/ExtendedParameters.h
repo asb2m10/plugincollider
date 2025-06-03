@@ -41,13 +41,13 @@ public:
     }
 };
 
-class ParameterControlBus : public juce::AudioParameterFloat {
+class ControlBusParameter : public juce::AudioParameterFloat {
     juce::String name;
     juce::NormalisableRange<float> defaultRange;
     PluginColliderRange currentRange;
     juce::CriticalSection updateLock;
 public:
-    ParameterControlBus(int idx) : juce::AudioParameterFloat(
+    ControlBusParameter(int idx) : juce::AudioParameterFloat(
             juce::String("cb") + juce::String(idx), juce::String("Control Bus ") + juce::String(idx), 0, 1, 0.5) {
         this->name = juce::String("Control Bus ") + juce::String(idx);
     }

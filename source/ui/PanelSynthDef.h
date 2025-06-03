@@ -23,25 +23,40 @@
 const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
 
 class SynthDefTable : public VTTableList {
+    juce::ValueTree vtControlBuses;
+    juce::Value staticSynth;
+
     juce::ValueTree getRowParameter(int rowNumber) {
         return vt.getChild(rowNumber);
     }
 
-    bool disabledControl(juce::String name) {
-        if ( synthParmsToMidi.contains(name, false) ) {
-            if ( ! vt.getProperty(IDs::staticSynth) )
+    /**
+     * Check if the control should be disabled if it is a control bus or if it is a parameter that is a midi event.
+     */
+    bool disabledControl(juce::ValueTree &params) {
+        int cbIdx = params.getProperty(IDs::pControlBus, -1);
+        if ( cbIdx != -1 )
+            return true;
+        juce::String name = params.getProperty(IDs::pName);
+        if ( synthParmsToMidi.contains(name, false) )
+            if ( ! staticSynth.getValue() )
                 return true;
-        }
         return false;
     }
 public:
-    juce::ValueTree vtControlBuses;
+    std::function<void(int)> onControlBusAssign;
 
     SynthDefTable() {
         addColumn(IDs::pName, "Argument", 70);
         addColumn(IDs::pCurrentValue, "Value", 200);
-        addColumn(IDs::pRange, "Low", 200);
+        addColumn(IDs::pRange, "Range", 200);
         addColumn(IDs::pControlBus, "Control Bus", 70);
+    }
+
+    void setSynthContent(juce::ValueTree vtSynth, juce::ValueTree vtControlBuses) {
+        staticSynth = vtSynth.getPropertyAsValue(IDs::staticSynth, nullptr);
+        this->vtControlBuses = vtControlBuses;
+        setContent(vtSynth.getChildWithName(IDs::parameters));
     }
 
     juce::Component* refreshComponentForCell (int rowNumber, int columnId,
@@ -60,7 +75,7 @@ public:
                     paramSlider->setRangeProperty(params, IDs::pRange);
                 }
 
-                paramSlider->setEnabled(!disabledControl(params.getProperty(IDs::pName)));
+                paramSlider->setEnabled(!disabledControl(params));
                 if ( params.hasProperty(IDs::pCurrentValue) ) {
                     paramSlider->setValue(params.getProperty(IDs::pCurrentValue), juce::NotificationType::dontSendNotification);
                 } else {
@@ -78,18 +93,12 @@ public:
                 if ( ! params.isValid() ) {
                     return nullptr;
                 }
-
                 auto* rangeEditor = static_cast<RangeEditor*>(existingComponentToUpdate);
                 if ( rangeEditor == nullptr ) {
                     rangeEditor = new RangeEditor();
                 }
                 rangeEditor->assignValueTree(params, IDs::pRange);
-                if ( static_cast<int>(params.getProperty(IDs::pControlBus)) != -1 ) {
-                    rangeEditor->setEnabled(true);
-                } else {
-                    rangeEditor->setEnabled(false);
-                }
-
+                rangeEditor->setEnabled(!disabledControl(params));
                 return rangeEditor;
             }
 
@@ -104,7 +113,6 @@ public:
                     cbSelector = new juce::TextButton();
                 }
                 int cbIdx = params.getProperty(IDs::pControlBus, -1);
-
                 if ( cbIdx == -1 ) {
                     cbSelector->setButtonText("Assign...");
                 } else {
@@ -113,6 +121,16 @@ public:
                         cbSelector->setButtonText(cbConf.getProperty(IDs::cbName));
                     }
                 }
+
+                if ( onControlBusAssign != nullptr ) {
+                    cbSelector->onClick = [this, rowNumber]() {
+                        juce::ValueTree parameter = getRowParameter(rowNumber);
+                        if ( parameter.isValid() ) {
+                            onControlBusAssign(rowNumber);
+                        }
+                    };
+                }
+
                 return cbSelector;
             }
         }
@@ -123,13 +141,16 @@ public:
 class PanelSynthDef : public juce::Component {
     PluginColliderAudioProcessor &processor;
     juce::Label synthname;
-    SynthDefTable table;
+    SynthDefTable synthDefTable;
     juce::ToggleButton staticSynth;
     std::unique_ptr<juce::FileChooser> scsynthChooser;
     juce::TextButton loaddef;
-    juce::ValueTree vt;
+    juce::ValueTree vtSynth;
+    juce::ValueTree vtControlBus;
 public:
-    PanelSynthDef(juce::ValueTree vt, PluginColliderAudioProcessor &processor) :  vt(vt), processor(processor) {
+    PanelSynthDef(juce::ValueTree vt, PluginColliderAudioProcessor &processor) :  vtSynth(vt), processor(processor) {
+        vtControlBus = this->processor.pluginState.getChildWithName(IDs::controlbuses);
+
         addAndMakeVisible(loaddef);
         loaddef.setButtonText("Load");
 
@@ -138,11 +159,11 @@ public:
         addAndMakeVisible(staticSynth);
         staticSynth.setButtonText("FX mode");
 
-        addAndMakeVisible(table);
+        addAndMakeVisible(synthDefTable);
 
         staticSynth.onClick = [this] {
-            if ( this->vt.isValid() ) {
-                this->vt.setProperty(IDs::staticSynth, staticSynth.getToggleState(), nullptr);
+            if ( this->vtSynth.isValid() ) {
+                this->vtSynth.setProperty(IDs::staticSynth, staticSynth.getToggleState(), nullptr);
                 refresh();
             }
         };
@@ -168,9 +189,8 @@ public:
 
                     // This is te be replaced once PluginCollider supports multiple synths; and the synth won't be
                     // loaded on the panel
-                    this->vt = this->processor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
-
-                    this->table.setContent(this->vt.getChildWithName(IDs::parameters));
+                    this->vtSynth = this->processor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
+                    this->synthDefTable.setSynthContent(this->vtSynth, this->vtControlBus);
                     this->refresh();
                 } else {
                     auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("Unable to read Synthdef file").withButton("OK");
@@ -179,17 +199,54 @@ public:
             });
         };
 
-        table.setContent(vt.getChildWithName(IDs::parameters));
+        synthDefTable.onControlBusAssign = [this](int rowNumber) {
+            juce::PopupMenu menu;
+
+            menu.addItem("Unassign", true, false, [this, rowNumber] {
+                juce::ValueTree parameter = this->vtSynth.getChildWithName(IDs::parameters).getChild(rowNumber);
+                parameter.setProperty(IDs::pControlBus, -1, nullptr);
+                refresh();
+            });
+            for (int i = 0; i < vtControlBus.getNumChildren(); i++) {
+                juce::ValueTree cb = vtControlBus.getChild(i);
+                juce::String name = cb.getProperty(IDs::cbName);
+                int idx = cb.getProperty(IDs::cbIdx);
+                menu.addItem(name, true, false, [this, idx, rowNumber, name] {
+                    juce::ValueTree parameter = this->vtSynth.getChildWithName(IDs::parameters).getChild(rowNumber);
+                    juce::String msg = juce::String("Assign parameters value '") + parameter.getProperty(IDs::pName).toString()
+                        + "' to control bus '" + name + "' ?";
+                    auto msgbox = juce::MessageBoxOptions::makeOptionsYesNoCancel(
+                        juce::MessageBoxIconType::QuestionIcon, "Confirmation", msg);
+                    juce::NativeMessageBox::showAsync(msgbox, [this, idx, name, rowNumber](int result) {
+                        if ( result == 2 )
+                            return;
+
+                        // We copy the value of the parameter to the control bus
+                        juce::ValueTree parameter = this->vtSynth.getChildWithName(IDs::parameters).getChild(rowNumber);
+                        if ( result == 0 ) {
+                            juce::ValueTree cbVt = this->vtControlBus.getChild(idx);
+                            cbVt.setProperty(IDs::cbName, parameter.getProperty(IDs::pName), nullptr);
+                            cbVt.setProperty(IDs::cbRange, parameter.getProperty(IDs::pRange), nullptr);
+                        }
+                        parameter.setProperty(IDs::pControlBus, idx, nullptr);
+                        refresh();
+                     });
+                });
+            }
+            menu.showMenuAsync(juce::PopupMenu::Options());
+        };
+
+        synthDefTable.setSynthContent(vtSynth, vtControlBus);
         refresh();
     }
 
     void refresh() {
-        juce::String synthName = vt.getProperty(IDs::synthName);
+        juce::String synthName = vtSynth.getProperty(IDs::synthName);
         if ( synthName == "" )
             synthName = "No synthDef loaded";
-        table.refresh();
+        synthDefTable.refresh();
         synthname.setText(juce::String("Synth: ") + synthName, juce::NotificationType::dontSendNotification);
-        staticSynth.setToggleState(vt.getProperty(IDs::staticSynth), juce::NotificationType::dontSendNotification);
+        staticSynth.setToggleState(vtSynth.getProperty(IDs::staticSynth), juce::NotificationType::dontSendNotification);
     }
 
     void resized() override {
@@ -198,6 +255,6 @@ public:
         synthname.setBounds(200, 5, bounds.getWidth() - 200, 25);
         loaddef.setBounds(0, 5, 50, 25);
         staticSynth.setBounds(60, 5, 200, 25);
-        table.setBounds(0, 40, bounds.getWidth(), bounds.getHeight() - 40);
+        synthDefTable.setBounds(0, 40, bounds.getWidth(), bounds.getHeight() - 40);
     }
 };

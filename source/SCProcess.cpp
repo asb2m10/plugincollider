@@ -296,16 +296,16 @@ void SCProcess::rt_setControlBusValue(int bus, float value) {
     world->mControlBus[bus] = value;
 }
 
-void SCProcess::rt_assignControlBus(int bus, int nodeId) {
+void SCProcess::rt_assignControlBus(int nodeId, int nodeParamIdx, int busIdx) {
     Node *node = rt_getNode(nodeId).node();
     if ( node == nullptr ) {
         logger.scprintf("Invalid node %d\n", nodeId);
         return;
     }
-    if ( bus < 0 || bus >= world->mNumControlBusChannels ) {
-        logger.scprintf("Invalid control bus %d; available %d\n", bus,world->mNumControlBusChannels);
+    if ( busIdx < 0 || busIdx >= world->mNumControlBusChannels ) {
+        logger.scprintf("Invalid control bus %d; available %d\n", busIdx ,world->mNumControlBusChannels);
     } else {
-        Node_MapControl(node, bus, 1);
+        Node_MapControl(node, nodeParamIdx, busIdx);
     }
 }
 

@@ -41,7 +41,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     juce::Logger::setCurrentLogger(&logger);
 
     for(int i=0;i<32;i++) {
-        addParameter(controlBus[i] = new ParameterControlBus(i)); // default value
+        addParameter(controlBus[i] = new ControlBusParameter(i)); // default value
         controlBus[i]->addListener(this);
     }
 
@@ -164,6 +164,9 @@ int PluginColliderAudioProcessor::rt_playSynth() {
         return 0;
     int node = superCollider.rt_newSynth(synthState.synthName, -1, kDefaultGroupId);
     if ( node != 0 ) {
+        for (const auto &p: synthState.precompiledMapValue) {
+            superCollider.rt_setNodeValue(node, p.first, p.second);
+        }
         for(const auto &p: synthState.precompiledMapValue) {
             superCollider.rt_setNodeValue(node, p.first, p.second);
         }
@@ -318,6 +321,12 @@ void PluginColliderAudioProcessor::recompileState() {
                     synthState.gateIdx = i;
                     continue;
                 }
+            }
+
+            int cbIdx = param.getProperty(IDs::pControlBus, -1);
+            if ( cbIdx != -1 ) {
+                synthState.controlBusMap.emplace(i, cbIdx);
+                continue;
             }
 
             if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {

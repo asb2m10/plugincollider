@@ -134,6 +134,9 @@ public:
     }
 };
 
+/**
+ * TableListBox where the content is mapped on a ValueTree content.
+ */
 class VTTableList : public juce::Component, public juce::TableListBoxModel {
 protected:
     std::vector<juce::Identifier> columnIds;
@@ -152,7 +155,10 @@ public:
         table.setModel(nullptr);
     }
 
-    virtual void setContent(juce::ValueTree vt) {
+    void setContent(juce::ValueTree vt) {
+        if ( vt.isValid() ) {
+            jassert("Content for VTTableList is not a valid ValueTree");
+        }
         this->vt = vt;
         table.updateContent();
     }

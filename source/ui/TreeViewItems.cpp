@@ -196,7 +196,8 @@ public:
                 int idx = cb.getProperty(IDs::cbIdx);
                 controlBusSelection.addItem(name, true, false, [this, idx] {
                     processor.command.push([this, idx](PluginColliderAudioProcessor &proc) {
-                        proc.superCollider.rt_assignControlBus(idx, nodeId);
+                        // TODO: set this based on parameter idx
+                        proc.superCollider.rt_assignControlBus(nodeId, 1, idx);
                     });
                 });
             }
