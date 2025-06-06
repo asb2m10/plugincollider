@@ -141,6 +141,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
         return &loadMeasurer;
     }
 
+    void recompileState();
+    
   private:
     juce::String pluginPath;
     juce::String synthPath;
@@ -172,7 +174,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     SynthState synthState;
 
     int boundedMidiVoice[127];
-    void recompileState();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

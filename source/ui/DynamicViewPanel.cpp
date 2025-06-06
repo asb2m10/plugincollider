@@ -35,7 +35,7 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         component.reset();
     }
 
-    if ( type == IDs::controlbuses) {
+    if ( type == IDs::controlbuses ) {
         PanelControlBus *cbPanel = new PanelControlBus(item);
         component.reset(cbPanel);
         addAndMakeVisible(cbPanel);

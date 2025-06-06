@@ -209,17 +209,15 @@ void SCProcess::bootServer() {
     }
 }
 
-void SCProcess::showRegistredSynthdef() {
-    logger.scprintf("=== Registred SynthDefs:\n");
+void SCProcess::rt_getSynthDef(HeapStringList<64,4096> &list) {
     for (int i=0;i<world->hw->mGraphDefLib->TableSize();i++) {
         GraphDef *gf = world->hw->mGraphDefLib->AtIndex(i);
-
         if ( gf != nullptr ) {
-            if  ( strncmp("system_", (const char*) gf->mNodeDef.mName, 6) )
-                logger.scprintf("\t%s\n", gf->mNodeDef.mName);
+            if  ( strncmp("system_", (const char*) gf->mNodeDef.mName, 6) ) {
+                list.add((const char *) gf->mNodeDef.mName);
+            }
         }
     }
-    logger.scprintf("===\n");
 }
 
 void SCProcess::run(juce::AudioBuffer<float> &buffer,

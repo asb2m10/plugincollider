@@ -31,6 +31,8 @@
 #include "SC_Node.h"
 #include "scsynthsend.h"
 
+#include "CommandFifo.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_osc/juce_osc.h>
 
@@ -228,6 +230,7 @@ public:
     void rt_freeGroup(int rootGroup);
     void rt_freeNode(int destNode);
     void rt_setNodeValue(int destNode, int idx, float value);
+    void rt_getSynthDef(HeapStringList<64,4096> &list);
     SCErr rt_newGroup(int parentNode, int destGroup);
     int32_t rt_newSynth(juce::String name, int newId, int destNode);
     SCErr rt_queryTree(int rootGroup, big_scpacket *packet, bool flagParameters = false);

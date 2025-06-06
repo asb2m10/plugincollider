@@ -99,11 +99,11 @@ public:
 
     void resized() override {
         auto bounds = getLocalBounds();
-        low.setBounds(bounds.removeFromLeft(70));
-        label.setBounds(bounds.removeFromLeft(25));
-        high.setBounds(bounds.removeFromLeft(70));
+        low.setBounds(bounds.removeFromLeft(60));
+        label.setBounds(bounds.removeFromLeft(20));
+        high.setBounds(bounds.removeFromLeft(60));
         stepLabel.setBounds(bounds.removeFromLeft(40));
-        step.setBounds(bounds.removeFromLeft(50));
+        step.setBounds(bounds.removeFromLeft(45));
     }
 };
 
@@ -156,9 +156,11 @@ public:
     }
 
     void setContent(juce::ValueTree vt) {
-        if ( vt.isValid() ) {
-            jassert("Content for VTTableList is not a valid ValueTree");
-        }
+        // Force empty table to free previous components that was assigned to a preivous ValueTree
+        juce::ValueTree emptyTree;
+        this->vt = emptyTree;
+        table.updateContent();
+
         this->vt = vt;
         table.updateContent();
     }

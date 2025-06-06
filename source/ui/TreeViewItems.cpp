@@ -21,31 +21,31 @@
 #include "TreeViewItems.h"
 #include "SC_OscUtils.hpp"
 
-class ProjectSynthDefItem : public PCTreeItem {
-    PluginColliderAudioProcessor &audioProcessor;
-public:
-    ProjectSynthDefItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
-        itemName = "SynthDefs";
-    }
+// class ProjectSynthDefItem : public PCTreeItem {
+//     PluginColliderAudioProcessor &audioProcessor;
+// public:
+//     ProjectSynthDefItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
+//         itemName = "SynthDefs";
+//     }
 
-    void itemOpennessChanged(bool isNowOpen) override {
-        if ( isNowOpen ) {
-            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths);
+//     void itemOpennessChanged(bool isNowOpen) override {
+//         if ( isNowOpen ) {
+//             juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths);
 
-            if ( vt.isValid() ) {
-                for(int i=0;i<vt.getNumChildren();i++) {
-                    juce::ValueTree synth = vt.getChild(i);
-                    if ( synth.hasType(IDs::synth) ) {
-                        juce::String name = synth.getProperty(IDs::synthName);
-                        addSubItem(new PCTreeItem(name, false));
-                    }
-                }
-            }
-        } else {
-            clearSubItems();
-        }
-    }
-};
+//             if ( vt.isValid() ) {
+//                 for(int i=0;i<vt.getNumChildren();i++) {
+//                     juce::ValueTree synth = vt.getChild(i);
+//                     if ( synth.hasType(IDs::synth) ) {
+//                         juce::String name = synth.getProperty(IDs::synthName);
+//                         addSubItem(new PCTreeItem(name, false));
+//                     }
+//                 }
+//             }
+//         } else {
+//             clearSubItems();
+//         }
+//     }
+// };
 
 class ControlBusItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
@@ -83,6 +83,31 @@ public:
             panel.clearEditableItem();
         }
     }
+
+    void itemClicked(const juce::MouseEvent&event) override {
+        if (event.mods.isPopupMenu()) {
+            juce::PopupMenu menu;
+            menu.addItem("Reset Synthdef", true, false, [this] {
+                audioProcessor.pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
+                audioProcessor.pluginState.getChildWithName(IDs::synths).addChild(juce::ValueTree(IDs::synth), 0, nullptr);
+                audioProcessor.recompileState();
+                panel.clearEditableItem();
+                juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths).getChild(0);
+                panel.setEditableItem(vt, audioProcessor);
+            });
+            menu.addItem("Reset Synthdef default values", true, false, [this] {
+                juce::ValueTree params = audioProcessor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getChildWithName(IDs::parameters);
+                if ( params.isValid() ) {
+                    for(int i=0;i<params.getNumChildren();i++) {
+                        juce::ValueTree param = params.getChild(i);
+                        param.removeProperty(IDs::pCurrentValue, nullptr);
+                        audioProcessor.recompileState();
+                    }
+                }
+            });            
+            menu.showMenuAsync(juce::PopupMenu::Options());
+        }
+    }    
 };
 
 class ProjectItem : public PCTreeItem {
@@ -112,13 +137,15 @@ public:
                 audioProcessor.superCollider.reboot();
                 setOpen(false);
             });
-            menu.addSeparator();
-            menu.addItem("Sync project with server", true, false, [this] {
-            });
+            // menu.addSeparator();
+            // menu.addItem("Sync project with server", true, false, [this] {
+            // });
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
     }
 };
+
+/* ------------------------------------------------------------------------- */
 
 class UnitItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
@@ -139,10 +166,33 @@ public:
     }
 };
 
+class SynthDefsServerItem : public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
+public:
+    SynthDefsServerItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
+        itemName = "SynthDefs";
+    }
+
+    void itemOpennessChanged(bool isNowOpen) {
+        if ( isNowOpen ) {
+            ASyncReply<HeapStringList<64,4096>> reply;
+            audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
+                proc.superCollider.rt_getSynthDef(reply.content);
+                reply.notify();
+            });
+            reply.wait();
+            for(int i=0;i<reply.content.size();i++) {
+                addSubItem(new PCTreeItem(reply.content[i], false));
+            }            
+        } else {
+            clearSubItems();
+        }
+    }
+};
+
 class NodeSynthTreeItem : public PCTreeItem {
     PluginColliderAudioProcessor &processor;
     int nodeId;
-
 public:
     NodeSynthTreeItem(PluginColliderAudioProcessor &processor,  OSCArgumentWalker &walker, int nodeId) : processor(processor), nodeId(nodeId) {
         itemName = juce::String("Synth ") + walker.getString();
@@ -254,7 +304,7 @@ public:
 
         //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new NodeTreeRoot(p));
-        addSubItem(new PCTreeItem("SynthDefs"));
+        addSubItem(new SynthDefsServerItem(p));
         addSubItem(new UnitItem(p));
     }
 

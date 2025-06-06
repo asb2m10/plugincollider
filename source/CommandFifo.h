@@ -4,6 +4,8 @@
  * @author JUCE examples (see the Sampler)
  */
 
+ #pragma once
+
 // CommandFifo.h
 // We want to send type-erased commands to the audio thread, but we also
 // want those commands to contain move-only resources, so that we can
@@ -73,6 +75,44 @@ private:
 
     std::vector<std::unique_ptr<Command<Proc>>> buffer;
     juce::AbstractFifo abstractFifo;
+};
+
+
+/**
+ * @brief A simple string list that allocates strings from a fixed-size heap.
+ */
+template <int itemSize, int heapSize>
+class HeapStringList {
+    char *items[itemSize];
+    char buffer[heapSize];
+    int heapPos = 0;
+    int numItems = 0;
+public:
+    void add(const char *str) {
+        if (numItems >= itemSize)
+            return;
+
+        int len = strlen(str);
+        if (len+1+heapPos >= heapSize)
+            return;
+
+        items[numItems] = buffer + heapPos;
+        memcpy(buffer + heapPos, str, len);
+        buffer[heapPos + len] = '\0';
+        heapPos += len + 1;
+        numItems++;
+    }
+
+    int size() const {
+        return numItems;
+    }
+
+    char *operator[](int idx) const {
+        if (idx < 0 || idx >= numItems) {
+            return '\0';
+        }
+        return items[idx];   
+    }
 };
 
 /**
