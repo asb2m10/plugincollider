@@ -209,7 +209,7 @@ public:
             });
             for (int i = 0; i < vtControlBus.getNumChildren(); i++) {
                 juce::ValueTree cb = vtControlBus.getChild(i);
-                juce::String name = juce::String(i+1) + ": " + cb.getProperty(IDs::cbName);
+                juce::String name = juce::String(i+1) + ": " + cb.getProperty(IDs::cbName).toString();
                 int idx = cb.getProperty(IDs::cbIdx);
                 menu.addItem(name, true, false, [this, idx, rowNumber, name] {
                     juce::ValueTree parameter = this->vtSynth.getChildWithName(IDs::parameters).getChild(rowNumber);

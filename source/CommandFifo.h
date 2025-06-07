@@ -88,6 +88,10 @@ class HeapStringList {
     int heapPos = 0;
     int numItems = 0;
 public:
+    HeapStringList() {
+        buffer[0] = '\0';
+    }
+
     void add(const char *str) {
         if (numItems >= itemSize)
             return;
@@ -107,11 +111,11 @@ public:
         return numItems;
     }
 
-    char *operator[](int idx) const {
+    char *getItem(int idx) {
         if (idx < 0 || idx >= numItems) {
-            return '\0';
+            return buffer + heapPos;
         }
-        return items[idx];   
+        return items[idx];
     }
 };
 

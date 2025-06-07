@@ -182,7 +182,7 @@ public:
             });
             reply.wait();
             for(int i=0;i<reply.content.size();i++) {
-                addSubItem(new PCTreeItem(reply.content[i], false));
+                addSubItem(new PCTreeItem(reply.content.getItem(i), false));
             }            
         } else {
             clearSubItems();
