@@ -23,6 +23,7 @@ PluginCollider Copyright (c) 2025 Pascal Gauthier.
 class ControlBusTable : public VTTableList {
 public:
     ControlBusTable(juce::ValueTree vt) {
+        addColumn(IDs::cbIdx, "ID", 50);
         addColumn(IDs::cbName, "Name", 100);
         addColumn(IDs::cbRange, "Range", 400);
         setContent(vt);
@@ -30,7 +31,7 @@ public:
 
     juce::Component* refreshComponentForCell(int rowNumber, int columnId,
                                             bool isRowSelected, juce::Component* existingComponentToUpdate) override {
-        if ( columnId == 1 ) {
+        if ( columnId == 2 ) {
             juce::Identifier targetId = columnIds[columnId - 1];
             auto* textEditor = static_cast<EditableTextCustomComponent*>(existingComponentToUpdate);
             if ( textEditor == nullptr ) {
@@ -40,7 +41,7 @@ public:
             return textEditor;
         }
 
-        if ( columnId == 2 ) {
+        if ( columnId == 3 ) {
             auto* rangeEditor = static_cast<RangeEditor*>(existingComponentToUpdate);
             if ( rangeEditor == nullptr ) {
                 rangeEditor = new RangeEditor();
@@ -48,6 +49,8 @@ public:
             rangeEditor->assignValueTree(vt.getChild(rowNumber), IDs::cbRange);
             return rangeEditor;
         }
+
+        return nullptr;
     }
 };
 

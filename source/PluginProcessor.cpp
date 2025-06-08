@@ -217,13 +217,17 @@ void PluginColliderAudioProcessor::processBlock(
                     if ( synthState.freqIdx != -1 ) {
                         superCollider.rt_setNodeValue(node, synthState.freqIdx, msg.getMidiNoteInHertz(note));
                     }
+
                     if ( synthState.velocityIdx != -1 ) {
                         superCollider.rt_setNodeValue(node, synthState.velocityIdx, msg.getFloatVelocity());
                     }
 
-                    std::map<int, int>::iterator it;
-                    for (it = synthState.controlBusMap.begin(); it != synthState.controlBusMap.end(); ++it) {
-                        superCollider.rt_assignControlBus(node, it->first, it->second);
+                    for(const auto &p: synthState.controlBusMap) {
+                        superCollider.rt_assignControlBus(node, p.first, p.second);
+                    }
+
+                    for(const auto &p: synthState.precompiledMapValue) {
+                        superCollider.rt_setNodeValue(node, p.first, p.second);
                     }
                 } else if ( msg.isNoteOff() ) {
                     int note = msg.getNoteNumber();
@@ -343,7 +347,7 @@ void PluginColliderAudioProcessor::recompileState() {
 
     // Push the synthstate to the command queue on the audio thread
     command.push([nextSynthState](PluginColliderAudioProcessor &proc) {
-        proc.synthState = nextSynthState;
+        proc.synthState = std::move(nextSynthState);
     });
 }
 
@@ -423,13 +427,17 @@ void PluginColliderAudioProcessor::resetPluginState() {
     juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);
     for(int i=0;i<NUMBER_OF_CONTROL_BUSES;i++) {
         juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
-        controlBus.setProperty(IDs::cbName, juce::String("Control Bus ") + juce::String(i+1), nullptr);
+        controlBus.setProperty(IDs::cbName, juce::String("Control Bus ") + juce::String(i), nullptr);
         controlBus.setProperty(IDs::cbIdx, i, nullptr);
         controlBus.setProperty(IDs::cbRange, "0 1 0.001", nullptr);
         controlBusses.addChild(controlBus, i, nullptr);
     }
     pluginState.addChild(controlBusses, 0, nullptr);
     juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
+
+    juce::ValueTree scratchpad = juce::ValueTree(IDs::scratchpad);
+    scratchpad.setProperty(IDs::spCode, "", nullptr);
+    pluginState.addChild(scratchpad, 0, nullptr);
 
     pluginState.setProperty(IDs::version, IDS_VERSION, nullptr);
     pluginState.addListener(this);

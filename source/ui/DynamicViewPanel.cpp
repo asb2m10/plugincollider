@@ -21,6 +21,7 @@
 #include "DynamicViewPanel.h"
 #include "PanelControlBus.h"
 #include "PanelSynthDef.h"
+#include "PanelScratchpad.h"
 
 void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudioProcessor &processor) {
     if ( currentItem == item ) {
@@ -33,6 +34,13 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
     if ( component != nullptr ) {
         removeChildComponent(component.get());
         component.reset();
+    }
+
+    if ( type == IDs::scratchpad ) {
+        ScratchpadPanel *scratchpad = new ScratchpadPanel(item, processor);
+        component.reset(scratchpad);
+        addAndMakeVisible(scratchpad);
+        resized();
     }
 
     if ( type == IDs::controlbuses ) {

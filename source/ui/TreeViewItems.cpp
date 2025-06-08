@@ -47,6 +47,27 @@
 //     }
 // };
 
+
+class ScratchpadItem : public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
+    DynamicViewPanel &panel;
+public:
+    ScratchpadItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
+        itemName = "Scratchpad";
+        containsSubItems = false;
+    }
+
+    void itemSelectionChanged(bool isNowSelected) override {
+        if ( isNowSelected ) {
+            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::scratchpad);
+            panel.setEditableItem(vt, audioProcessor);
+        } else {
+            panel.clearEditableItem();
+        }
+    }
+};
+
+
 class ControlBusItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
     DynamicViewPanel &panel;
@@ -127,6 +148,7 @@ public:
         //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new ControlBusItem(processor, panel));
         addSubItem(new SynthEditItem(processor, panel));
+        addSubItem(new ScratchpadItem(processor, panel));
         // addSubItem(new ProjectSynthDefItem(processor));
     }
 

@@ -35,7 +35,6 @@ namespace IDs {
     DECLARE_ID(root)
     DECLARE_ID(version)
     DECLARE_ID(udpport)
-
     DECLARE_ID(controlbuses)
     DECLARE_ID(controlbus)
     DECLARE_ID(cbName)
@@ -57,6 +56,9 @@ namespace IDs {
     DECLARE_ID(pDefaultValue)
     DECLARE_ID(pControlBus)
     DECLARE_ID(pRange)
+
+    DECLARE_ID(scratchpad)
+    DECLARE_ID(spCode)
 };
 
 //==============================================================================
@@ -164,8 +166,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     struct SynthState {
         char synthName[127];
-        std::map<int, float> precompiledMapValue;
-        std::map<int, int> controlBusMap;
+        // While easy to use, this allocates memory on the audio thread
+        std::unordered_map<int, float> precompiledMapValue;
+        std::unordered_map<int, int> controlBusMap;
         int freqIdx;
         int velocityIdx;
         int gateIdx;
