@@ -12,6 +12,8 @@ Now support Linux, macOS and Windows.
 # Changelog
 ## Version 0.3.0 (IN DEVELOPMENT)
 * Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it will be the editor to push the desired node hierarchy.
+* You can now assign a name and range values to plugin parameters that will be exposed as a controlbus on SuperCollider.
+* You can now assign a controlbus on a synthdef parameter upon synth instanciation
 * UIUGen units (MouseX, MouseY, MouseButton) are now available by using JUCE events
 
 ## Version 0.2.1
