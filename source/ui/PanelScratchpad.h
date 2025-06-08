@@ -49,7 +49,7 @@ public:
                     if (c == 0 || (c == '/' && lastWasStar))
                         break;
                     lastWasStar = (c == '*');
-                }                
+                }
                 source.skip();
                 return tokenType_Comment; // Multi-line comment
             }
