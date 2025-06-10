@@ -14,41 +14,31 @@
 // because it enforces that functions are copy-constructible.
 // Therefore, we use a very simple templated type-eraser here.
 template <typename Proc>
-struct Command
-{
+struct Command {
     virtual ~Command() noexcept = default;
     virtual void run(Proc& proc) = 0;
 };
 
 template <typename Proc, typename Func>
-class TemplateCommand : public Command<Proc>,
-    private Func
-{
+class TemplateCommand : public Command<Proc>, private Func {
 public:
     template <typename FuncPrime>
-    explicit TemplateCommand(FuncPrime&& funcPrime)
-        : Func(std::forward<FuncPrime>(funcPrime))
-    {}
-
+    explicit TemplateCommand(FuncPrime&& funcPrime) : Func(std::forward<FuncPrime>(funcPrime)) {
+    }
     void run(Proc& proc) override { (*this) (proc); }
 };
 
 template <typename Proc>
-class CommandFifo final
-{
+class CommandFifo final {
 public:
-    explicit CommandFifo(int size)
-        : buffer((size_t)size),
-        abstractFifo(size)
-    {}
+    explicit CommandFifo(int size) : buffer((size_t)size), abstractFifo(size) {
+    }
 
-    CommandFifo()
-        : CommandFifo(1024)
-    {}
+    CommandFifo() : CommandFifo(1024) {
+    }
 
     template <typename Item>
-    void push(Item&& item) noexcept
-    {
+    void push(Item&& item) noexcept {
         auto command = makeCommand(std::forward<Item>(item));
 
         abstractFifo.write(1).forEach([&](int index)
@@ -57,18 +47,18 @@ public:
             });
     }
 
-    void call(Proc& proc)
-    {
-        abstractFifo.read(abstractFifo.getNumReady()).forEach([&](int index)
-            {
-                buffer[size_t(index)]->run(proc);
-            });
+    void call(Proc& proc) {
+        abstractFifo.read(abstractFifo.getNumReady()).forEach([&](int index) {
+            buffer[size_t(index)]->run(proc);
+        });
     }
 
+    void reset() {
+        abstractFifo.reset();
+    }
 private:
     template <typename Func>
-    static std::unique_ptr<Command<Proc>> makeCommand(Func&& func)
-    {
+    static std::unique_ptr<Command<Proc>> makeCommand(Func&& func) {
         using Decayed = typename std::decay<Func>::type;
         return std::make_unique<TemplateCommand<Proc, Decayed>>(std::forward<Func>(func));
     }
@@ -128,22 +118,29 @@ public:
  */
 template <class T>
 class ASyncReply {
+    const int TIMEOUT_SECONDS = 1;
+    int rc = -1;
+
     std::condition_variable cv;
     std::mutex cv_m;
     std::unique_lock<std::mutex> lk;
-
 public:
     T content;
-    int rc = -1;
 
     ASyncReply() : lk(cv_m) {
     }
 
-    void wait() {
-        cv.wait(lk);
+    /**
+     * Waits for the audio thread to notify this object.
+     * If the audio thread does not notify within TIMEOUT_SECONDS, it returns -1.
+     */
+    int wait() {
+        cv.wait_for(lk, std::chrono::seconds(TIMEOUT_SECONDS));
+        return rc;
     }
 
-    void notify() {
+    void notify(int rc) {
+        this->rc = rc;
         cv.notify_one();
     }
 };

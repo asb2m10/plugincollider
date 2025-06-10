@@ -200,7 +200,7 @@ public:
             ASyncReply<HeapStringList<64,4096>> reply;
             audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
                 proc.superCollider.rt_getSynthDef(reply.content);
-                reply.notify();
+                reply.notify(0);
             });
             reply.wait();
             for(int i=0;i<reply.content.size();i++) {
@@ -297,11 +297,9 @@ public:
         if ( isNowOpen ) {
             ASyncReply<big_scpacket> reply;
             audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
-                reply.rc = proc.superCollider.rt_queryTree(0, &reply.content, true);
-                reply.notify();
+                reply.notify(proc.superCollider.rt_queryTree(0, &reply.content, true));
             });
-            reply.wait();
-            if ( reply.rc == 0 ) {
+            if ( reply.wait() == 0 ) {
                 juce::OSCMessage msg = OSCMemoryBlock::parseMessage(reply.content.data(), reply.content.size());
                 OSCArgumentWalker walker(msg);
                 // if synthControl value included

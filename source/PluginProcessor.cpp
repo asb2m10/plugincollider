@@ -124,6 +124,8 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     // juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application
     // Support/SuperCollider/synthdefs");
 
+    command.reset();
+
     if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath) ) {
         juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
