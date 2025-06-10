@@ -166,8 +166,8 @@ int PluginColliderAudioProcessor::rt_playSynth() {
         return 0;
     int node = superCollider.rt_newSynth(synthState.synthName, -1, kDefaultGroupId);
     if ( node != 0 ) {
-        for (const auto &p: synthState.precompiledMapValue) {
-            superCollider.rt_setNodeValue(node, p.first, p.second);
+        for(const auto &p: synthState.controlBusMap) {
+            superCollider.rt_assignControlBus(node, p.first, p.second);
         }
         for(const auto &p: synthState.precompiledMapValue) {
             superCollider.rt_setNodeValue(node, p.first, p.second);
@@ -219,17 +219,8 @@ void PluginColliderAudioProcessor::processBlock(
                     if ( synthState.freqIdx != -1 ) {
                         superCollider.rt_setNodeValue(node, synthState.freqIdx, msg.getMidiNoteInHertz(note));
                     }
-
                     if ( synthState.velocityIdx != -1 ) {
                         superCollider.rt_setNodeValue(node, synthState.velocityIdx, msg.getFloatVelocity());
-                    }
-
-                    for(const auto &p: synthState.controlBusMap) {
-                        superCollider.rt_assignControlBus(node, p.first, p.second);
-                    }
-
-                    for(const auto &p: synthState.precompiledMapValue) {
-                        superCollider.rt_setNodeValue(node, p.first, p.second);
                     }
                 } else if ( msg.isNoteOff() ) {
                     int note = msg.getNoteNumber();
@@ -266,8 +257,8 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
 
 void PluginColliderAudioProcessor::parameterValueChanged (int parameterIndex, float newValue) {
     command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
-        float tagetValue = controlBus[parameterIndex-1]->getRangedValue(newValue);
-        superCollider.rt_setControlBusValue(parameterIndex-1, tagetValue);
+        float targetValue = controlBus[parameterIndex-1]->getRangedValue(newValue);
+        superCollider.rt_setControlBusValue(parameterIndex-1, targetValue);
     });
 }
 

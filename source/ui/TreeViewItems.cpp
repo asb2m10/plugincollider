@@ -195,7 +195,7 @@ public:
         itemName = "SynthDefs";
     }
 
-    void itemOpennessChanged(bool isNowOpen) {
+    void itemOpennessChanged(bool isNowOpen) override {
         if ( isNowOpen ) {
             ASyncReply<HeapStringList<64,4096>> reply;
             audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
@@ -257,6 +257,7 @@ public:
     void itemClicked(const juce::MouseEvent&event) override {
         if (event.mods.isPopupMenu()) {
             juce::PopupMenu menu;
+            /*
             menu.addItem("Set value...", true, false, [this] {
             });
 
@@ -275,6 +276,7 @@ public:
             }
             menu.addSubMenu("Map to control bus...", controlBusSelection);
             menu.addSeparator();
+            */
             menu.addItem("Free node", true, false, [this] {
                 processor.command.push([this](PluginColliderAudioProcessor &proc) {
                     proc.superCollider.rt_freeNode(nodeId);
