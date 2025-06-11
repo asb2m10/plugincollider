@@ -69,7 +69,7 @@ class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
     juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& str) override;
     void menuItemSelected(int, int) override;
     juce::StringArray getMenuBarNames() {
-        return juce::StringArray({"Server", "SynthDef", "Tools", "Help" });
+        return juce::StringArray({"Server", "Tools", "Help" });
     }
 
   private:

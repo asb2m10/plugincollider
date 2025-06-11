@@ -281,6 +281,7 @@ target_sources(PluginCollider
     source/PluginProcessor.cpp
 	source/SCProcess.cpp
 	source/SCPluginDriver.cpp
+	source/UIUGenJUCE.cpp
 	source/ui/PluginEditor.cpp
 	source/ui/TreeViewItems.cpp
 	source/ui/DynamicViewPanel.cpp

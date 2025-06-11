@@ -18,10 +18,12 @@
 
 #pragma once
 
+#include "ExtendedParameters.h"
 #include "SCProcess.h"
 #include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "UDPPort.h"
+
 
 class PluginColliderAudioProcessorEditor;
 
@@ -33,13 +35,11 @@ namespace IDs {
     DECLARE_ID(root)
     DECLARE_ID(version)
     DECLARE_ID(udpport)
-
     DECLARE_ID(controlbuses)
     DECLARE_ID(controlbus)
     DECLARE_ID(cbName)
-    DECLARE_ID(cbLow)
-    DECLARE_ID(cbHigh)
-    DECLARE_ID(cbStep)
+    DECLARE_ID(cbRange)
+    DECLARE_ID(cbIdx)
 
     DECLARE_ID(synths)
     DECLARE_ID(synth)
@@ -55,8 +55,10 @@ namespace IDs {
     DECLARE_ID(pCurrentValue)
     DECLARE_ID(pDefaultValue)
     DECLARE_ID(pControlBus)
-    DECLARE_ID(pLow)
-    DECLARE_ID(pHigh)
+    DECLARE_ID(pRange)
+
+    DECLARE_ID(scratchpad)
+    DECLARE_ID(spCode)
 };
 
 //==============================================================================
@@ -116,7 +118,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     juce::ValueTree pluginState;
     
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
-    void valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
+    void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
     bool loadSynthDef(SynthDef *def);
     int rt_playSynth();
@@ -141,12 +143,14 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
         return &loadMeasurer;
     }
 
+    void recompileState();
+    
   private:
     juce::String pluginPath;
     juce::String synthPath;
 
     juce::AudioParameterFloat *gain;
-    juce::AudioParameterFloat *controlBus[NUMBER_OF_CONTROL_BUSES];
+    ControlBusParameter *controlBus[NUMBER_OF_CONTROL_BUSES];
 
     juce::AudioProcessLoadMeasurer loadMeasurer;
 
@@ -154,12 +158,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     juce::ApplicationProperties appProp;
 
-    void parameterValueChanged (int parameterIndex, float newValue) override {
-        command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
-            superCollider.rt_setControlBusValue(parameterIndex-1, newValue);
-        });
-    }
-
+    void parameterValueChanged (int parameterIndex, float newValue) override;
     void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override {
     }
 
@@ -167,7 +166,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     struct SynthState {
         char synthName[127];
-        std::map<int, float> precompiledMapValue;
+        // While easy to use, this allocates memory on the audio thread
+        std::unordered_map<int, float> precompiledMapValue;
+        std::unordered_map<int, int> controlBusMap;
         int freqIdx;
         int velocityIdx;
         int gateIdx;
@@ -176,7 +177,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     SynthState synthState;
 
     int boundedMidiVoice[127];
-    void recompileState();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)

@@ -10,8 +10,11 @@ Now support Linux, macOS and Windows.
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
-## Version 0.2.2 (IN DEVELOPMENT)
+## Version 0.3.0 (IN DEVELOPMENT)
 * Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it will be the editor to push the desired node hierarchy.
+* You can now assign a name and range values to plugin parameters that will be exposed as a controlbus on SuperCollider.
+* You can now assign a controlbus on a synthdef parameter upon synth instanciation
+* UIUGen units (MouseX, MouseY, MouseButton) are now available by using JUCE events
 
 ## Version 0.2.1
 * Fixed [crash](https://forum.juce.com/t/accessible-list-box-row-segfault-crash-on-exit/51162) on pluginwindow close
@@ -61,7 +64,7 @@ If for example your SynthDef doesn't have the gate arguments, the node will be f
 
 # TODO
 - [ ] add [CLAP](https://github.com/free-audio/clap) plugin format
-- [ ] assign scsyndef parameters to controlbus (and plug parameters values)
+- [x] assign scsyndef parameters to controlbus (and plug parameters values)
 - [ ] multi scsyndef support
 - [x] implement /freq and /amp from DAW midi message
 - [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed (handle notarization)

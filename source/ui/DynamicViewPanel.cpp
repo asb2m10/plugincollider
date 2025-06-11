@@ -19,7 +19,9 @@
 #pragma once
 
 #include "DynamicViewPanel.h"
-#include "SynthDefPanel.h"
+#include "PanelControlBus.h"
+#include "PanelSynthDef.h"
+#include "PanelScratchpad.h"
 
 void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudioProcessor &processor) {
     if ( currentItem == item ) {
@@ -34,15 +36,22 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         component.reset();
     }
 
-    if ( type == IDs::controlbuses) {
-        ControlBusPanel *label = new ControlBusPanel(item);
-        component.reset(label);
-        addAndMakeVisible(label);
+    if ( type == IDs::scratchpad ) {
+        ScratchpadPanel *scratchpad = new ScratchpadPanel(item, processor);
+        component.reset(scratchpad);
+        addAndMakeVisible(scratchpad);
         resized();
     }
 
-    if ( type == IDs::synths ) {
-        SynthDefPanel *panel = new SynthDefPanel(item, processor);
+    if ( type == IDs::controlbuses ) {
+        PanelControlBus *cbPanel = new PanelControlBus(item);
+        component.reset(cbPanel);
+        addAndMakeVisible(cbPanel);
+        resized();
+    }
+
+    if ( type == IDs::synth ) {
+        PanelSynthDef *panel = new PanelSynthDef(item, processor);
         component.reset(panel);
         addAndMakeVisible(panel);
         resized();

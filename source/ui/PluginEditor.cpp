@@ -130,7 +130,7 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     addAndMakeVisible(stats);
     stats.setJustificationType(juce::Justification::centredRight);
 
-    layout.setItemLayout(0, -0.1, -0.9, -0.3);
+    layout.setItemLayout(0, -0.05, -0.9, -0.15);
     layout.setItemLayout(1, 5, 5, 5);
     layout.setItemLayout(2, -0.1, -0.9, -0.7);
 
@@ -230,32 +230,8 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         }
         break;
     case 1:
-        ret.addItem("Clear plugin assigned synthdef", true, false, [this] {
-            audioProcessor.pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
-            audioProcessor.recompileState();
-            //synthDefPanel.refresh();
-        });
-        ret.addItem("Reset Synthdef default values", true, false, [this] {
-            juce::ValueTree params = audioProcessor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getChildWithName(IDs::parameters);
-            if ( params.isValid() ) {
-                for(int i=0;i<params.getNumChildren();i++) {
-                    juce::ValueTree param = params.getChild(i);
-                    param.removeProperty(IDs::pCurrentValue, nullptr);
-                    audioProcessor.recompileState();
-                    //synthDefPanel.refresh();
-                }
-            }
-        });
-        ret.addSeparator();
-        ret.addItem("Show registred synthdefs on scserver", true, false, [this] {
-            audioProcessor.superCollider.showRegistredSynthdef();
-        });
-        break;
-    case 2:
         ret.addItem("Midi keyboard", [this] {
             midikeyboard.reset(new MidiKeyboardWindow(audioProcessor.midiKeyboardState));
-        });
-        ret.addItem("Mouse canvas", [this] {
         });
         ret.addSeparator();
         ret.addItem("Internal plugin state (advanced debugging)", [this] {
@@ -263,7 +239,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
             value_tree_debugger.reset(vtd);
         });
         break;
-    case 3:
+    case 2:
         ret.addItem("About...", [this] {
             auto opts = juce::MessageBoxOptions().withTitle("Info").withMessage(juce::String("PluginCollider\n\nUsing SuperCollider ") + SC_VersionString() + "\n\nBuilt on " +  __DATE__).withButton("OK");
             juce::AlertWindow::showAsync(opts, [](int res) {});

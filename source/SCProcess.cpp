@@ -34,6 +34,10 @@
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
+// Needed to load UIUGenJUCE in static plugins
+extern void UIUGens_Load(InterfaceTable* table);
+extern InterfaceTable gInterfaceTable;
+
 void null_reply_func(struct ReplyAddress * /*addr*/, char * /*msg*/,
                      int /*size*/);
 int scprocess_scprintf(const char *format, va_list ap);
@@ -194,11 +198,14 @@ void SCProcess::bootServer() {
         putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthdefPath).toRawUTF8());
 
     world = World_New(&options);
-    world->mDumpOSC = 0;
 
     if (world) {
+        world->mDumpOSC = 0;
         rt_newGroup(0, kDefaultGroupId);
 
+#if STATIC_PLUGINS
+        UIUGens_Load(&gInterfaceTable);
+#endif
         logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
                 options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
@@ -209,17 +216,15 @@ void SCProcess::bootServer() {
     }
 }
 
-void SCProcess::showRegistredSynthdef() {
-    logger.scprintf("=== Registred SynthDefs:\n");
+void SCProcess::rt_getSynthDef(HeapStringList<64,4096> &list) {
     for (int i=0;i<world->hw->mGraphDefLib->TableSize();i++) {
         GraphDef *gf = world->hw->mGraphDefLib->AtIndex(i);
-
         if ( gf != nullptr ) {
-            if  ( strncmp("system_", (const char*) gf->mNodeDef.mName, 6) )
-                logger.scprintf("\t%s\n", gf->mNodeDef.mName);
+            if  ( strncmp("system_", (const char*) gf->mNodeDef.mName, 6) ) {
+                list.add((const char *) gf->mNodeDef.mName);
+            }
         }
     }
-    logger.scprintf("===\n");
 }
 
 void SCProcess::run(juce::AudioBuffer<float> &buffer,
@@ -294,6 +299,19 @@ void SCProcess::rt_setControlBusValue(int bus, float value) {
     }
     world->mControlBusTouched[bus] = world->mBufCounter;
     world->mControlBus[bus] = value;
+}
+
+void SCProcess::rt_assignControlBus(int nodeId, int nodeParamIdx, int busIdx) {
+    Node *node = rt_getNode(nodeId).node();
+    if ( node == nullptr ) {
+        logger.scprintf("Invalid node %d\n", nodeId);
+        return;
+    }
+    if ( busIdx < 0 || busIdx >= world->mNumControlBusChannels ) {
+        logger.scprintf("Invalid control bus %d; available %d\n", busIdx ,world->mNumControlBusChannels);
+    } else {
+        Node_MapControl(node, nodeParamIdx, busIdx);
+    }
 }
 
 void SCProcess::rt_dumpTree() {
@@ -382,15 +400,6 @@ int scprocess_scprintf(const char *fmt, va_list ap) {
     juce::Logger::writeToLog(juce::String(buf));
     return p;
 }
-
-// NOUP for now, but JUCE could implement the MouseInputUGen
-PluginLoad(UIUGens) {
-}
-
-
-PluginUnload(UIUGens) {
-}
-
 
 // This is copied from SC source code since it is not made public
 bool SCProcess::unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket) {
