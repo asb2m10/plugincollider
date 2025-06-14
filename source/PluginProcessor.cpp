@@ -405,6 +405,23 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
     } else {
         pluginState = tmpState;
     }
+
+    for (int idx=0;idx<NUMBER_OF_CONTROL_BUSES;idx++) {
+        juce::ValueTree rootbus = pluginState.getChildWithName(IDs::controlbuses);
+        if ( rootbus.isValid() && rootbus.getNumChildren() > idx ) {
+            juce::ValueTree cb = rootbus.getChild(idx);
+            if ( cb.hasProperty(IDs::cbRange) ) {
+                PluginColliderRange range(cb.getProperty(IDs::cbRange));
+                controlBus[idx]->setRange(range);
+            }
+            if ( cb.hasProperty(IDs::cbName) ) {
+                juce::String name = cb.getProperty(IDs::cbName);
+                controlBus[idx]->setName(name);
+            }
+        }
+        const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
+        updateHostDisplay(details);
+    }
 }
 
 void PluginColliderAudioProcessor::resetPluginState() {
