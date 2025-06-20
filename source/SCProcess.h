@@ -219,7 +219,6 @@ public:
     }
 
     void freeNodes(int rootNodeId = 0);
-    void showRegistredSynthdef();
     juce::StringArray getRegistredUnits();
 
     // Anything rt_ should be called from the audio thread since the worldLock is already acquired

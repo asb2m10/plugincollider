@@ -399,6 +399,11 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
     juce::ValueTree tmpState = juce::ValueTree::fromXml(*xmlState);
 
+    resetPluginState();
+    recompileState();
+
+    return;
+
     if ( tmpState.getProperty(IDs::version) != IDS_VERSION ) {
         resetPluginState();
         recompileState();
@@ -429,7 +434,7 @@ void PluginColliderAudioProcessor::resetPluginState() {
     pluginState.removeAllChildren(nullptr);
 
     juce::ValueTree synths = juce::ValueTree(IDs::synths);
-    pluginState.addChild(synths, 1, nullptr);
+    pluginState.addChild(synths, 0, nullptr);
     synths.addChild(juce::ValueTree(IDs::synth), 1, nullptr);
 
     juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);
@@ -440,12 +445,13 @@ void PluginColliderAudioProcessor::resetPluginState() {
         controlBus.setProperty(IDs::cbRange, "0 1 0.001", nullptr);
         controlBusses.addChild(controlBus, i, nullptr);
     }
+    pluginState.addChild(juce::ValueTree(IDs::rootnode), 0, nullptr);
     pluginState.addChild(controlBusses, 0, nullptr);
     juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
 
     juce::ValueTree scratchpad = juce::ValueTree(IDs::scratchpad);
     scratchpad.setProperty(IDs::spCode, "", nullptr);
-    pluginState.addChild(scratchpad, 0, nullptr);
+    pluginState.addChild(scratchpad, -1, nullptr);
 
     pluginState.setProperty(IDs::version, IDS_VERSION, nullptr);
     pluginState.addListener(this);

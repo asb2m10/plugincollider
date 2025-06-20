@@ -41,6 +41,10 @@ namespace IDs {
     DECLARE_ID(cbRange)
     DECLARE_ID(cbIdx)
 
+    DECLARE_ID(rootnode)
+    DECLARE_ID(fxnode)
+    DECLARE_ID(notenode)
+
     DECLARE_ID(synths)
     DECLARE_ID(synth)
     DECLARE_ID(staticSynth)

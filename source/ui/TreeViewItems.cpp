@@ -128,7 +128,32 @@ public:
             });            
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
-    }    
+    }
+};
+
+class RootNode : public PCTreeItem {
+    PluginColliderAudioProcessor &audioProcessor;
+public:
+    RootNode(PluginColliderAudioProcessor &processor) : audioProcessor(processor) {
+        itemName = "Root Node";
+    }
+
+    void itemClicked(const juce::MouseEvent&event) override {
+        if (event.mods.isPopupMenu()) {
+            juce::PopupMenu menu;
+            menu.addItem("Add group", true, false, [this] {
+            });
+            menu.addItem("Add SynthDef effect", true, false, [this] {
+            });
+            menu.addItem("Add SynthDef trigger by midi notes", true, false, [this] {
+            });
+            menu.addSeparator();
+            menu.addItem("Re-sync configuration with server", true, false, [this] {
+            });
+
+            menu.showMenuAsync(juce::PopupMenu::Options());
+        }
+    }
 };
 
 class ProjectItem : public PCTreeItem {
@@ -148,6 +173,7 @@ public:
         //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new ControlBusItem(processor, panel));
         addSubItem(new SynthEditItem(processor, panel));
+        addSubItem(new RootNode(processor));
         addSubItem(new ScratchpadItem(processor, panel));
         // addSubItem(new ProjectSynthDefItem(processor));
     }
