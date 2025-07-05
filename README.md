@@ -10,6 +10,9 @@ Now support Linux, macOS and Windows.
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
+## Version 0.3.1
+* Fix sessions issue upon reloading plugin FX
+
 ## Version 0.3.0
 * Added TreeView to browse active objects from the server (Node, Buffer, Synthdefs, Unit). This is still a work in progress since it will be the editor to push the desired node hierarchy.
 * You can now assign a name and range values to plugin parameters that will be exposed as a controlbus on SuperCollider.
