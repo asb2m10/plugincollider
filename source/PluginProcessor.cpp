@@ -133,6 +133,7 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
             if ( synth.hasProperty(IDs::synthBlob) && synth.getProperty(IDs::synthBlob).isBinaryData() ) {
                 superCollider.rt_loadSynthDef(synth.getProperty(IDs::synthBlob).getBinaryData());
                 recompileState();
+                command.call(*this);
                 if ( synth.getProperty(IDs::staticSynth) )
                     rt_playSynth();
             }
