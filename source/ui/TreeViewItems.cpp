@@ -131,21 +131,77 @@ public:
     }
 };
 
-class RootNode : public PCTreeItem {
-    PluginColliderAudioProcessor &audioProcessor;
+class ConfigurableNodeItem : public PCTreeItem {
+    PluginColliderAudioProcessor &processor;
+    juce::ValueTree node;
+
 public:
-    RootNode(PluginColliderAudioProcessor &processor) : audioProcessor(processor) {
-        itemName = "Root Node";
+    ConfigurableNodeItem(PluginColliderAudioProcessor &processor, const juce::ValueTree &node) : processor(processor), node(node) {
+        itemName = node.getProperty(IDs::nodename).toString();
+        containsSubItems = false;
+    }
+
+    void itemSelectionChanged(bool isNowSelected) override {
+    }
+
+    bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
+        return dragSourceDetails.description == "100";
+    }
+    
+    void itemDropped (const juce::DragAndDropTarget::SourceDetails&, int insertIndex) override {
+    }
+
+    juce::var getDragSourceDescription() override {
+        juce::var description("100");
+        return description;
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
         if (event.mods.isPopupMenu()) {
             juce::PopupMenu menu;
-            menu.addItem("Add group", true, false, [this] {
+            menu.addItem("Edit Node", true, false, [this] {
             });
+            menu.showMenuAsync(juce::PopupMenu::Options());
+        }
+    }
+};
+
+
+class RootNode : public PCTreeItem {
+    PluginColliderAudioProcessor &processor;
+public:
+    RootNode(PluginColliderAudioProcessor &processor) : processor(processor) {
+        itemName = "Root Node";
+    }
+
+    void itemOpennessChanged(bool isNowOpen) {
+        if ( isNowOpen ) {
+            auto rootnode = processor.pluginState.getChildWithName(IDs::rootnode);
+            for(int i=0; i < rootnode.getNumChildren(); i++) {
+                juce::ValueTree child = rootnode.getChild(i);
+                if ( child.hasType(IDs::fxnode) || child.hasType(IDs::notenode) ) {
+                    addSubItem(new ConfigurableNodeItem(processor, child), false);
+                }
+            }
+        } else {
+            clearSubItems();
+        }
+    }
+
+    void itemClicked(const juce::MouseEvent&event) override {
+        if (event.mods.isPopupMenu()) {
+            juce::PopupMenu menu;
+            // menu.addItem("Add group", true, false, [this] {
+            // });
             menu.addItem("Add SynthDef effect", true, false, [this] {
+                juce::ValueTree newSynth = juce::ValueTree(IDs::fxnode);
+                newSynth.setProperty(IDs::nodename, "FX Node", nullptr);
+                processor.pluginState.getChildWithName(IDs::rootnode).addChild(newSynth, -1, nullptr);
             });
             menu.addItem("Add SynthDef trigger by midi notes", true, false, [this] {
+                juce::ValueTree newSynth = juce::ValueTree(IDs::notenode);
+                newSynth.setProperty(IDs::nodename, "Midi Note Node", nullptr);
+                processor.pluginState.getChildWithName(IDs::rootnode).addChild(newSynth, -1, nullptr);
             });
             menu.addSeparator();
             menu.addItem("Re-sync configuration with server", true, false, [this] {

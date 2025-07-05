@@ -31,6 +31,8 @@
 #include "SC_Group.h"
 #include "SC_UnitDef.h"
 
+#include "NodeContainer.h"
+
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
@@ -322,9 +324,13 @@ int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
     char synthName[127] = { 0 };
     strcpy(synthName, name.toRawUTF8());
 
-    GraphDef* def = World_GetGraphDef(world, (int*) &synthName);
+    return rt_newSynth((int *) synthName, newId, destNode);
+}
+
+int32_t SCProcess::rt_newSynth(int *hashname, int newId, int destNode) {
+    GraphDef* def = World_GetGraphDef(world, hashname);
     if ( def == nullptr ) {
-        logger.scprintf("Syntdef not found: %s\n", name.toRawUTF8());
+        logger.scprintf("Syntdef not found: %s\n", (char *) hashname);
         return 0;
     }
 

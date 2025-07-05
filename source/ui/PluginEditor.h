@@ -55,7 +55,7 @@ public:
 /**
  */
 class PluginColliderAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                           public juce::Timer, public juce::MenuBarModel {
+                                           public juce::Timer, public juce::MenuBarModel, public juce::DragAndDropContainer {
   public:
     PluginColliderAudioProcessorEditor(PluginColliderAudioProcessor &);
     ~PluginColliderAudioProcessorEditor() override;

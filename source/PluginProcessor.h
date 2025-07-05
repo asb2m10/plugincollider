@@ -23,47 +23,9 @@
 #include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "UDPPort.h"
-
+#include "PluginModel.h"
 
 class PluginColliderAudioProcessorEditor;
-
-#define IDS_VERSION "A"
-const int NUMBER_OF_CONTROL_BUSES = 32;
-
-namespace IDs {
-#define DECLARE_ID(name) const juce::Identifier name (#name);
-    DECLARE_ID(root)
-    DECLARE_ID(version)
-    DECLARE_ID(udpport)
-    DECLARE_ID(controlbuses)
-    DECLARE_ID(controlbus)
-    DECLARE_ID(cbName)
-    DECLARE_ID(cbRange)
-    DECLARE_ID(cbIdx)
-
-    DECLARE_ID(rootnode)
-    DECLARE_ID(fxnode)
-    DECLARE_ID(notenode)
-
-    DECLARE_ID(synths)
-    DECLARE_ID(synth)
-    DECLARE_ID(staticSynth)
-    DECLARE_ID(synthName)
-    DECLARE_ID(synthBlob)
-
-    DECLARE_ID(parameters)
-    DECLARE_ID(parameter)
-
-    DECLARE_ID(pName)
-    DECLARE_ID(pIdx)
-    DECLARE_ID(pCurrentValue)
-    DECLARE_ID(pDefaultValue)
-    DECLARE_ID(pControlBus)
-    DECLARE_ID(pRange)
-
-    DECLARE_ID(scratchpad)
-    DECLARE_ID(spCode)
-};
 
 //==============================================================================
 /**

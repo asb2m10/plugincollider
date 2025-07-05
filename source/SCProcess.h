@@ -231,7 +231,12 @@ public:
     void rt_setNodeValue(int destNode, int idx, float value);
     void rt_getSynthDef(HeapStringList<64,4096> &list);
     SCErr rt_newGroup(int parentNode, int destGroup);
+
+    [[deprecated]]
     int32_t rt_newSynth(juce::String name, int newId, int destNode);
+
+    int32_t rt_newSynth(int *hashname, int newId, int destNode);
+
     SCErr rt_queryTree(int rootGroup, big_scpacket *packet, bool flagParameters = false);
     void rt_dumpTree();
     void rt_assignControlBus(int nodeId, int nodeParamIdx, int busIdx);
