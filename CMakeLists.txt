@@ -10,6 +10,10 @@ endif()
 
 enable_language(C CXX)
 
+if (MSVC)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 if(NOT MSVC) # should be enought with line above
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
@@ -63,7 +67,6 @@ else()
 	set(BUILD_TESTING OFF CACHE INTERNAL "dont build testing")
 	set(BUILD_EXAMPLES OFF CACHE INTERNAL "dont build examples")
 	set(ENABLE_CPACK OFF CACHE INTERNAL "disable cpack")
-	set(ENABLE_STATIC_RUNTIME OFF CACHE INTERNAL "disable static runtime")
 	set(ENABLE_PACKAGE_CONFIG OFF CACHE INTERNAL "disable package config")
 
 	FetchContent_MakeAvailable(sndfile)
@@ -148,7 +151,7 @@ if(MSVC)
 
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+#  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif(MSVC)
 
 # If SuperCollider has been built, use SC_Version.h otherwise use the forged version
