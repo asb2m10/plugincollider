@@ -147,6 +147,8 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -D_ENABLE_ATOMIC_ALIGNMENT_FIX)
 
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif(MSVC)
 
 # If SuperCollider has been built, use SC_Version.h otherwise use the forged version
