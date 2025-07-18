@@ -323,7 +323,6 @@ void SCProcess::rt_dumpTree() {
 int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
     char synthName[127] = { 0 };
     strcpy(synthName, name.toRawUTF8());
-
     return rt_newSynth((int *) synthName, newId, destNode);
 }
 

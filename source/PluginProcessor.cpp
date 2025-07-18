@@ -19,6 +19,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/PluginEditor.h"
+#include "NodeContainer.h"
 #include "UDPPort.h"
 
 //==============================================================================
@@ -128,6 +129,8 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath) ) {
+        container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
+        container->rt_allocate(superCollider);
         juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
         if ( synth.isValid() ) {
             if ( synth.hasProperty(IDs::synthBlob) && synth.getProperty(IDs::synthBlob).isBinaryData() ) {
@@ -145,8 +148,21 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 void PluginColliderAudioProcessor::releaseResources() {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    container->rt_free(superCollider);
     loadMeasurer.reset();
     superCollider.quit();
+}
+
+void PluginColliderAudioProcessor::reloadNodeContainer() {
+    ASyncReply<std::unique_ptr<NodeContainer>> reply;
+    reply.content = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
+    command.push([this, &reply](PluginColliderAudioProcessor &proc) {
+        container->rt_free(superCollider);
+        std::swap(container, reply.content);
+        container->rt_allocate(superCollider);
+        reply.notify(0);
+    });
+    reply.wait();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -182,7 +198,7 @@ void PluginColliderAudioProcessor::processBlock(
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    juce::AudioProcessLoadMeasurer::ScopedTimer timer (loadMeasurer, buffer.getNumSamples());
+    juce::AudioProcessLoadMeasurer::ScopedTimer timer(loadMeasurer, buffer.getNumSamples());
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
@@ -237,6 +253,8 @@ void PluginColliderAudioProcessor::processBlock(
                 }
             }
         }
+
+        container->rt_process(superCollider, midiMessages);
         command.call(*this);
     } catch (std::exception &e) {
         logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
@@ -255,14 +273,44 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
     return new PluginColliderAudioProcessorEditor(*this);
 }
 
-void PluginColliderAudioProcessor::parameterValueChanged (int parameterIndex, float newValue) {
+void PluginColliderAudioProcessor::parameterValueChanged(int parameterIndex, float newValue) {
     command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
         float targetValue = controlBus[parameterIndex-1]->getRangedValue(newValue);
         superCollider.rt_setControlBusValue(parameterIndex-1, targetValue);
     });
 }
 
-bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
+bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
+    ASyncReply<int> reply;
+    command.push([this, &reply, &block](PluginColliderAudioProcessor &proc) {
+        reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
+    });
+    if ( reply.wait() != 0 ) {
+        return false;
+    }
+
+    std::unique_ptr<SynthDef> synthDef;
+    synthDef.reset(SynthDef::fromMemory(block));
+
+    target.setProperty(IDs::synthBlob, block, nullptr);
+    target.setProperty(IDs::synthName, synthDef->getName(), nullptr);
+
+    target.getChildWithName(IDs::parameters).removeAllChildren(nullptr);
+    juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
+    for(int i=0;i<synthDef->getParameters().size();i++) { 
+        juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
+        parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
+        parameter.setProperty(IDs::pIdx, i, nullptr);
+        parameter.setProperty(IDs::pDefaultValue, synthDef->getParametersValues()[i], nullptr);
+        parameter.setProperty(IDs::pRange, synthDef->guessParameterRange(i), nullptr);
+        parameter.setProperty(IDs::pControlBus, -1, nullptr);
+        parameters.addChild(parameter, i, nullptr);
+    }
+
+    return true;
+}
+
+bool PluginColliderAudioProcessor::loadSynthDefLegacy(SynthDef *synthDef) {
     const juce::ScopedLock lock(superCollider.worldLock);
 
     if ( superCollider.world == nullptr )

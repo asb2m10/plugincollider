@@ -56,6 +56,20 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         addAndMakeVisible(panel);
         resized();
     }
+
+    if ( type == IDs::fxnode ) {
+        PanelSynthDefFx *panel = new PanelSynthDefFx(item, processor);
+        component.reset(panel);
+        addAndMakeVisible(panel);
+        resized();
+    }
+
+    if ( type == IDs::notenode ) {
+        PanelSynthDefMidi *panel = new PanelSynthDefMidi(item, processor);
+        component.reset(panel);
+        addAndMakeVisible(panel);
+        resized();
+    }
 }
 
 void DynamicViewPanel::valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {

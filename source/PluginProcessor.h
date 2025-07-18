@@ -24,9 +24,9 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "UDPPort.h"
 #include "PluginModel.h"
+#include "NodeContainer.h"
 
 class PluginColliderAudioProcessorEditor;
-
 //==============================================================================
 /**
  */
@@ -86,7 +86,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
-    bool loadSynthDef(SynthDef *def);
+
+    bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target);
+    bool loadSynthDefLegacy(SynthDef *def);
     int rt_playSynth();
     void stopSynth();
 
@@ -111,6 +113,14 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     void recompileState();
     
+    void reloadNodeContainer();
+
+    int getFreeNodeId() {
+        int nodeCount = pluginState.getProperty(IDs::nodeCount, 1000);
+        pluginState.setProperty(IDs::nodeCount, nodeCount + 1, nullptr);
+        return nodeCount;
+    }
+
   private:
     juce::String pluginPath;
     juce::String synthPath;
@@ -144,6 +154,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     int boundedMidiVoice[127];
 
+    std::unique_ptr<NodeContainer> container;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)
 };
