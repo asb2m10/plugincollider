@@ -87,50 +87,6 @@ public:
     }
 };
 
-class SynthEditItem: public PCTreeItem {
-    PluginColliderAudioProcessor &audioProcessor;
-    DynamicViewPanel &panel;
-public:
-    SynthEditItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
-        itemName = "Synthdef";
-        containsSubItems = false;
-    }
-
-    void itemSelectionChanged(bool isNowSelected) override {
-        if ( isNowSelected ) {
-            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths).getChild(0);
-            panel.setEditableItem(vt, audioProcessor);
-        } else {
-            panel.clearEditableItem();
-        }
-    }
-
-    void itemClicked(const juce::MouseEvent&event) override {
-        if (event.mods.isPopupMenu()) {
-            juce::PopupMenu menu;
-            menu.addItem("Reset Synthdef", true, false, [this] {
-                audioProcessor.pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
-                audioProcessor.pluginState.getChildWithName(IDs::synths).addChild(juce::ValueTree(IDs::synth), 0, nullptr);
-                audioProcessor.recompileState();
-                panel.clearEditableItem();
-                juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths).getChild(0);
-                panel.setEditableItem(vt, audioProcessor);
-            });
-            menu.addItem("Reset Synthdef default values", true, false, [this] {
-                juce::ValueTree params = audioProcessor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getChildWithName(IDs::parameters);
-                if ( params.isValid() ) {
-                    for(int i=0;i<params.getNumChildren();i++) {
-                        juce::ValueTree param = params.getChild(i);
-                        param.removeProperty(IDs::pCurrentValue, nullptr);
-                        audioProcessor.recompileState();
-                    }
-                }
-            });            
-            menu.showMenuAsync(juce::PopupMenu::Options());
-        }
-    }
-};
-
 class SynthdefNode : public PCTreeItem {
     PluginColliderAudioProcessor &processor;
     juce::ValueTree node;
@@ -269,11 +225,8 @@ public:
 
         //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new ControlBusItem(processor, panel));
-        addSubItem(new SynthEditItem(processor, panel));
-        //addSubItem(new RootNode(processor, panel));
         addSubItem(new GroupNodeItem(processor, processor.pluginState.getChildWithName(IDs::rootnode), panel));
         addSubItem(new ScratchpadItem(processor, panel));
-        // addSubItem(new ProjectSynthDefItem(processor));
     }
 
     void itemClicked(const juce::MouseEvent&event) override {

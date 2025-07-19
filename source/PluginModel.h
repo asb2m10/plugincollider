@@ -41,9 +41,6 @@ namespace IDs {
     DECLARE_ID(nodeid)
     DECLARE_ID(nodeCount)
 
-    DECLARE_ID(synths)
-    DECLARE_ID(synth)
-    DECLARE_ID(staticSynth)
     DECLARE_ID(synthName)
     DECLARE_ID(synthBlob)
 

@@ -29,13 +29,13 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
     juce::ValueTree tmpState = juce::ValueTree::fromXml(*xmlState);
 
     resetPluginState();
-    recompileState();
+
 
     return;
 
     if ( tmpState.getProperty(IDs::version) != IDS_VERSION ) {
         resetPluginState();
-        recompileState();
+        //recompileState();
     } else {
         pluginState = tmpState;
     }
@@ -61,10 +61,6 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
 void PluginColliderAudioProcessor::resetPluginState() {
     pluginState.removeListener(this);
     pluginState.removeAllChildren(nullptr);
-
-    juce::ValueTree synths = juce::ValueTree(IDs::synths);
-    pluginState.addChild(synths, 0, nullptr);
-    synths.addChild(juce::ValueTree(IDs::synth), 1, nullptr);
 
     juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);
     for(int i=0;i<NUMBER_OF_CONTROL_BUSES;i++) {

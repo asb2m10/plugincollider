@@ -178,8 +178,8 @@ class NodeContainer {
     std::vector<std::unique_ptr<BaseNode>> globalnodes;
     std::vector<MidiNode*> midinodes;
 
-    void insertNode(juce::ValueTree &node, int parentId) {
-        for (auto &node : node) {
+    void insertNode(juce::ValueTree nodes, int parentId) {
+        for (auto node : nodes) {
             if ( node.hasType(IDs::notenode) ) {
                 std::unique_ptr<MidiNode> midiNode = std::make_unique<MidiNode>(node, parentId);
                 midinodes.push_back(midiNode.get());
@@ -200,7 +200,7 @@ class NodeContainer {
     }
 
 public:
-    NodeContainer(juce::ValueTree &rootNode) {
+    NodeContainer(juce::ValueTree rootNode) {
         insertNode(rootNode, 1);
     }
 

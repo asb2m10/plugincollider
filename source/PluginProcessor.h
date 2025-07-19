@@ -86,23 +86,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
-
     bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target);
-    bool loadSynthDefLegacy(SynthDef *def);
-    int rt_playSynth();
-    void stopSynth();
-
-    void resetStaticSynth() {
-        juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
-        bool isStaticSynth = synth.getProperty(IDs::staticSynth);
-        if ( synth.isValid() ) {
-            command.push([this, isStaticSynth](PluginColliderAudioProcessor &proc) {
-                superCollider.rt_freeGroup(kDefaultGroupId);
-                if ( isStaticSynth )
-                    rt_playSynth();
-            });
-        }
-    }
 
     juce::MidiKeyboardState midiKeyboardState;
     CommandFifo<PluginColliderAudioProcessor> command;
@@ -111,8 +95,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
         return &loadMeasurer;
     }
 
-    void recompileState();
-    
     void reloadNodeContainer();
 
     int getFreeNodeId() {
@@ -139,20 +121,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     }
 
     bool bindUdpPort();
-
-    struct SynthState {
-        char synthName[127];
-        // While easy to use, this allocates memory on the audio thread
-        std::unordered_map<int, float> precompiledMapValue;
-        std::unordered_map<int, int> controlBusMap;
-        int freqIdx;
-        int velocityIdx;
-        int gateIdx;
-        bool isStaticSynth;
-    };
-    SynthState synthState;
-
-    int boundedMidiVoice[127];
 
     std::unique_ptr<NodeContainer> container;
     //==============================================================================

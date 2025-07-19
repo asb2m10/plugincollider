@@ -50,13 +50,6 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         resized();
     }
 
-    if ( type == IDs::synth ) {
-        PanelSynthDefLegacy *panel = new PanelSynthDefLegacy(item, processor);
-        component.reset(panel);
-        addAndMakeVisible(panel);
-        resized();
-    }
-
     if ( type == IDs::fxnode ) {
         PanelSynthDefFx *panel = new PanelSynthDefFx(item, processor);
         component.reset(panel);
