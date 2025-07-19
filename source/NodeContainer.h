@@ -39,12 +39,17 @@ public:
 };
 
 class FXNode : public BaseNode {
+    bool valid = false;
 public:
     std::unordered_map<int, float> precompiledMapValue;
     std::unordered_map<int, int> controlBusMap;
     char synthName[127];
 
     FXNode(juce::ValueTree &vt, int parentid) : BaseNode(vt, parentid) {
+        if ( ! vt.hasProperty(IDs::synthBlob) ) {
+            return;
+        }
+
         juce::String name = vt[IDs::synthName];
         strncpy(synthName, name.toRawUTF8(), 127);
 
@@ -64,6 +69,7 @@ public:
         }
 
         type = NodeType::FX;
+        valid = true;
     }
 
     void rt_start(SCProcess &superCollider) {
@@ -75,10 +81,14 @@ public:
             superCollider.rt_setNodeValue(nodeid, p.first, p.second);
         }
     }
+
+    bool isValid() const {
+        return valid;
+    }
 };
 
 class MidiNode : public FXNode {
-    int lowNote , highNote, freqIdx = -1, velocityIdx = -1, gateIdx = -1;
+    int lowNote = 0, highNote = 127, freqIdx = -1, velocityIdx = -1, gateIdx = -1;
     bool mono = false, legato = false;
 
     int activeSynths[127] = { 0 };
@@ -127,7 +137,7 @@ public:
         if ( note < lowNote || note > highNote )
             return;
 
-        int node = superCollider.rt_newSynth(synthName, -1, nodeid);
+        int node = superCollider.rt_newSynth((int *) synthName, -1, nodeid);
         if ( node == 0 )
             return;
         int lastNode = activeSynths[note];
@@ -182,14 +192,19 @@ class NodeContainer {
         for (auto node : nodes) {
             if ( node.hasType(IDs::notenode) ) {
                 std::unique_ptr<MidiNode> midiNode = std::make_unique<MidiNode>(node, parentId);
+                if ( ! midiNode->isValid() )
+                    continue;
                 midinodes.push_back(midiNode.get());
                 globalnodes.emplace_back(std::move(midiNode));
                 continue;
             }
             
             if ( node.hasType(IDs::fxnode) ) {
-                 globalnodes.emplace_back(std::make_unique<FXNode>(node, parentId));
-                 continue;
+                std::unique_ptr<FXNode> fxNode = std::make_unique<FXNode>(node, parentId);
+                if ( ! fxNode->isValid() )
+                    continue;
+                globalnodes.emplace_back(std::move(fxNode));
+                continue;
              }
 
             if (node.hasType(IDs::groupnode)) {

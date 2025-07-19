@@ -320,12 +320,6 @@ void SCProcess::rt_dumpTree() {
     Group_DumpTreeAndControls(rt_getNode(0).group());
 }
 
-int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
-    char synthName[127] = { 0 };
-    strcpy(synthName, name.toRawUTF8());
-    return rt_newSynth((int *) synthName, newId, destNode);
-}
-
 int32_t SCProcess::rt_newSynth(int *hashname, int newId, int destNode) {
     GraphDef* def = World_GetGraphDef(world, hashname);
     if ( def == nullptr ) {

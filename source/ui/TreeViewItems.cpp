@@ -108,14 +108,15 @@ public:
     }
 
     bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
-        return dragSourceDetails.description == "100";
+        return false;
     }
     
-    void itemDropped (const juce::DragAndDropTarget::SourceDetails&, int insertIndex) override {
+    void itemDropped (const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
+        scprintf("Index %d\n", insertIndex);
     }
 
     juce::var getDragSourceDescription() override {
-        juce::var description("100");
+        juce::var description("synthdef");
         return description;
     }
 
@@ -148,14 +149,18 @@ public:
     }
 
     bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
-        return dragSourceDetails.description == "100";
+        return dragSourceDetails.description == "group" || dragSourceDetails.description == "synthdef";
     }
     
-    void itemDropped (const juce::DragAndDropTarget::SourceDetails&, int insertIndex) override {
+    void itemDropped (const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
+        scprintf("Index %d\n", insertIndex);
     }
 
     juce::var getDragSourceDescription() override {
-        juce::var description("100");
+        if ( node.hasType(IDs::rootnode) )
+            return juce::var();
+
+        juce::var description("group");
         return description;
     }
 
@@ -188,7 +193,7 @@ public:
             menu.addItem("Add SynthDef trigger by midi notes", true, false, [this] {
                 juce::ValueTree newSynth = juce::ValueTree(IDs::notenode);
                 newSynth.setProperty(IDs::nodename, "Midi Note Node", nullptr);
-                newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);                
+                newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);
                 node.addChild(newSynth, -1, nullptr);
             });
             menu.addItem("Add Group", true, false, [this] {

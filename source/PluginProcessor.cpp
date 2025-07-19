@@ -228,9 +228,9 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
     target.setProperty(IDs::synthBlob, block, nullptr);
     target.setProperty(IDs::synthName, synthDef->getName(), nullptr);
 
-    target.getChildWithName(IDs::parameters).removeAllChildren(nullptr);
+    target.removeChild(target.getChildWithName(IDs::parameters), nullptr);
     juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
-    for(int i=0;i<synthDef->getParameters().size();i++) { 
+    for(int i=0;i<synthDef->getParameters().size();i++) {
         juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
         parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
         parameter.setProperty(IDs::pIdx, i, nullptr);
@@ -239,6 +239,7 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
         parameter.setProperty(IDs::pControlBus, -1, nullptr);
         parameters.addChild(parameter, i, nullptr);
     }
+    target.addChild(parameters, -1, nullptr);
 
     return true;
 }
@@ -247,9 +248,13 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
      if ( property == IDs::pCurrentValue ) {
         int idx = treeWhosePropertyHasChanged.getProperty(IDs::pIdx);
         float value = treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue);
-        command.push([this, idx, value](PluginColliderAudioProcessor &proc) {
-            superCollider.rt_setNodeValue(kDefaultGroupId, idx, value);
-        });
+        juce::ValueTree node = treeWhosePropertyHasChanged.getParent().getParent();
+        int nodeid = node.getProperty(IDs::nodeid, -1);
+        if ( nodeid != -1 ) {
+            command.push([this, nodeid, idx, value](PluginColliderAudioProcessor &proc) {
+                superCollider.rt_setNodeValue(nodeid, idx, value);
+            });
+        }
         return;
      }
 
