@@ -21,6 +21,7 @@
 #include "TreeViewItems.h"
 #include "SC_OscUtils.hpp"
 
+
 // class ProjectSynthDefItem : public PCTreeItem {
 //     PluginColliderAudioProcessor &audioProcessor;
 // public:
@@ -94,7 +95,6 @@ class SynthdefNode : public PCTreeItem {
 public:
     SynthdefNode(PluginColliderAudioProcessor &processor, const juce::ValueTree &node, DynamicViewPanel &panel) : processor(processor), node(node), panel(panel) {
         juce::String fxPrefix = node.hasType(IDs::fxnode) ? "FX " : "";
-
         itemName = node.getProperty(IDs::nodeid).toString() + ": " + fxPrefix + node.getProperty(IDs::synthName).toString();
         containsSubItems = false;
     }
@@ -107,17 +107,16 @@ public:
         }
     }
 
-    bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
+    bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
         return false;
     }
     
-    void itemDropped (const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
-        scprintf("Index %d\n", insertIndex);
+    juce::ValueTree getNodeValueTree() const {
+        return node;
     }
 
     juce::var getDragSourceDescription() override {
-        juce::var description("synthdef");
-        return description;
+        return juce::var("synthdef");
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
@@ -152,16 +151,56 @@ public:
         return dragSourceDetails.description == "group" || dragSourceDetails.description == "synthdef";
     }
     
-    void itemDropped (const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
-        scprintf("Index %d\n", insertIndex);
+    void itemDropped(const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
+        juce::TreeView *owner = getOwnerView();
+        juce::TreeViewItem *sourceItem = owner->getSelectedItem(0);
+        juce::ValueTree sourceNode;
+        if ( source.description == "synthdef" ) {
+            SynthdefNode* source = dynamic_cast<SynthdefNode*>(sourceItem);
+            if ( source != nullptr ) {
+                sourceNode = source->getNodeValueTree();
+            }
+        }
+        if ( source.description == "group" ) {
+            GroupNodeItem* source = dynamic_cast<GroupNodeItem*>(sourceItem);
+            if ( source != nullptr ) {
+                sourceNode = source->node;
+            } 
+        }
+
+        if ( ! sourceNode.isValid() )
+            return;
+
+        std::unique_ptr<juce::XmlElement> oldOpenness(owner->getOpennessState(false));
+
+        if ( sourceNode.getParent().isValid() && node != sourceNode && ! node.isAChildOf(sourceNode) ) {
+            if ( sourceNode.getParent() == node && node.indexOf(sourceNode) < insertIndex )
+                --insertIndex;
+
+            sourceNode.getParent().removeChild(sourceNode, nullptr);
+            node.addChild(sourceNode, insertIndex, nullptr);
+        }
+
+        if (oldOpenness != nullptr) {
+            owner->restoreOpennessState(*oldOpenness, false);
+        }
+
+        sourceItem->itemSelectionChanged(false);
+        juce::TreeViewItem *parent = sourceItem->getParentItem();
+        parent->removeSubItem(sourceItem->getIndexInParent(), true);
+
+        setOpen(false);
+        setOpen(true);
+
+        if (oldOpenness != nullptr) {
+            owner->restoreOpennessState(*oldOpenness, false);
+        }
     }
 
     juce::var getDragSourceDescription() override {
         if ( node.hasType(IDs::rootnode) )
             return juce::var();
-
-        juce::var description("group");
-        return description;
+        return juce::var("group");
     }
 
     void itemOpennessChanged(bool isNowOpen) {
@@ -169,9 +208,9 @@ public:
             for(int i=0; i < node.getNumChildren(); i++) {
                 juce::ValueTree child = node.getChild(i);
                 if ( child.hasType(IDs::groupnode) ) {
-                    addSubItem(new GroupNodeItem(processor, child, panel), false);
+                    addSubItem(new GroupNodeItem(processor, child, panel), -1);
                 } else {
-                    addSubItem(new SynthdefNode(processor, child, panel), false);
+                    addSubItem(new SynthdefNode(processor, child, panel), -1);
                 }
             }
         } else {
@@ -189,18 +228,24 @@ public:
                 newSynth.setProperty(IDs::nodename, "FX Node", nullptr);
                 newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);
                 node.addChild(newSynth, -1, nullptr);
+                this->setOpen(false);
+                this->setOpen(true);
             });
             menu.addItem("Add SynthDef trigger by midi notes", true, false, [this] {
                 juce::ValueTree newSynth = juce::ValueTree(IDs::notenode);
                 newSynth.setProperty(IDs::nodename, "Midi Note Node", nullptr);
                 newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);
                 node.addChild(newSynth, -1, nullptr);
+                this->setOpen(false);
+                this->setOpen(true);
             });
             menu.addItem("Add Group", true, false, [this] {
                 juce::ValueTree newSynth = juce::ValueTree(IDs::groupnode);
                 newSynth.setProperty(IDs::nodename, "Group", nullptr);
                 newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);  
                 node.addChild(newSynth, -1, nullptr);
+                this->setOpen(false);
+                this->setOpen(true);
             });
             menu.addSeparator();
             if ( ! node.hasType(IDs::rootnode) ) {
@@ -286,7 +331,7 @@ public:
             });
             reply.wait();
             for(int i=0;i<reply.content.size();i++) {
-                addSubItem(new PCTreeItem(reply.content.getItem(i), false));
+                addSubItem(new PCTreeItem(reply.content.getItem(i)));
             }            
         } else {
             clearSubItems();
@@ -426,6 +471,7 @@ public:
 
 RootItem::RootItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) {
     setOpen(true);
+    itemName = "PluginCollider";
     addSubItem(new ProjectItem(processor, panel));
     addSubItem(new ServerItem(processor));
 }

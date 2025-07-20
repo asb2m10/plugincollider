@@ -339,7 +339,7 @@ int32_t SCProcess::rt_newSynth(int *hashname, int newId, int destNode) {
     }
 
     if ( destNode != 0 ) {
-        Group_AddTail(rt_getNode(kDefaultGroupId).group(), &graph->mNode);
+        Group_AddTail(rt_getNode(destNode).group(), &graph->mNode);
     }
 
     return graph->mNode.mID;
