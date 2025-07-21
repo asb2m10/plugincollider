@@ -86,7 +86,15 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
+    /**
+     * Replace the synthdef in the plugin state with the one in the block.
+     */
     bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target);
+
+    /**
+     * Load the synthdef from the plugin state into the supercollider world ; usually when the server is booted.
+     */
+    void rt_loadSynthDef(juce::ValueTree &root);
 
     juce::MidiKeyboardState midiKeyboardState;
     CommandFifo<PluginColliderAudioProcessor> command;

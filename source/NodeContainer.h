@@ -257,7 +257,7 @@ public:
         }
     }
 
-    void rt_process(SCProcess &superCollider, juce::MidiBuffer &midiMessages) {
+    void rt_processMidiMessages(SCProcess &superCollider, juce::MidiBuffer &midiMessages) {
         // // Process the nodes
         for (const auto meta : midiMessages) {
             const auto msg = meta.getMessage();

@@ -56,6 +56,13 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
         const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
         updateHostDisplay(details);
     }
+
+    if ( superCollider.isRunning() ) {
+        command.push([&] (PluginColliderAudioProcessor &proc) {
+            proc.rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
+        });
+        reloadNodeContainer();
+    }
 }
 
 void PluginColliderAudioProcessor::resetPluginState() {

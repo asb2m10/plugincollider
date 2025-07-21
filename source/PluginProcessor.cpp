@@ -129,6 +129,7 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath) ) {
+        rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
         container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
         container->rt_allocate(superCollider);
     }
@@ -175,25 +176,17 @@ void PluginColliderAudioProcessor::processBlock(
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    // TODO: There is probably something to send to world in term of timing...
-    // auto *playhead = getPlayHead();
-    // if (playhead != NULL) {
-    //     juce::AudioPlayHead::CurrentPositionInfo posInfo;
-    //     playhead->getCurrentPosition(posInfo);
-    //     // posInfo.timeInSeconds;
-    // }
-
     midiKeyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
 
     const juce::ScopedLock lock(superCollider.worldLock);
     try {
-        container->rt_process(superCollider, midiMessages);
         command.call(*this);
+        container->rt_processMidiMessages(superCollider, midiMessages);
+        superCollider.run(buffer, midiMessages);
     } catch (std::exception &e) {
         logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
     }
 
-    superCollider.run(buffer, midiMessages);
     buffer.applyGain(*gain);
 }
 
@@ -242,6 +235,21 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
     target.addChild(parameters, -1, nullptr);
 
     return true;
+}
+
+void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree &vt) {
+    if ( vt.hasType(IDs::groupnode) ) {
+        for(int i=0;i<vt.getNumChildren();i++) {
+            rt_loadSynthDef(vt.getChild(i));
+        }
+        return;
+    }
+    if ( vt.hasType(IDs::notenode) || vt.hasType(IDs::fxnode) ) {
+        juce::MemoryBlock *block = vt.getProperty(IDs::synthBlob).getBinaryData();
+        if ( block != nullptr ) {
+            superCollider.rt_loadSynthDef(block);
+        }
+    }
 }
 
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {

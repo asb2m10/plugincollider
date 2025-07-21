@@ -257,6 +257,12 @@ public:
             world->mDumpOSC = level;
     }
 
+    bool isRunning() {
+        if ( world == nullptr )
+            return false;
+        return world->mRunning;
+    }
+
 private:
     friend class PluginColliderAudioProcessor;
 
