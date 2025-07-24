@@ -61,6 +61,7 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
         command.push([&] (PluginColliderAudioProcessor &proc) {
             proc.rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
         });
+
         reloadNodeContainer();
     }
 }

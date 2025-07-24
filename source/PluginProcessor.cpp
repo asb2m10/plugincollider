@@ -237,7 +237,7 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
     return true;
 }
 
-void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree &vt) {
+void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
     if ( vt.hasType(IDs::groupnode) ) {
         for(int i=0;i<vt.getNumChildren();i++) {
             rt_loadSynthDef(vt.getChild(i));

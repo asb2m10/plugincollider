@@ -243,19 +243,44 @@ public:
     }
 };
 
-
 class PanelSynthDefMidi : public PanelSynthDefFx {
+    juce::Label labelRange;
+    juce::Label labelDash;
+    juce::TextEditor lowNote;
+    juce::TextEditor highNote;
+    juce::ToggleButton mono;
 public:    
     PanelSynthDefMidi(juce::ValueTree vt, PluginColliderAudioProcessor &processor) : PanelSynthDefFx(vt, processor) {
         synthDefTable.setParametersToFilter(synthParmsToMidi);
+
+        addAndMakeVisible(labelRange);
+        addAndMakeVisible(labelDash);
+        addAndMakeVisible(lowNote);
+        addAndMakeVisible(highNote);
+        addAndMakeVisible(mono);
+
+        labelRange.setText("Note Range", juce::dontSendNotification);
+        labelDash.setText(" - ", juce::dontSendNotification);
+        mono.setButtonText("Monophonic");
+        lowNote.setInputFilter(new juce::TextEditor::LengthAndCharacterRestriction(3, "0123456789"), true);
+        highNote.setInputFilter(new juce::TextEditor::LengthAndCharacterRestriction(3, "0123456789"), true);
     }
 
     void resized() override {
-        auto bounds = getBounds();
-
-        synthname.setBounds(200, 5, bounds.getWidth() - 200, 25);
-        loaddef.setBounds(0, 5, 50, 25);
-        synthDefTable.setBounds(0, 40, bounds.getWidth(), bounds.getHeight() - 40);
+        auto bounds = getLocalBounds();
+        bounds.removeFromTop(8);
+        auto top = bounds.removeFromTop(25);
+        bounds.removeFromTop(8);
+        loaddef.setBounds(top.removeFromLeft(50));
+        top.removeFromLeft(2);
+        labelRange.setBounds(top.removeFromLeft(80));
+        lowNote.setBounds(top.removeFromLeft(30));
+        labelDash.setBounds(top.removeFromLeft(15));
+        highNote.setBounds(top.removeFromLeft(30));
+        top.removeFromLeft(10);
+        mono.setBounds(top.removeFromLeft(130));
+        synthname.setBounds(top.removeFromRight(200));
+        synthDefTable.setBounds(bounds);
     }    
 };
 

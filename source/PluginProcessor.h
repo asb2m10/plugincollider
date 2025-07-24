@@ -94,7 +94,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     /**
      * Load the synthdef from the plugin state into the supercollider world ; usually when the server is booted.
      */
-    void rt_loadSynthDef(juce::ValueTree &root);
+    void rt_loadSynthDef(juce::ValueTree root);
 
     juce::MidiKeyboardState midiKeyboardState;
     CommandFifo<PluginColliderAudioProcessor> command;

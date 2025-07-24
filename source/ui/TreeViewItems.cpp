@@ -146,6 +146,8 @@ class GroupNodeItem : public PCTreeItem, public juce::ValueTree::Listener {
     juce::ValueTree node;
     DynamicViewPanel &panel;
 public:
+    bool nowDiscared = false;
+
     GroupNodeItem(PluginColliderAudioProcessor &processor, juce::ValueTree node, DynamicViewPanel &panel) : processor(processor), node(node), panel(panel) {
         if ( node.hasType(IDs::rootnode) ) {
             itemName = "1: Root Node";
@@ -253,7 +255,7 @@ public:
     }
 
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override {
-        if ( ! isOpen() )
+        if ( getOwnerView() == nullptr )
             return;
 
         if ( parentTree == node ) {
