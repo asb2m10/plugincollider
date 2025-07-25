@@ -43,6 +43,8 @@ namespace IDs {
 
     DECLARE_ID(synthName)
     DECLARE_ID(synthBlob)
+    DECLARE_ID(synthNoteRange)
+    DECLARE_ID(synthMono)
 
     DECLARE_ID(parameters)
     DECLARE_ID(parameter)
@@ -57,3 +59,4 @@ namespace IDs {
     DECLARE_ID(scratchpad)
     DECLARE_ID(spCode)
 };
+

@@ -19,6 +19,7 @@
 #pragma once
 
 #include "PanelCommon.h"
+#include "PluginModel.h"
 
 const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
 
@@ -235,11 +236,14 @@ public:
     }
 
     void resized() override {
-        auto bounds = getBounds();
-
-        synthname.setBounds(200, 5, bounds.getWidth() - 200, 25);
-        loaddef.setBounds(0, 5, 50, 25);
-        synthDefTable.setBounds(0, 40, bounds.getWidth(), bounds.getHeight() - 40);
+        auto bounds = getLocalBounds();
+        bounds.removeFromTop(8);
+        auto top = bounds.removeFromTop(25);
+        bounds.removeFromTop(8);
+        loaddef.setBounds(top.removeFromLeft(50));
+        top.removeFromLeft(10);
+        synthname.setBounds(top.removeFromRight(200));
+        synthDefTable.setBounds(bounds);
     }
 };
 
@@ -264,6 +268,51 @@ public:
         mono.setButtonText("Monophonic");
         lowNote.setInputFilter(new juce::TextEditor::LengthAndCharacterRestriction(3, "0123456789"), true);
         highNote.setInputFilter(new juce::TextEditor::LengthAndCharacterRestriction(3, "0123456789"), true);
+
+        juce::String range = vtSynth[IDs::synthNoteRange];
+        juce::StringArray token;
+        token.addTokens(range, " ");
+
+        lowNote.setText(token[0], juce::dontSendNotification);
+        highNote.setText(token[1], juce::dontSendNotification);
+        bool isMonoSynth= vtSynth[IDs::synthMono];
+        mono.setToggleState(isMonoSynth, juce::dontSendNotification);
+
+        lowNote.onTextChange = [this]() {
+            int low = lowNote.getText().getIntValue();
+            juce::String range = vtSynth[IDs::synthNoteRange];
+            juce::StringArray token;
+            token.addTokens(range, " ");
+            int currentHigh = token[1].getIntValue();
+            if ( low >= currentHigh ) {
+                low = currentHigh - 1;
+            }
+            if ( low < 0 ) {
+                low = 0;
+            }
+            lowNote.setText(juce::String(low), juce::dontSendNotification);
+            vtSynth.setProperty(IDs::synthNoteRange, juce::String(low) + " " + token[1], nullptr);
+        };
+
+        highNote.onTextChange = [this]() {
+            int high = highNote.getText().getIntValue();
+            juce::String range = vtSynth[IDs::synthNoteRange];
+            juce::StringArray token;
+            token.addTokens(range, " ");
+            int currentLow = token[0].getIntValue();
+            if ( high <= currentLow ) {
+                high = currentLow + 1;
+            }
+            if ( high > 127 ) {
+                high = 127;
+            }
+            highNote.setText(juce::String(high), juce::dontSendNotification);
+            vtSynth.setProperty(IDs::synthNoteRange, token[0] + " " + juce::String(high), nullptr);
+        };
+
+        mono.onStateChange = [this]() {
+            vtSynth.setProperty(IDs::synthMono, mono.getToggleState(), nullptr);
+        };
     }
 
     void resized() override {

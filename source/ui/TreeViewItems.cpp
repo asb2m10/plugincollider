@@ -127,7 +127,7 @@ public:
                 panel.clearEditableItem();
                 juce::ValueTree parent = node.getParent();
                 parent.removeChild(node, nullptr);
-                getParentItem()->clearSubItems();
+                //getParentItem()->clearSubItems();
             });
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
@@ -217,18 +217,12 @@ public:
             juce::PopupMenu menu;
             menu.addItem("Add SynthDef effect", true, false, [this] {
                 setOpen(true);                
-                juce::ValueTree newSynth = juce::ValueTree(IDs::fxnode);
-                newSynth.setProperty(IDs::nodename, "FX Node", nullptr);
-                newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);
-                node.addChild(newSynth, -1, nullptr);
+                node.addChild(processor.createFxNodeVT(), -1, nullptr);
 
             });
             menu.addItem("Add SynthDef trigger by midi notes", true, false, [this] {
-                setOpen(true);                
-                juce::ValueTree newSynth = juce::ValueTree(IDs::notenode);
-                newSynth.setProperty(IDs::nodename, "Midi Note Node", nullptr);
-                newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);
-                node.addChild(newSynth, -1, nullptr);
+                setOpen(true);
+                node.addChild(processor.createMidiNoteNodeVT(), -1, nullptr);
             });
             menu.addItem("Add Group", true, false, [this] {
                 setOpen(true);                

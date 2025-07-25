@@ -74,6 +74,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     //==============================================================================
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
+    juce::ValueTree createMidiNoteNodeVT();
+    juce::ValueTree createFxNodeVT();
 
     bool getActivityMonitor();
 
@@ -87,7 +89,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
 
     /**
-     * Replace the synthdef in the plugin state with the one in the block.
+     * Replace the synthdef in the plugin state with the one in the memory block.
      */
     bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target);
 

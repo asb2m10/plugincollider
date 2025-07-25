@@ -91,3 +91,18 @@ void PluginColliderAudioProcessor::resetPluginState() {
     pluginState.addListener(this);
 }
 
+juce::ValueTree PluginColliderAudioProcessor::createMidiNoteNodeVT() {
+    juce::ValueTree newSynth = juce::ValueTree(IDs::notenode);
+    newSynth.setProperty(IDs::nodename, "Midi Note Node", nullptr);
+    newSynth.setProperty(IDs::nodeid, getFreeNodeId(), nullptr);
+    newSynth.setProperty(IDs::synthNoteRange, "0 127", nullptr);
+    newSynth.setProperty(IDs::synthMono, false, nullptr);
+    return newSynth;
+}
+
+juce::ValueTree PluginColliderAudioProcessor::createFxNodeVT() {
+    juce::ValueTree newSynth = juce::ValueTree(IDs::fxnode);
+    newSynth.setProperty(IDs::nodename, "FX Node", nullptr);
+    newSynth.setProperty(IDs::nodeid, getFreeNodeId(), nullptr);
+    return newSynth;
+}
