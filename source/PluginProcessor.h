@@ -76,6 +76,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void setStateInformation(const void *data, int sizeInBytes) override;
     juce::ValueTree createMidiNoteNodeVT();
     juce::ValueTree createFxNodeVT();
+    juce::ValueTree createGroupNodeVT();
 
     bool getActivityMonitor();
 

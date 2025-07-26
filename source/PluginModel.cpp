@@ -106,3 +106,10 @@ juce::ValueTree PluginColliderAudioProcessor::createFxNodeVT() {
     newSynth.setProperty(IDs::nodeid, getFreeNodeId(), nullptr);
     return newSynth;
 }
+
+juce::ValueTree PluginColliderAudioProcessor::createGroupNodeVT() {
+    juce::ValueTree newNode = juce::ValueTree(IDs::groupnode);
+    newNode.setProperty(IDs::nodename, "Group", nullptr);
+    newNode.setProperty(IDs::nodeid, getFreeNodeId(), nullptr);
+    return newNode;
+}

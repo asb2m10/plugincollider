@@ -22,6 +22,7 @@
 #include "PanelControlBus.h"
 #include "PanelSynthDef.h"
 #include "PanelScratchpad.h"
+#include "PanelGroup.h"
 
 void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudioProcessor &processor) {
     if ( currentItem == item ) {
@@ -41,6 +42,7 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         component.reset(scratchpad);
         addAndMakeVisible(scratchpad);
         resized();
+        return;
     }
 
     if ( type == IDs::controlbuses ) {
@@ -48,6 +50,7 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         component.reset(cbPanel);
         addAndMakeVisible(cbPanel);
         resized();
+        return;
     }
 
     if ( type == IDs::fxnode ) {
@@ -55,6 +58,7 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         component.reset(panel);
         addAndMakeVisible(panel);
         resized();
+        return;
     }
 
     if ( type == IDs::notenode ) {
@@ -62,6 +66,15 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
         component.reset(panel);
         addAndMakeVisible(panel);
         resized();
+        return;
+    }
+
+    if ( type == IDs::groupnode || type == IDs::rootnode ) {
+        GroupPanel *panel = new GroupPanel(item);
+        component.reset(panel);
+        addAndMakeVisible(panel);
+        resized();
+        return;
     }
 }
 

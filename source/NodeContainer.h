@@ -90,13 +90,15 @@ public:
 class MidiNode : public FXNode {
     int lowNote = 0, highNote = 127, freqIdx = -1, velocityIdx = -1, gateIdx = -1;
     bool mono = false, legato = false;
-
     int activeSynths[127] = { 0 };
 
 public:
     MidiNode(juce::ValueTree &vt, int parentid) : FXNode(vt, parentid) {
-        // lowNote = vt[IDs::lowNote];
-        // highNote = vt[IDs::highNote];
+        juce::String range = vt[IDs::synthNoteRange];
+        juce::StringArray token;
+        token.addTokens(range, " ");
+        lowNote = token[0].getIntValue();
+        highNote = token[1].getIntValue();
         // mono = vt[IDs::mono];
         // legato = vt[IDs::legato];
 

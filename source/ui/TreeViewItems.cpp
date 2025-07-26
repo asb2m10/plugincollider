@@ -158,6 +158,14 @@ public:
         this->node.addListener(this);
     }
 
+    void itemSelectionChanged(bool isNowSelected) override {
+        if ( isNowSelected ) {
+            panel.setEditableItem(node, processor);
+        } else {
+            panel.clearEditableItem();
+        }
+    }
+
     bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
         return dragSourceDetails.description == "group" || dragSourceDetails.description == "synthdef";
     }
@@ -225,11 +233,8 @@ public:
                 node.addChild(processor.createMidiNoteNodeVT(), -1, nullptr);
             });
             menu.addItem("Add Group", true, false, [this] {
-                setOpen(true);                
-                juce::ValueTree newSynth = juce::ValueTree(IDs::groupnode);
-                newSynth.setProperty(IDs::nodename, "Group", nullptr);
-                newSynth.setProperty(IDs::nodeid, processor.getFreeNodeId(), nullptr);  
-                node.addChild(newSynth, -1, nullptr);
+                setOpen(true);
+                node.addChild(processor.createGroupNodeVT(), -1, nullptr);
             });
             menu.addSeparator();
             if ( ! node.hasType(IDs::rootnode) ) {
@@ -249,9 +254,6 @@ public:
     }
 
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override {
-        if ( getOwnerView() == nullptr )
-            return;
-
         if ( parentTree == node ) {
             // Delete the item from the message thread to avoid deleting the caller
             juce::MessageManager::callAsync([this, childWhichHasBeenRemoved ] {
@@ -262,6 +264,9 @@ public:
     }
 
     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) override {
+        if ( getOwnerView() == nullptr )
+            return;
+
         if ( parentTree == node ) {
             juce::MessageManager::callAsync([this, childWhichHasBeenAdded] {
                 // The item might been closed from a delete, ignore this...
