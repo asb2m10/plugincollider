@@ -70,7 +70,7 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
     }
 
     if ( type == IDs::groupnode || type == IDs::rootnode ) {
-        GroupPanel *panel = new GroupPanel(item);
+        GroupPanel *panel = new GroupPanel(item, processor);
         component.reset(panel);
         addAndMakeVisible(panel);
         resized();

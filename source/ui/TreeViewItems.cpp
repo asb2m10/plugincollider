@@ -90,30 +90,30 @@ public:
 
 class SynthDefNodeItem : public PCTreeItem, public juce::ValueTree::Listener {
     PluginColliderAudioProcessor &processor;
-    juce::ValueTree node;
+    juce::ValueTree vt;
     DynamicViewPanel &panel;
 
     void setItemName() {
-        juce::String fxPrefix = node.hasType(IDs::fxnode) ? "FX " : "";
-        itemName = node.getProperty(IDs::nodeid).toString() + ": " + fxPrefix + node.getProperty(IDs::synthName).toString();
+        juce::String fxPrefix = vt.hasType(IDs::fxnode) ? "FX " : "";
+        itemName = vt.getProperty(IDs::nodeid).toString() + ": " + fxPrefix + vt.getProperty(IDs::synthName).toString();
     }
 public:
-    SynthDefNodeItem(PluginColliderAudioProcessor &processor, juce::ValueTree node, DynamicViewPanel &panel) : processor(processor), node(node), panel(panel) {
+    SynthDefNodeItem(PluginColliderAudioProcessor &processor, juce::ValueTree node, DynamicViewPanel &panel) : processor(processor), vt(node), panel(panel) {
         setItemName();
         containsSubItems = false;
-        this->node.addListener(this);
+        vt.addListener(this);
     }
 
     void itemSelectionChanged(bool isNowSelected) override {
         if ( isNowSelected ) {
-            panel.setEditableItem(node, processor);
+            panel.setEditableItem(vt, processor);
         } else {
             panel.clearEditableItem();
         }
     }
 
     juce::ValueTree getNodeValueTree() const {
-        return node;
+        return vt;
     }
 
     juce::var getDragSourceDescription() override {
@@ -125,16 +125,15 @@ public:
             juce::PopupMenu menu;
             menu.addItem("Remove Node", true, false, [this] {
                 panel.clearEditableItem();
-                juce::ValueTree parent = node.getParent();
-                parent.removeChild(node, nullptr);
-                //getParentItem()->clearSubItems();
+                juce::ValueTree parent = vt.getParent();
+                parent.removeChild(vt, nullptr);
             });
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
     }
 
     void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged, const juce::Identifier& property) override {
-        if ( treeWhosePropertyHasChanged == node && property == IDs::synthName ) {
+        if ( treeWhosePropertyHasChanged == vt && property == IDs::synthName ) {
             setItemName();
             repaintItem();
         }
@@ -143,72 +142,31 @@ public:
 
 class GroupNodeItem : public PCTreeItem, public juce::ValueTree::Listener {
     PluginColliderAudioProcessor &processor;
-    juce::ValueTree node;
+    juce::ValueTree vt;
     DynamicViewPanel &panel;
 public:
-    bool nowDiscared = false;
-
-    GroupNodeItem(PluginColliderAudioProcessor &processor, juce::ValueTree node, DynamicViewPanel &panel) : processor(processor), node(node), panel(panel) {
+    GroupNodeItem(PluginColliderAudioProcessor &processor, juce::ValueTree node, DynamicViewPanel &panel) : processor(processor), vt(node), panel(panel) {
         if ( node.hasType(IDs::rootnode) ) {
             itemName = "1: Root Node";
         } else {
             itemName = node.getProperty(IDs::nodeid).toString() + ": " + node.getProperty(IDs::nodename).toString();
         }
         containsSubItems = true;
-        this->node.addListener(this);
+        vt.addListener(this);
     }
 
     void itemSelectionChanged(bool isNowSelected) override {
         if ( isNowSelected ) {
-            panel.setEditableItem(node, processor);
+            panel.setEditableItem(vt, processor);
         } else {
             panel.clearEditableItem();
         }
     }
 
-    bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
-        return dragSourceDetails.description == "group" || dragSourceDetails.description == "synthdef";
-    }
-    
-    void itemDropped(const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
-        juce::TreeView *owner = getOwnerView();
-        juce::TreeViewItem *sourceItem = owner->getSelectedItem(0);
-        juce::ValueTree sourceNode;
-        if ( source.description == "synthdef" ) {
-            SynthDefNodeItem* source = dynamic_cast<SynthDefNodeItem*>(sourceItem);
-            if ( source != nullptr ) {
-                sourceNode = source->getNodeValueTree();
-            }
-        }
-        if ( source.description == "group" ) {
-            GroupNodeItem* source = dynamic_cast<GroupNodeItem*>(sourceItem);
-            if ( source != nullptr ) {
-                sourceNode = source->node;
-            } 
-        }
-
-        if ( ! sourceNode.isValid() )
-            return;
-
-        if ( sourceNode.getParent().isValid() && node != sourceNode && ! node.isAChildOf(sourceNode) ) {
-            if ( sourceNode.getParent() == node && node.indexOf(sourceNode) < insertIndex )
-                --insertIndex;
-
-            sourceNode.getParent().removeChild(sourceNode, nullptr);
-            node.addChild(sourceNode, insertIndex, nullptr);
-        }
-    }
-
-    juce::var getDragSourceDescription() override {
-        if ( node.hasType(IDs::rootnode) )
-            return juce::var();
-        return juce::var("group");
-    }
-
     void itemOpennessChanged(bool isNowOpen) {
         if ( isNowOpen ) {
-            for(int i=0; i < node.getNumChildren(); i++) {
-                juce::ValueTree child = node.getChild(i);
+            for(int i=0; i < vt.getNumChildren(); i++) {
+                juce::ValueTree child = vt.getChild(i);
                 if ( child.hasType(IDs::groupnode) ) {
                     addSubItem(new GroupNodeItem(processor, child, panel), -1);
                 } else {
@@ -225,23 +183,23 @@ public:
             juce::PopupMenu menu;
             menu.addItem("Add SynthDef effect", true, false, [this] {
                 setOpen(true);                
-                node.addChild(processor.createFxNodeVT(), -1, nullptr);
+                vt.addChild(processor.createFxNodeVT(), -1, nullptr);
 
             });
             menu.addItem("Add SynthDef trigger by midi notes", true, false, [this] {
                 setOpen(true);
-                node.addChild(processor.createMidiNoteNodeVT(), -1, nullptr);
+                vt.addChild(processor.createMidiNoteNodeVT(), -1, nullptr);
             });
             menu.addItem("Add Group", true, false, [this] {
                 setOpen(true);
-                node.addChild(processor.createGroupNodeVT(), -1, nullptr);
+                vt.addChild(processor.createGroupNodeVT(), -1, nullptr);
             });
             menu.addSeparator();
-            if ( ! node.hasType(IDs::rootnode) ) {
+            if ( ! vt.hasType(IDs::rootnode) ) {
                 menu.addItem("Remove Group", true, false, [this] {
                     panel.clearEditableItem();
-                    juce::ValueTree parent = node.getParent();
-                    parent.removeChild(node, nullptr);        
+                    juce::ValueTree parent = vt.getParent();
+                    parent.removeChild(vt, nullptr);
                 });
                 menu.addSeparator();
             }
@@ -253,38 +211,64 @@ public:
         }
     }
 
+    bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
+        return dragSourceDetails.description == "group" || dragSourceDetails.description == "synthdef";
+    }
+
+    juce::var getDragSourceDescription() override {
+        if ( vt.hasType(IDs::rootnode) )
+            return juce::var();
+        return juce::var("group");
+    }
+
+    void itemDropped(const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
+        juce::TreeView *owner = getOwnerView();
+        juce::TreeViewItem *sourceItem = owner->getSelectedItem(0);
+        juce::ValueTree sourceNode;
+        if ( source.description == "synthdef" ) {
+            SynthDefNodeItem* source = dynamic_cast<SynthDefNodeItem*>(sourceItem);
+            if ( source != nullptr ) {
+                sourceNode = source->getNodeValueTree();
+            }
+        }
+        if ( source.description == "group" ) {
+            GroupNodeItem* source = dynamic_cast<GroupNodeItem*>(sourceItem);
+            if ( source != nullptr ) {
+                sourceNode = source->vt;
+            }
+        }
+
+        if ( sourceNode.getParent().isValid() && vt != sourceNode && ! vt.isAChildOf(sourceNode) ) {
+            if ( sourceNode.getParent() == vt ) {
+                int currentIndex = vt.indexOf(sourceNode);
+                vt.moveChild(currentIndex, insertIndex, nullptr);
+                return;
+            }
+            sourceNode.getParent().removeChild(sourceNode, nullptr);
+            vt.addChild(sourceNode, insertIndex, nullptr);
+        }
+    }
+
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override {
-        if ( parentTree == node ) {
-            // Delete the item from the message thread to avoid deleting the caller
-            juce::MessageManager::callAsync([this, childWhichHasBeenRemoved ] {
-                setOpen(false);
-                setOpen(true);
-            });
+        if ( parentTree == vt && isOpen() ) {
+            removeSubItem(indexFromWhichChildWasRemoved, true);
         }
     }
 
     void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) override {
-        if ( getOwnerView() == nullptr )
-            return;
-
-        if ( parentTree == node ) {
-            juce::MessageManager::callAsync([this, childWhichHasBeenAdded] {
-                // The item might been closed from a delete, ignore this...
-                if ( ! isOpen() )
-                    return;                
-                setOpen(false);
-                setOpen(true);
+        if ( parentTree == vt ) {
+            juce::MessageManager::callAsync([this] {
+                setOpenness(Openness::opennessClosed);
+                setOpenness(Openness::opennessOpen);
             });
         }
     }
 
     void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {
-        if ( ! isOpen() )
-            return;
-
-        if ( parentTree == node ) {
-            setOpen(false);
-            setOpen(true);
+        if ( parentTree == vt && isOpen() ) {
+            juce::TreeViewItem *moved = getSubItem(oldIndex);
+            removeSubItem(oldIndex, false);
+            addSubItem(moved, newIndex);
         }
     }
 };

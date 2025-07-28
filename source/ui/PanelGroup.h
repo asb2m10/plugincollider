@@ -21,6 +21,7 @@
 #include "PanelCommon.h"
 
 class GroupPanel : public juce::Component {
+    PluginColliderAudioProcessor &processor;
     juce::Label label;
     juce::ValueTree vt;
     juce::TextButton addGroup;
@@ -28,11 +29,11 @@ class GroupPanel : public juce::Component {
     juce::TextButton addMidiNote;
 
 public:
-    GroupPanel(const juce::ValueTree &groupVt) : vt(groupVt) {
+    GroupPanel(const juce::ValueTree &groupVt, PluginColliderAudioProcessor &processor) : vt(groupVt), processor(processor) {
         if ( groupVt.hasType(IDs::rootnode) )
             label.setText("Group: Root Node", juce::dontSendNotification);
         else
-            label.setText("Group: " + juce::String(vt[IDs::nodeid]), juce::dontSendNotification);
+            label.setText("Group: " + juce::String(vt[IDs::nodeid].toString()), juce::dontSendNotification);
 
         addAndMakeVisible(label);
         addAndMakeVisible(addGroup);
@@ -44,17 +45,16 @@ public:
         addFx.setButtonText("Add Fx Synth...");
 
         addGroup.onClick = [this] {
-
+            vt.addChild(this->processor.createGroupNodeVT(), -1, nullptr);
         };
 
         addFx.onClick = [this] {
-
+            vt.addChild(this->processor.createFxNodeVT(), -1, nullptr);
         };
 
         addMidiNote.onClick = [this] {
+            vt.addChild(this->processor.createMidiNoteNodeVT(), -1, nullptr);
         };
-
-
     }
 
     void resized() override {
