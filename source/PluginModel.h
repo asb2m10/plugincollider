@@ -58,5 +58,11 @@ namespace IDs {
 
     DECLARE_ID(scratchpad)
     DECLARE_ID(spCode)
+
+    DECLARE_ID(srvRoot)
+    DECLARE_ID(srvAlwaysSyncNodes)
+    DECLARE_ID(srvSynthDefPath)
+    DECLARE_ID(srvPluginPath)
+
 };
 

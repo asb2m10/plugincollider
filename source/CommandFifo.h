@@ -114,7 +114,7 @@ public:
  * The goal is to allocate the reply object from the UI thread and let the audio thread fill it.
  *
  * This could be done with a std::promise, but we want to avoid the overhead of std::future that would 
- * allocte from the audio thread.
+ * allocate from the audio thread.
  */
 template <class T>
 class ASyncReply {

@@ -70,6 +70,10 @@ void PluginColliderAudioProcessor::resetPluginState() {
     pluginState.removeListener(this);
     pluginState.removeAllChildren(nullptr);
 
+    juce::ValueTree srvRoot = juce::ValueTree(IDs::srvRoot);
+    srvRoot.setProperty(IDs::srvAlwaysSyncNodes, true, nullptr);
+    pluginState.addChild(srvRoot, -1, nullptr);
+
     juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);
     for(int i=0;i<NUMBER_OF_CONTROL_BUSES;i++) {
         juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);

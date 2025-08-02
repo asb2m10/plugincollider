@@ -88,6 +88,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
+    void valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&) override;
+    void valueTreeChildOrderChanged(juce::ValueTree&, int, int) override;
 
     /**
      * Replace the synthdef in the plugin state with the one in the memory block.
@@ -127,9 +129,15 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     juce::ApplicationProperties appProp;
 
-    void parameterValueChanged (int parameterIndex, float newValue) override;
-    void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override {
+    void parameterValueChanged(int parameterIndex, float newValue) override;
+    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {
     }
+
+    /**
+     * Tells if the event is a base event for reloading nodes.
+     * @param parentTree the parent tree of the event
+     */
+    bool isNodeReloadBaseEvent(juce::ValueTree& parentTree);
 
     bool bindUdpPort();
 

@@ -38,25 +38,34 @@ public:
     }
 };
 
-class FXNode : public BaseNode {
+class SynthNode : public BaseNode {
+protected:
     bool valid = false;
-public:
     std::unordered_map<int, float> precompiledMapValue;
     std::unordered_map<int, int> controlBusMap;
-    char synthName[127];
-
-    FXNode(juce::ValueTree &vt, int parentid) : BaseNode(vt, parentid) {
+    char synthName[127] = { 0 };
+public:
+    SynthNode(juce::ValueTree &vt, int parentid) : BaseNode(vt, parentid) {
         if ( ! vt.hasProperty(IDs::synthBlob) ) {
             return;
         }
 
         juce::String name = vt[IDs::synthName];
         strncpy(synthName, name.toRawUTF8(), 127);
+    }
 
+    bool isValid() const {
+        return valid;
+    }
+};
+
+class FXNode : public SynthNode {
+public:
+    FXNode(juce::ValueTree &vt, int parentid) : SynthNode(vt, parentid) {
         juce::ValueTree parameters = vt.getChildWithName(IDs::parameters);
         for(int i=0;i< parameters.getNumChildren(); i++) {
             juce::ValueTree param = parameters.getChild(i);
-            int cbIdx = param[IDs::cbIdx];
+            int cbIdx = param.getProperty(IDs::pControlBus);
             if ( cbIdx != -1 ) {
                 controlBusMap.emplace(i, cbIdx);
                 continue;
@@ -67,7 +76,6 @@ public:
                 precompiledMapValue.emplace(i, value);
             }
         }
-
         type = NodeType::FX;
         valid = true;
     }
@@ -81,19 +89,15 @@ public:
             superCollider.rt_setNodeValue(nodeid, p.first, p.second);
         }
     }
-
-    bool isValid() const {
-        return valid;
-    }
 };
 
-class MidiNode : public FXNode {
+class MidiNode : public SynthNode {
     int lowNote = 0, highNote = 127, freqIdx = -1, velocityIdx = -1, gateIdx = -1;
     bool mono = false, legato = false;
     int activeSynths[127] = { 0 };
 
 public:
-    MidiNode(juce::ValueTree &vt, int parentid) : FXNode(vt, parentid) {
+    MidiNode(juce::ValueTree &vt, int parentid) : SynthNode(vt, parentid) {
         juce::String range = vt[IDs::synthNoteRange];
         juce::StringArray token;
         token.addTokens(range, " ");
@@ -120,7 +124,7 @@ public:
                 continue;
             }
 
-            int cbIdx = param[IDs::cbIdx];
+            int cbIdx = param.getProperty(IDs::pControlBus);
             if ( cbIdx != -1 ) {
                 controlBusMap.emplace(i, cbIdx);
                 continue;
@@ -133,6 +137,7 @@ public:
         }
 
         type = NodeType::Note;
+        valid = true;
     }
 
     void noteOn(SCProcess &superCollider, int note, float velocity) {
@@ -149,10 +154,10 @@ public:
         }
         activeSynths[note] = node;
         for(const auto &p: controlBusMap) {
-            superCollider.rt_assignControlBus(nodeid, p.first, p.second);
+            superCollider.rt_assignControlBus(node, p.first, p.second);
         }
         for(const auto &p: precompiledMapValue) {
-            superCollider.rt_setNodeValue(nodeid, p.first, p.second);
+            superCollider.rt_setNodeValue(node, p.first, p.second);
         }
         if ( freqIdx != -1 ) {
             superCollider.rt_setNodeValue(node, freqIdx, juce::MidiMessage::getMidiNoteInHertz(note));
@@ -224,18 +229,15 @@ public:
     void rt_allocate(SCProcess &superCollider) {
         for(auto &fx: globalnodes) {
             switch(fx->type) {
-                case BaseNode::NodeType::Group: { 
+                case BaseNode::NodeType::Group:
+                case BaseNode::NodeType::Note:
                     superCollider.rt_newGroup(fx->parentid, fx->nodeid);
                     break;
-                }
                 case BaseNode::NodeType::FX: {
                     FXNode *fxNode = static_cast<FXNode *>(fx.get());
                     fxNode->rt_start(superCollider);
                     break;
                 }
-                case BaseNode::NodeType::Note:
-                    superCollider.rt_newGroup(fx->parentid, fx->nodeid);
-                    break;
             }
         }
     }
@@ -260,7 +262,6 @@ public:
     }
 
     void rt_processMidiMessages(SCProcess &superCollider, juce::MidiBuffer &midiMessages) {
-        // // Process the nodes
         for (const auto meta : midiMessages) {
             const auto msg = meta.getMessage();
             if ( msg.isNoteOn() ) {

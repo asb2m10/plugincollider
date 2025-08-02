@@ -155,6 +155,7 @@ void PluginColliderAudioProcessor::reloadNodeContainer() {
         reply.notify(0);
     });
     reply.wait();
+    // since we swap the container, the unique_ptr will automatically free the old one
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -218,7 +219,6 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
     std::unique_ptr<SynthDef> synthDef;
     synthDef.reset(SynthDef::fromMemory(block));
 
-    target.setProperty(IDs::synthBlob, block, nullptr);
     target.setProperty(IDs::synthName, synthDef->getName(), nullptr);
 
     target.removeChild(target.getChildWithName(IDs::parameters), nullptr);
@@ -233,6 +233,8 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
         parameters.addChild(parameter, i, nullptr);
     }
     target.addChild(parameters, -1, nullptr);
+
+    target.setProperty(IDs::synthBlob, block, nullptr);
 
     return true;
 }
@@ -252,6 +254,14 @@ void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
     }
 }
 
+bool PluginColliderAudioProcessor::isNodeReloadBaseEvent(juce::ValueTree &parentTree) {
+    if ( ! static_cast<bool>(pluginState.getChildWithName(IDs::srvRoot).getProperty(IDs::srvAlwaysSyncNodes, false)) )
+        return false;
+    if ( pluginState.getChildWithName(IDs::rootnode) != parentTree || !parentTree.isAChildOf(pluginState.getChildWithName(IDs::rootnode)) )
+        return false;
+    return true;
+}
+
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
      if ( property == IDs::pCurrentValue ) {
         int idx = treeWhosePropertyHasChanged.getProperty(IDs::pIdx);
@@ -268,6 +278,7 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
 
     if ( property == IDs::pControlBus ) {
         reloadNodeContainer();
+        return;
     }
 
     if ( property == IDs::cbName ) {
@@ -276,6 +287,7 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
         controlBus[idx]->setName(name);
         const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
         updateHostDisplay(details);
+        return;
     }
 
     if ( property == IDs::cbRange ) {
@@ -284,10 +296,35 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
         controlBus[idx]->setRange(range);
         const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
         updateHostDisplay(details);
+        return;
+    }
+
+    /* From here, we reload nodes only if requested */
+    if ( ! static_cast<bool>(pluginState.getChildWithName(IDs::srvRoot).getProperty(IDs::srvAlwaysSyncNodes, false)) )
+        return;
+
+    if ( property == IDs::synthBlob ) {
+        reloadNodeContainer();
+        return;
     }
 }
 
-void PluginColliderAudioProcessor::valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
+void PluginColliderAudioProcessor::valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
+    if ( ! isNodeReloadBaseEvent(parentTree) )
+        return;
+    reloadNodeContainer();
+}
+
+void PluginColliderAudioProcessor::valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childTree) {
+    if ( ! isNodeReloadBaseEvent(parentTree) )
+        return;
+    reloadNodeContainer();
+}
+
+void PluginColliderAudioProcessor::valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIdx, int newIdx) {
+    if ( ! isNodeReloadBaseEvent(parentTree) )
+        return;
+    reloadNodeContainer();
 }
 
 bool PluginColliderAudioProcessor::getActivityMonitor() {
