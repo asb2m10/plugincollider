@@ -280,7 +280,7 @@ SCErr SCProcess::rt_newGroup(int parentNode, int destGroup) {
         } else
             return err;
     } else {
-        Group_AddHead(parent, &newGroup->mNode);
+        Group_AddTail(parent, &newGroup->mNode);
     }
     return 0;
 }

@@ -411,13 +411,15 @@ public:
             menu.addSubMenu("Map to control bus...", controlBusSelection);
             menu.addSeparator();
             */
-            menu.addItem("Free node", true, false, [this] {
-                processor.command.push([this](PluginColliderAudioProcessor &proc) {
-                    proc.superCollider.rt_freeNode(nodeId);
+            if ( nodeId != 1 ) {
+                menu.addItem("Free node", true, false, [this] {
+                    processor.command.push([this](PluginColliderAudioProcessor &proc) {
+                        proc.superCollider.rt_freeNode(nodeId);
+                    });
+                    getParentItem()->setOpen(false);
                 });
-                getParentItem()->setOpen(false);
-            });
-            menu.showMenuAsync(juce::PopupMenu::Options());
+                menu.showMenuAsync(juce::PopupMenu::Options());
+            }
         }
     }
 };

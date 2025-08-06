@@ -231,10 +231,12 @@ public:
             switch(fx->type) {
                 case BaseNode::NodeType::Group:
                 case BaseNode::NodeType::Note:
+                    //scprintf("Add group %d parent %d\n", fx->nodeid, fx->parentid);
                     superCollider.rt_newGroup(fx->parentid, fx->nodeid);
                     break;
                 case BaseNode::NodeType::FX: {
                     FXNode *fxNode = static_cast<FXNode *>(fx.get());
+                    //scprintf("Add fx %d parent %d\n", fxNode->nodeid, fxNode->parentid);
                     fxNode->rt_start(superCollider);
                     break;
                 }

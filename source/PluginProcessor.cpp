@@ -146,6 +146,8 @@ void PluginColliderAudioProcessor::releaseResources() {
 }
 
 void PluginColliderAudioProcessor::reloadNodeContainer() {
+    scprintf("Rebuilding node tree\n");
+
     ASyncReply<std::unique_ptr<NodeContainer>> reply;
     reply.content = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
     command.push([this, &reply](PluginColliderAudioProcessor &proc) {
@@ -257,7 +259,7 @@ void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
 bool PluginColliderAudioProcessor::isNodeReloadBaseEvent(juce::ValueTree &parentTree) {
     if ( ! static_cast<bool>(pluginState.getChildWithName(IDs::srvRoot).getProperty(IDs::srvAlwaysSyncNodes, false)) )
         return false;
-    if ( pluginState.getChildWithName(IDs::rootnode) != parentTree || !parentTree.isAChildOf(pluginState.getChildWithName(IDs::rootnode)) )
+    if ( pluginState.getChildWithName(IDs::rootnode) != parentTree && !parentTree.isAChildOf(pluginState.getChildWithName(IDs::rootnode)) )
         return false;
     return true;
 }
@@ -316,9 +318,7 @@ void PluginColliderAudioProcessor::valueTreeChildRemoved(juce::ValueTree& parent
 }
 
 void PluginColliderAudioProcessor::valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childTree) {
-    if ( ! isNodeReloadBaseEvent(parentTree) )
-        return;
-    reloadNodeContainer();
+    // We don't care about childTree node add, only if there is a synthBlob change (see valueTreePropertyChanged)
 }
 
 void PluginColliderAudioProcessor::valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIdx, int newIdx) {

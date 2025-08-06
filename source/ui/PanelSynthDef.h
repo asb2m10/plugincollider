@@ -261,7 +261,7 @@ public:
         addAndMakeVisible(labelDash);
         addAndMakeVisible(lowNote);
         addAndMakeVisible(highNote);
-        addAndMakeVisible(mono);
+        //addAndMakeVisible(mono);
 
         labelRange.setText("Note Range", juce::dontSendNotification);
         labelDash.setText(" - ", juce::dontSendNotification);
