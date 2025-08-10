@@ -144,14 +144,19 @@ public:
         if ( note < lowNote || note > highNote )
             return;
 
+        int lastNode = activeSynths[note];
+        if ( lastNode != 0 ) {
+            if ( superCollider.rt_getNode(lastNode).isValid() ) {
+                if ( gateIdx != -1 ) {
+                    superCollider.rt_freeNode(lastNode);
+                }
+            }
+        }
+
         int node = superCollider.rt_newSynth((int *) synthName, -1, nodeid);
         if ( node == 0 )
             return;
-        int lastNode = activeSynths[note];
-        if ( lastNode != 0 ) {
-            if ( superCollider.rt_getNode(lastNode).isValid() )
-                superCollider.rt_freeNode(lastNode);
-        }
+
         activeSynths[note] = node;
         for(const auto &p: controlBusMap) {
             superCollider.rt_assignControlBus(node, p.first, p.second);
@@ -167,15 +172,26 @@ public:
         }
     }
 
+    /**
+     * Trigger gate = 0 for midi note off
+     */
     void noteOff(SCProcess &superCollider, int note) {
         if ( note < lowNote || note > highNote )
             return;
-    
         if ( activeSynths[note] != 0 ) {
             if ( superCollider.rt_getNode(activeSynths[note]).isValid() && gateIdx != -1 ) {
                 superCollider.rt_setNodeValue(activeSynths[note], gateIdx, 0);
             }
         }
+    }
+
+    /**
+     * Ignore gate message, kill the node
+     */
+    void nodeOff(SCProcess &superCollider, int note) {
+        if ( note < lowNote || note > highNote )
+            return;
+        superCollider.rt_freeNode(activeSynths[note]);
     }
 
     void panic(SCProcess &superCollider) {
@@ -264,15 +280,22 @@ public:
     }
 
     void rt_processMidiMessages(SCProcess &superCollider, juce::MidiBuffer &midiMessages) {
+        int scheduledNote[128] = { 0 };
+
         for (const auto meta : midiMessages) {
             const auto msg = meta.getMessage();
+            int note = msg.getNoteNumber();
             if ( msg.isNoteOn() ) {
+                scheduledNote[note] = 1;
                 for(auto midinote: midinodes) {
-                    midinote->noteOn(superCollider, msg.getNoteNumber(), msg.getFloatVelocity());
+                    midinote->noteOn(superCollider, note, msg.getFloatVelocity());
                 }
             } else if ( msg.isNoteOff() ) {
                 for(auto midinote: midinodes) {
-                    midinote->noteOff(superCollider, msg.getNoteNumber());
+                    if ( scheduledNote[note] == 0 )
+                        midinote->noteOff(superCollider, note);
+                    else
+                        midinote->nodeOff(superCollider, note);
                 }
             }
         }
