@@ -265,11 +265,7 @@ public:
             int nodeId = it->get()->nodeid;
             if ( nodeId == 1 )
                 continue;
-            if ( it->get()->type == BaseNode::NodeType::FX ) {
-                superCollider.rt_freeNode(nodeId);
-            } else {
-                superCollider.rt_freeGroup(nodeId);
-            }
+            superCollider.rt_freeNode(nodeId);
         }
     }
 

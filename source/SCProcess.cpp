@@ -252,10 +252,11 @@ SCNodeWalker SCProcess::rt_getNode(int destNode) {
     return SCNodeWalker(World_GetNode(world, destNode));
 }
 
-void SCProcess::rt_freeGroup(int rootGroup) {
+void SCProcess::rt_freeGroup(int rootGroup) {\
     SCNodeWalker node = rt_getNode(rootGroup);
-    if ( node.isValid() && node.isGroup() )
+    if ( node.isValid() && node.isGroup() ) {
         Group_DeleteAll(node.group());
+    }
 }
 
 void SCProcess::rt_freeNode(int destNode) {

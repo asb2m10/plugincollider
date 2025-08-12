@@ -163,8 +163,8 @@ public:
         addAndMakeVisible(synthDefTable);
 
         loaddef.onClick = [this] () {
-            scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-                                                juce::File(), "*.scsyndef");
+            scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the SynthDef you want to load...",
+                                                juce::File(), "*.scsyndef;*.scd");
             auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
             scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
                 juce::File scfile(chooser.getResult());

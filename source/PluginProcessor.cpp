@@ -129,9 +129,13 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath) ) {
-        rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
-        container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
-        container->rt_allocate(superCollider);
+        try {
+            rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
+            container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
+            container->rt_allocate(superCollider);
+        } catch (std::exception &e) {
+            logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
+        }
     }
 
     loadMeasurer.reset(sampleRate, samplesPerBlock);
@@ -242,7 +246,7 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
 }
 
 void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
-    if ( vt.hasType(IDs::groupnode) ) {
+    if ( vt.hasType(IDs::groupnode) || vt.hasType(IDs::rootnode) ) {
         for(int i=0;i<vt.getNumChildren();i++) {
             rt_loadSynthDef(vt.getChild(i));
         }
@@ -250,8 +254,16 @@ void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
     }
     if ( vt.hasType(IDs::notenode) || vt.hasType(IDs::fxnode) ) {
         juce::MemoryBlock *block = vt.getProperty(IDs::synthBlob).getBinaryData();
+        //scprintf("Trying synthdef: %s\n", synthDef->getName().toRawUTF8());
         if ( block != nullptr ) {
-            superCollider.rt_loadSynthDef(block);
+            if ( !superCollider.rt_loadSynthDef(block) ) {
+                scprintf("Error loading synthdef\n");
+            }
+            SynthDef *synthDef = SynthDef::fromMemory(*block);
+            //scprintf("Loaded synthdef: %s\n", synthDef->getName().toRawUTF8());
+        } else {
+            juce::String ref = vt.getProperty(IDs::synthName).toString();
+            scprintf("Warning: unable to get synthdef '%s' binary data, was the plugin state changed externally (like the internal plugin state viewer) ?\n", ref.toRawUTF8());
         }
     }
 }
