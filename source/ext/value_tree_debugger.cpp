@@ -44,7 +44,7 @@ public:
                 Value v = tree.getPropertyAsValue (name, nullptr);
                 TextPropertyComponent* tpc;
 
-                if (v.getValue().isObject()) {
+                if (v.getValue().isObject() || v.getValue().isBinaryData()) {
                     tpc = new TextPropertyComponent (noEditValue, name.toString(), maxChars, false);
                     tpc->setEnabled (false);
                 } else {
