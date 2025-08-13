@@ -51,7 +51,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 #endif
 
     void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
-
+    void processBlockBypassed(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
     //==============================================================================
     juce::AudioProcessorEditor *createEditor() override;
     bool hasEditor() const override;
@@ -116,10 +116,16 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
         return nodeCount;
     }
 
+    // Reaper doesnt signal the plugin that it is suspended, we need to check the timestamp of the
+    // last audio proc call to detect that the audioProc is not run anymore
+    bool isAudioProcSuspended();
+
+    template <typename Item>
+    bool execOnAudioThread(Item&& item) noexcept;
+
   private:
     juce::String pluginPath;
     juce::String synthPath;
-
     juce::AudioParameterFloat *gain;
     ControlBusParameter *controlBus[NUMBER_OF_CONTROL_BUSES];
 
@@ -142,6 +148,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     bool bindUdpPort();
 
     std::unique_ptr<NodeContainer> container;
+
+    double lastProcThreshold;
+    double lastProcRun;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)
 };

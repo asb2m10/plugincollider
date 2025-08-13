@@ -37,8 +37,7 @@
 #include <juce_osc/juce_osc.h>
 
 /**
- * @brief This class represent a compiled SynthDef file.
- *
+ * @brief This class represent a compiled SynthDef file.1
  */
 class SynthDef {
     juce::MemoryBlock memoryBlock;
@@ -98,7 +97,6 @@ public:
     }
 };
 
-
 // Dirty cheap logger
 class SuperLogger : public juce::Logger {
 public:
@@ -112,7 +110,7 @@ public:
     }
 
     /**
-     * Overriden messasge that might be called from static context.
+     * Overridden message that might be called from static context.
      */
     void logMessage(const juce::String &message) override {
         if (content.size() > 4096)

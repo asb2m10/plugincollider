@@ -137,14 +137,14 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
             logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
         }
     }
-
     loadMeasurer.reset(sampleRate, samplesPerBlock);
+    lastProcRun = juce::Time::getMillisecondCounterHiRes();
+    lastProcThreshold = ((float)sampleRate) / samplesPerBlock;
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
-    container->rt_free(superCollider);
+    if ( container != nullptr )
+        container->rt_free(superCollider);
     loadMeasurer.reset();
     superCollider.quit();
 }
@@ -164,6 +164,12 @@ void PluginColliderAudioProcessor::reloadNodeContainer() {
     // since we swap the container, the unique_ptr will automatically free the old one
 }
 
+bool PluginColliderAudioProcessor::isAudioProcSuspended() {
+    if ( juce::Time::getMillisecondCounterHiRes() - lastProcRun > lastProcThreshold )
+        return true;
+    return false;
+}
+
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool PluginColliderAudioProcessor::isBusesLayoutSupported(
     const BusesLayout &layouts) const {
@@ -178,6 +184,7 @@ void PluginColliderAudioProcessor::processBlock(
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
+    lastProcRun = juce::Time::getMillisecondCounterHiRes();
     juce::AudioProcessLoadMeasurer::ScopedTimer timer(loadMeasurer, buffer.getNumSamples());
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
@@ -193,8 +200,12 @@ void PluginColliderAudioProcessor::processBlock(
     } catch (std::exception &e) {
         logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
     }
-
     buffer.applyGain(*gain);
+}
+
+void PluginColliderAudioProcessor::processBlockBypassed(juce::AudioBuffer<float> &audio_buffer,
+    juce::MidiBuffer &midi_message_metadatas) {
+    AudioProcessor::processBlockBypassed(audio_buffer, midi_message_metadatas);
 }
 
 //==============================================================================
@@ -213,6 +224,15 @@ void PluginColliderAudioProcessor::parameterValueChanged(int parameterIndex, flo
     });
 }
 
+template <typename Item>
+bool PluginColliderAudioProcessor::execOnAudioThread(Item&& item) noexcept {
+    if ( isAudioProcSuspended() )
+        return false;
+
+    command.push(std::forward<Item>(item));
+    return true;
+}
+
 bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
     try {
         SynthDef synthDef(block);
@@ -221,6 +241,10 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
         command.push([this, &reply, &block](PluginColliderAudioProcessor &proc) {
             reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
         });
+        // execOnAudioThread([this, &reply, &block](PluginColliderAudioProcessor &proc) {
+        //      reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
+        // });
+
         if ( reply.wait() != 0 ) {
             return false;
         }
