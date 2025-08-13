@@ -214,33 +214,36 @@ void PluginColliderAudioProcessor::parameterValueChanged(int parameterIndex, flo
 }
 
 bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
-    ASyncReply<int> reply;
-    command.push([this, &reply, &block](PluginColliderAudioProcessor &proc) {
-        reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
-    });
-    if ( reply.wait() != 0 ) {
+    try {
+        SynthDef synthDef(block);
+
+        ASyncReply<int> reply;
+        command.push([this, &reply, &block](PluginColliderAudioProcessor &proc) {
+            reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
+        });
+        if ( reply.wait() != 0 ) {
+            return false;
+        }
+
+        target.setProperty(IDs::synthName, synthDef.getName(), nullptr);
+
+        target.removeChild(target.getChildWithName(IDs::parameters), nullptr);
+        juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
+        for(int i=0;i<synthDef.getParameters().size();i++) {
+            juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
+            parameter.setProperty(IDs::pName, synthDef.getParameters()[i], nullptr);
+            parameter.setProperty(IDs::pIdx, i, nullptr);
+            parameter.setProperty(IDs::pDefaultValue, synthDef.getParametersValues()[i], nullptr);
+            parameter.setProperty(IDs::pRange, synthDef.guessParameterRange(i), nullptr);
+            parameter.setProperty(IDs::pControlBus, -1, nullptr);
+            parameters.addChild(parameter, i, nullptr);
+        }
+        target.addChild(parameters, -1, nullptr);
+
+        target.setProperty(IDs::synthBlob, block, nullptr);
+    } catch (InvalidSynthDef &except) {
         return false;
     }
-
-    std::unique_ptr<SynthDef> synthDef;
-    synthDef.reset(SynthDef::fromMemory(block));
-
-    target.setProperty(IDs::synthName, synthDef->getName(), nullptr);
-
-    target.removeChild(target.getChildWithName(IDs::parameters), nullptr);
-    juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
-    for(int i=0;i<synthDef->getParameters().size();i++) {
-        juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
-        parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
-        parameter.setProperty(IDs::pIdx, i, nullptr);
-        parameter.setProperty(IDs::pDefaultValue, synthDef->getParametersValues()[i], nullptr);
-        parameter.setProperty(IDs::pRange, synthDef->guessParameterRange(i), nullptr);
-        parameter.setProperty(IDs::pControlBus, -1, nullptr);
-        parameters.addChild(parameter, i, nullptr);
-    }
-    target.addChild(parameters, -1, nullptr);
-
-    target.setProperty(IDs::synthBlob, block, nullptr);
 
     return true;
 }
@@ -253,13 +256,15 @@ void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
         return;
     }
     if ( vt.hasType(IDs::notenode) || vt.hasType(IDs::fxnode) ) {
+        if ( ! (vt.hasProperty(IDs::synthBlob) && vt.hasProperty(IDs::synthName)) )
+            return;
         juce::MemoryBlock *block = vt.getProperty(IDs::synthBlob).getBinaryData();
         //scprintf("Trying synthdef: %s\n", synthDef->getName().toRawUTF8());
         if ( block != nullptr ) {
             if ( !superCollider.rt_loadSynthDef(block) ) {
                 scprintf("Error loading synthdef\n");
             }
-            SynthDef *synthDef = SynthDef::fromMemory(*block);
+            //SynthDef *synthDef = SynthDef::fromMemory(*block);
             //scprintf("Loaded synthdef: %s\n", synthDef->getName().toRawUTF8());
         } else {
             juce::String ref = vt.getProperty(IDs::synthName).toString();

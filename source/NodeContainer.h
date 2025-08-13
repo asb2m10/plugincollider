@@ -23,6 +23,11 @@
 #include "PluginModel.h"
 #include "SCProcess.h"
 
+class InvalidSynthDef : public std::invalid_argument {
+public:
+    InvalidSynthDef(const char *arg) : std::invalid_argument(arg) {}
+};
+
 class BaseNode {
 public:
     int nodeid, parentid;
@@ -40,22 +45,15 @@ public:
 
 class SynthNode : public BaseNode {
 protected:
-    bool valid = false;
     std::unordered_map<int, float> precompiledMapValue;
     std::unordered_map<int, int> controlBusMap;
     char synthName[127] = { 0 };
 public:
     SynthNode(juce::ValueTree &vt, int parentid) : BaseNode(vt, parentid) {
-        if ( ! vt.hasProperty(IDs::synthBlob) ) {
-            return;
-        }
-
+        if ( ! (vt.hasProperty(IDs::synthBlob) && vt.hasProperty(IDs::synthName)) )
+            throw InvalidSynthDef("Missing synth blob or name");
         juce::String name = vt[IDs::synthName];
         strncpy(synthName, name.toRawUTF8(), 127);
-    }
-
-    bool isValid() const {
-        return valid;
     }
 };
 
@@ -77,7 +75,6 @@ public:
             }
         }
         type = NodeType::FX;
-        valid = true;
     }
 
     void rt_start(SCProcess &superCollider) {
@@ -137,7 +134,6 @@ public:
         }
 
         type = NodeType::Note;
-        valid = true;
     }
 
     void noteOn(SCProcess &superCollider, int note, float velocity) {
@@ -213,26 +209,25 @@ class NodeContainer {
 
     void insertNode(juce::ValueTree nodes, int parentId) {
         for (auto node : nodes) {
-            if ( node.hasType(IDs::notenode) ) {
-                std::unique_ptr<MidiNode> midiNode = std::make_unique<MidiNode>(node, parentId);
-                if ( ! midiNode->isValid() )
+            try {
+                if ( node.hasType(IDs::notenode) ) {
+                    std::unique_ptr<MidiNode> midiNode = std::make_unique<MidiNode>(node, parentId);
+                    midinodes.push_back(midiNode.get());
+                    globalnodes.emplace_back(std::move(midiNode));
                     continue;
-                midinodes.push_back(midiNode.get());
-                globalnodes.emplace_back(std::move(midiNode));
-                continue;
-            }
-            
-            if ( node.hasType(IDs::fxnode) ) {
-                std::unique_ptr<FXNode> fxNode = std::make_unique<FXNode>(node, parentId);
-                if ( ! fxNode->isValid() )
-                    continue;
-                globalnodes.emplace_back(std::move(fxNode));
-                continue;
-             }
+                }
 
-            if (node.hasType(IDs::groupnode)) {
-                globalnodes.emplace_back(std::make_unique<BaseNode>(node, parentId));
-                insertNode(node, node[IDs::nodeid]);
+                if ( node.hasType(IDs::fxnode) ) {
+                    globalnodes.emplace_back(std::make_unique<FXNode>(node, parentId));
+                    continue;
+                }
+
+                if (node.hasType(IDs::groupnode)) {
+                    globalnodes.emplace_back(std::make_unique<BaseNode>(node, parentId));
+                    insertNode(node, node[IDs::nodeid]);
+                }
+            } catch ( const InvalidSynthDef & e) {
+                // The node has no SynthDef defined, we don't insert it into the runtime, pass on
             }
         }
     }

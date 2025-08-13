@@ -292,9 +292,10 @@ public:
             juce::PopupMenu menu;
             menu.addItem("Reset Project", true, false, [this] {
                 // Clear group nodes before resetting whole node tree
-                getSubItem(1)->setOpen(false);
+                this->removeSubItem(1);
                 audioProcessor.resetPluginState();
                 audioProcessor.superCollider.reboot();
+                this->addSubItem(new GroupNodeItem(audioProcessor, audioProcessor.pluginState.getChildWithName(IDs::rootnode), panel), 1);
             });
             menu.showMenuAsync(juce::PopupMenu::Options());
         }

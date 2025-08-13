@@ -47,15 +47,7 @@ class SynthDef {
     std::unique_ptr<float []> parametersValues;
 
 public:
-    static SynthDef *fromFile(juce::File file) {
-        if (!file.existsAsFile())
-            return nullptr;
-        juce::MemoryBlock content;
-        if (!file.loadFileAsData(content))
-            return nullptr;
-        return SynthDef::fromMemory(content);
-    }
-    static SynthDef *fromMemory(juce::MemoryBlock &newContent);
+    SynthDef(juce::MemoryBlock &newContent);
 
     juce::MemoryBlock &getContent() {
         return memoryBlock;

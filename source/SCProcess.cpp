@@ -66,30 +66,28 @@ public:
     }
 };
 
-SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
+SynthDef::SynthDef(juce::MemoryBlock &newContent) {
     if (newContent.getSize() < 0)
-        return nullptr;
+        throw InvalidSynthDef("MemoryBlock empty");
     MemoryInputPStream stream(newContent);
 
     // Check header
     if (stream.readIntBigEndian() != (('S' << 24) | ('C' << 16) | ('g' << 8) | 'f') /*'SCgf'*/) {
         scprintf("Invalid SynthDef header\n");
-        return nullptr;
+        throw InvalidSynthDef("Invalid SyntDef header");
     }
 
-    // synthdef version
+    // SynthDef version
     int version = stream.readIntBigEndian();
     if ( version != 2 ) {
         scprintf("SynthDef version %d not supported\n", version);
-        return nullptr;
+        throw InvalidSynthDef("SynthDef version not supported");
     }
-
     // number of synth definition in file
     stream.readShortBigEndian();
 
-    SynthDef *ret = new SynthDef();
-    ret->memoryBlock = newContent;
-    ret->name = stream.readPString();
+    memoryBlock = newContent;
+    name = stream.readPString();
 
     /* number of constant */
     int numConstant = stream.readIntBigEndian();
@@ -99,9 +97,9 @@ SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
     int numParametersValues = stream.readIntBigEndian();
     jassert(numParametersValues<256);
 
-    ret->parametersValues.reset(new float[numParametersValues]);
+    parametersValues.reset(new float[numParametersValues]);
     for(int i=0;i<numParametersValues;i++) {
-        ret->parametersValues[i] = stream.readFloatBigEndian();
+        parametersValues[i] = stream.readFloatBigEndian();
     }
 
     /* number of parameters names */
@@ -109,10 +107,9 @@ SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
     jassert(numParameters<256);
 
     for(int i=0;i<numParameters;i++) {
-        ret->parameters.add(stream.readPString());
+        parameters.add(stream.readPString());
         int pos = stream.readIntBigEndian();
     }
-    return ret;
 }
 
 SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
