@@ -10,6 +10,9 @@ Now support Linux, macOS and Windows.
 *Plugincollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
+## Version 0.4.0
+* Multiple SynthDef snapshot tree configuration: route midi SynthDef outputs to dedicated SynthDef effects
+
 ## Version 0.3.1
 * Fix sessions issue upon reloading plugin FX
 
@@ -68,7 +71,7 @@ If for example your SynthDef doesn't have the gate arguments, the node will be f
 # TODO
 - [ ] add [CLAP](https://github.com/free-audio/clap) plugin format
 - [x] assign scsyndef parameters to controlbus (and plug parameters values)
-- [ ] multi scsyndef support
+- [x] multi scsyndef support
 - [x] implement /freq and /amp from DAW midi message
 - [ ] *macOS* enable Plugincollider to use SuperCollider scsynth plugin that the user previously installed (handle notarization)
 - [x] *Windows* bundle sndfile.dll within the plugin installation

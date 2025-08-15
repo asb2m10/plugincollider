@@ -157,6 +157,15 @@ void PluginColliderAudioProcessorEditor::timerCallback() {
                       "units: %i graph: %i groups: %i cpu: %0.3f xrun: %d", worldStats.mNumUnits,
                       worldStats.mNumGraphs, worldStats.mNumGroups, load->getLoadAsPercentage(), load->getXRunCount()),
                   juce::dontSendNotification);
+
+    if ( audioProcessor.isAudioProcSuspended() ) {
+        if ( isEnabled() )
+            setEnabled(false);
+    } else {
+        if ( !isEnabled() ) {
+            setEnabled(true);
+        }
+    }
 }
 
 juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevelMenuIndex, const juce::String& str) {

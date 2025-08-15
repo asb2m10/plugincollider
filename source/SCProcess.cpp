@@ -31,6 +31,8 @@
 #include "SC_Group.h"
 #include "SC_UnitDef.h"
 
+#include "NodeContainer.h"
+
 const int kDefaultNumWireBufs = 64;
 const int kDefaultRtMemorySize = 8192;
 
@@ -64,30 +66,28 @@ public:
     }
 };
 
-SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
+SynthDef::SynthDef(juce::MemoryBlock &newContent) {
     if (newContent.getSize() < 0)
-        return nullptr;
+        throw InvalidSynthDef("MemoryBlock empty");
     MemoryInputPStream stream(newContent);
 
     // Check header
     if (stream.readIntBigEndian() != (('S' << 24) | ('C' << 16) | ('g' << 8) | 'f') /*'SCgf'*/) {
         scprintf("Invalid SynthDef header\n");
-        return nullptr;
+        throw InvalidSynthDef("Invalid SyntDef header");
     }
 
-    // synthdef version
+    // SynthDef version
     int version = stream.readIntBigEndian();
     if ( version != 2 ) {
         scprintf("SynthDef version %d not supported\n", version);
-        return nullptr;
+        throw InvalidSynthDef("SynthDef version not supported");
     }
-
     // number of synth definition in file
     stream.readShortBigEndian();
 
-    SynthDef *ret = new SynthDef();
-    ret->memoryBlock = newContent;
-    ret->name = stream.readPString();
+    memoryBlock = newContent;
+    name = stream.readPString();
 
     /* number of constant */
     int numConstant = stream.readIntBigEndian();
@@ -97,9 +97,9 @@ SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
     int numParametersValues = stream.readIntBigEndian();
     jassert(numParametersValues<256);
 
-    ret->parametersValues.reset(new float[numParametersValues]);
+    parametersValues.reset(new float[numParametersValues]);
     for(int i=0;i<numParametersValues;i++) {
-        ret->parametersValues[i] = stream.readFloatBigEndian();
+        parametersValues[i] = stream.readFloatBigEndian();
     }
 
     /* number of parameters names */
@@ -107,10 +107,9 @@ SynthDef *SynthDef::fromMemory(juce::MemoryBlock &newContent) {
     jassert(numParameters<256);
 
     for(int i=0;i<numParameters;i++) {
-        ret->parameters.add(stream.readPString());
+        parameters.add(stream.readPString());
         int pos = stream.readIntBigEndian();
     }
-    return ret;
 }
 
 SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
@@ -252,8 +251,9 @@ SCNodeWalker SCProcess::rt_getNode(int destNode) {
 
 void SCProcess::rt_freeGroup(int rootGroup) {
     SCNodeWalker node = rt_getNode(rootGroup);
-    if ( node.isValid() && node.isGroup() )
+    if ( node.isValid() && node.isGroup() ) {
         Group_DeleteAll(node.group());
+    }
 }
 
 void SCProcess::rt_freeNode(int destNode) {
@@ -278,7 +278,7 @@ SCErr SCProcess::rt_newGroup(int parentNode, int destGroup) {
         } else
             return err;
     } else {
-        Group_AddHead(parent, &newGroup->mNode);
+        Group_AddTail(parent, &newGroup->mNode);
     }
     return 0;
 }
@@ -318,13 +318,10 @@ void SCProcess::rt_dumpTree() {
     Group_DumpTreeAndControls(rt_getNode(0).group());
 }
 
-int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
-    char synthName[127] = { 0 };
-    strcpy(synthName, name.toRawUTF8());
-
-    GraphDef* def = World_GetGraphDef(world, (int*) &synthName);
+int32_t SCProcess::rt_newSynth(int *hashname, int newId, int destNode) {
+    GraphDef* def = World_GetGraphDef(world, hashname);
     if ( def == nullptr ) {
-        logger.scprintf("Syntdef not found: %s\n", name.toRawUTF8());
+        logger.scprintf("Syntdef not found: %s\n", (char *) hashname);
         return 0;
     }
 
@@ -340,7 +337,7 @@ int32_t SCProcess::rt_newSynth(juce::String name, int newId, int destNode) {
     }
 
     if ( destNode != 0 ) {
-        Group_AddTail(rt_getNode(kDefaultGroupId).group(), &graph->mNode);
+        Group_AddTail(rt_getNode(destNode).group(), &graph->mNode);
     }
 
     return graph->mNode.mID;

@@ -19,6 +19,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/PluginEditor.h"
+#include "NodeContainer.h"
 #include "UDPPort.h"
 
 //==============================================================================
@@ -128,26 +129,45 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
                         getTotalNumOutputChannels(), pluginPath, synthPath) ) {
-        juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
-        if ( synth.isValid() ) {
-            if ( synth.hasProperty(IDs::synthBlob) && synth.getProperty(IDs::synthBlob).isBinaryData() ) {
-                superCollider.rt_loadSynthDef(synth.getProperty(IDs::synthBlob).getBinaryData());
-                recompileState();
-                command.call(*this);
-                if ( synth.getProperty(IDs::staticSynth) )
-                    rt_playSynth();
-            }
+        try {
+            rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
+            container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
+            container->rt_allocate(superCollider);
+        } catch (std::exception &e) {
+            logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
         }
     }
-
     loadMeasurer.reset(sampleRate, samplesPerBlock);
+    lastProcRun = juce::Time::getMillisecondCounterHiRes();
+    lastProcThreshold = ((float)sampleRate) / samplesPerBlock;
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+    if ( container != nullptr )
+        container->rt_free(superCollider);
     loadMeasurer.reset();
     superCollider.quit();
+}
+
+void PluginColliderAudioProcessor::reloadNodeContainer() {
+    scprintf("Rebuilding node tree\n");
+
+    ASyncReply<std::unique_ptr<NodeContainer>> reply;
+    reply.content = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
+    command.push([this, &reply](PluginColliderAudioProcessor &proc) {
+        container->rt_free(superCollider);
+        std::swap(container, reply.content);
+        container->rt_allocate(superCollider);
+        reply.notify(0);
+    });
+    reply.wait();
+    // since we swap the container, the unique_ptr will automatically free the old one
+}
+
+bool PluginColliderAudioProcessor::isAudioProcSuspended() {
+    if ( juce::Time::getMillisecondCounterHiRes() - lastProcRun > lastProcThreshold )
+        return true;
+    return false;
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -158,93 +178,34 @@ bool PluginColliderAudioProcessor::isBusesLayoutSupported(
 }
 #endif
 
-int PluginColliderAudioProcessor::rt_playSynth() {
-    if ( !superCollider.rt_getNode(kDefaultGroupId).isValid() ) {
-        logger.scprintf("PluginCollider default group (1) was removed !\n");
-        return 0;
-    }
-    if ( synthState.synthName[0] == 0 )
-        return 0;
-    int node = superCollider.rt_newSynth(synthState.synthName, -1, kDefaultGroupId);
-    if ( node != 0 ) {
-        for(const auto &p: synthState.controlBusMap) {
-            superCollider.rt_assignControlBus(node, p.first, p.second);
-        }
-        for(const auto &p: synthState.precompiledMapValue) {
-            superCollider.rt_setNodeValue(node, p.first, p.second);
-        }
-    }
-    return node;
-}
-
 void PluginColliderAudioProcessor::processBlock(
     juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) {
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    juce::AudioProcessLoadMeasurer::ScopedTimer timer (loadMeasurer, buffer.getNumSamples());
+    lastProcRun = juce::Time::getMillisecondCounterHiRes();
+    juce::AudioProcessLoadMeasurer::ScopedTimer timer(loadMeasurer, buffer.getNumSamples());
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
-
-    // TODO: There is probably something to send to world in term of timing...
-    // auto *playhead = getPlayHead();
-    // if (playhead != NULL) {
-    //     juce::AudioPlayHead::CurrentPositionInfo posInfo;
-    //     playhead->getCurrentPosition(posInfo);
-    //     // posInfo.timeInSeconds;
-    // }
 
     midiKeyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
 
     const juce::ScopedLock lock(superCollider.worldLock);
     try {
-        if ( ! synthState.isStaticSynth ) {
-            for (const auto meta : midiMessages) {
-                const auto msg = meta.getMessage();
-                if ( msg.isNoteOn() ) {
-                    int node = rt_playSynth();
-                    if ( node == 0 )
-                        continue;
-
-                    int note = msg.getNoteNumber();
-                    int lastNode = boundedMidiVoice[note];
-                    if ( lastNode != 0 ) {
-                        if ( superCollider.rt_getNode(lastNode).isValid() )
-                            superCollider.rt_freeNode(lastNode);
-                        boundedMidiVoice[note] = 0;
-                    }
-
-                    boundedMidiVoice[note] = node;
-                    if ( synthState.freqIdx != -1 ) {
-                        superCollider.rt_setNodeValue(node, synthState.freqIdx, msg.getMidiNoteInHertz(note));
-                    }
-                    if ( synthState.velocityIdx != -1 ) {
-                        superCollider.rt_setNodeValue(node, synthState.velocityIdx, msg.getFloatVelocity());
-                    }
-                } else if ( msg.isNoteOff() ) {
-                    int note = msg.getNoteNumber();
-                    if ( boundedMidiVoice[note] != 0 ) {
-                        if ( superCollider.rt_getNode(boundedMidiVoice[note]).isValid() ) {
-                            if ( synthState.gateIdx != -1 )
-                                superCollider.rt_setNodeValue(boundedMidiVoice[note], synthState.gateIdx, 0);
-                            // else {
-                            //     superCollider.rt_freeNode(boundedMidiVoice[note]);
-                            //     boundedMidiVoice[note] = 0;
-                            // }
-                        }
-                    }
-                }
-            }
-        }
         command.call(*this);
+        container->rt_processMidiMessages(superCollider, midiMessages);
+        superCollider.run(buffer, midiMessages);
     } catch (std::exception &e) {
         logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
     }
-
-    superCollider.run(buffer, midiMessages);
     buffer.applyGain(*gain);
+}
+
+void PluginColliderAudioProcessor::processBlockBypassed(juce::AudioBuffer<float> &audio_buffer,
+    juce::MidiBuffer &midi_message_metadatas) {
+    AudioProcessor::processBlockBypassed(audio_buffer, midi_message_metadatas);
 }
 
 //==============================================================================
@@ -256,114 +217,112 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
     return new PluginColliderAudioProcessorEditor(*this);
 }
 
-void PluginColliderAudioProcessor::parameterValueChanged (int parameterIndex, float newValue) {
+void PluginColliderAudioProcessor::parameterValueChanged(int parameterIndex, float newValue) {
     command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
         float targetValue = controlBus[parameterIndex-1]->getRangedValue(newValue);
         superCollider.rt_setControlBusValue(parameterIndex-1, targetValue);
     });
 }
 
-bool PluginColliderAudioProcessor::loadSynthDef(SynthDef *synthDef) {
-    const juce::ScopedLock lock(superCollider.worldLock);
-
-    if ( superCollider.world == nullptr )
+template <typename Item>
+bool PluginColliderAudioProcessor::execOnAudioThread(Item&& item) noexcept {
+    if ( isAudioProcSuspended() )
         return false;
 
-    if ( !superCollider.rt_loadSynthDef(&(synthDef->getContent())) )
-        return false;
-
-    pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
-
-    juce::ValueTree synth = juce::ValueTree(IDs::synth);
-    synth.setProperty(IDs::synthName, synthDef->getName(), nullptr);
-    synth.setProperty(IDs::synthBlob, synthDef->getContent(), nullptr);
-    synth.setProperty(IDs::staticSynth, false, nullptr);
-    juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
-    for(int i=0;i<synthDef->getParameters().size();i++) {
-        juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
-        parameter.setProperty(IDs::pName, synthDef->getParameters()[i], nullptr);
-        parameter.setProperty(IDs::pIdx, i, nullptr);
-        parameter.setProperty(IDs::pDefaultValue, synthDef->getParametersValues()[i], nullptr);
-        parameter.setProperty(IDs::pRange, synthDef->guessParameterRange(i), nullptr);
-        parameter.setProperty(IDs::pControlBus, -1, nullptr);
-        parameters.addChild(parameter, i, nullptr);
-    }
-    synth.addChild(parameters, 0, nullptr);
-    pluginState.getChildWithName(IDs::synths).addChild(synth, 0, nullptr);
-
-    recompileState();
+    command.push(std::forward<Item>(item));
     return true;
 }
 
-void PluginColliderAudioProcessor::recompileState() {
-    SynthState nextSynthState;
-    memset(nextSynthState.synthName, 0, 127);
-    nextSynthState.freqIdx = -1;
-    nextSynthState.velocityIdx = -1;
-    nextSynthState.gateIdx = -1;
-    juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
-    if ( synth.isValid() ) {
-        nextSynthState.isStaticSynth = synth.getProperty(IDs::staticSynth);
-        juce::String name = synth.getProperty(IDs::synthName);
-        strncpy(nextSynthState.synthName, name.toRawUTF8(), 127);
-        juce::ValueTree params = synth.getChildWithName(IDs::parameters);
-        for(int i=0;i<params.getNumChildren();i++) {
-            juce::ValueTree param = params.getChild(i);
+bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
+    try {
+        SynthDef synthDef(block);
 
-            if ( ! nextSynthState.isStaticSynth ) {
-                juce::String pName = param.getProperty(IDs::pName);
-                if ( pName == "freq" ) {
-                    nextSynthState.freqIdx = i;
-                    continue;
-                }
-                if ( pName == "amp" ) {
-                    nextSynthState.velocityIdx = i;
-                    continue;
-                }
-                if ( pName == "gate" ) {
-                    nextSynthState.gateIdx = i;
-                    continue;
-                }
-            }
+        ASyncReply<int> reply;
+        command.push([this, &reply, &block](PluginColliderAudioProcessor &proc) {
+            reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
+        });
+        // execOnAudioThread([this, &reply, &block](PluginColliderAudioProcessor &proc) {
+        //      reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
+        // });
 
-            int cbIdx = param.getProperty(IDs::pControlBus, -1);
-            if ( cbIdx != -1 ) {
-                nextSynthState.controlBusMap.emplace(i, cbIdx);
-                continue;
-            }
-
-            if ( param.hasProperty(IDs::pCurrentValue) && param.getProperty(IDs::pCurrentValue) != param.getProperty(IDs::pDefaultValue) ) {
-                float value = param.getProperty(IDs::pCurrentValue);
-                nextSynthState.precompiledMapValue.emplace(i, value);
-            }
+        if ( reply.wait() != 0 ) {
+            return false;
         }
+
+        target.setProperty(IDs::synthName, synthDef.getName(), nullptr);
+
+        target.removeChild(target.getChildWithName(IDs::parameters), nullptr);
+        juce::ValueTree parameters = juce::ValueTree(IDs::parameters);
+        for(int i=0;i<synthDef.getParameters().size();i++) {
+            juce::ValueTree parameter = juce::ValueTree(IDs::parameter);
+            parameter.setProperty(IDs::pName, synthDef.getParameters()[i], nullptr);
+            parameter.setProperty(IDs::pIdx, i, nullptr);
+            parameter.setProperty(IDs::pDefaultValue, synthDef.getParametersValues()[i], nullptr);
+            parameter.setProperty(IDs::pRange, synthDef.guessParameterRange(i), nullptr);
+            parameter.setProperty(IDs::pControlBus, -1, nullptr);
+            parameters.addChild(parameter, i, nullptr);
+        }
+        target.addChild(parameters, -1, nullptr);
+
+        target.setProperty(IDs::synthBlob, block, nullptr);
+    } catch (InvalidSynthDef &except) {
+        return false;
     }
 
-    // Push the synthstate to the command queue on the audio thread
-    command.push([nextSynthState](PluginColliderAudioProcessor &proc) {
-        proc.synthState = std::move(nextSynthState);
-    });
+    return true;
+}
+
+void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
+    if ( vt.hasType(IDs::groupnode) || vt.hasType(IDs::rootnode) ) {
+        for(int i=0;i<vt.getNumChildren();i++) {
+            rt_loadSynthDef(vt.getChild(i));
+        }
+        return;
+    }
+    if ( vt.hasType(IDs::notenode) || vt.hasType(IDs::fxnode) ) {
+        if ( ! (vt.hasProperty(IDs::synthBlob) && vt.hasProperty(IDs::synthName)) )
+            return;
+        juce::MemoryBlock *block = vt.getProperty(IDs::synthBlob).getBinaryData();
+        //scprintf("Trying synthdef: %s\n", synthDef->getName().toRawUTF8());
+        if ( block != nullptr ) {
+            if ( !superCollider.rt_loadSynthDef(block) ) {
+                scprintf("Error loading synthdef\n");
+            }
+            //SynthDef *synthDef = SynthDef::fromMemory(*block);
+            //scprintf("Loaded synthdef: %s\n", synthDef->getName().toRawUTF8());
+        } else {
+            juce::String ref = vt.getProperty(IDs::synthName).toString();
+            scprintf("Warning: unable to get synthdef '%s' binary data, was the plugin state changed externally (like the internal plugin state viewer) ?\n", ref.toRawUTF8());
+        }
+    }
+}
+
+bool PluginColliderAudioProcessor::isNodeReloadBaseEvent(juce::ValueTree &parentTree) {
+    if ( ! static_cast<bool>(pluginState.getChildWithName(IDs::srvRoot).getProperty(IDs::srvAlwaysSyncNodes, false)) )
+        return false;
+    if ( pluginState.getChildWithName(IDs::rootnode) != parentTree && !parentTree.isAChildOf(pluginState.getChildWithName(IDs::rootnode)) )
+        return false;
+    return true;
 }
 
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
      if ( property == IDs::pCurrentValue ) {
         int idx = treeWhosePropertyHasChanged.getProperty(IDs::pIdx);
         float value = treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue);
-        recompileState();
-        command.push([this, idx, value](PluginColliderAudioProcessor &proc) {
-            superCollider.rt_setNodeValue(kDefaultGroupId, idx, value);
-        });
-         return;
+        juce::ValueTree node = treeWhosePropertyHasChanged.getParent().getParent();
+        int nodeid = node.getProperty(IDs::nodeid, -1);
+        if ( nodeid != -1 ) {
+            command.push([this, nodeid, idx, value](PluginColliderAudioProcessor &proc) {
+                superCollider.rt_setNodeValue(nodeid, idx, value);
+            });
+        }
+        return;
      }
 
     if ( property == IDs::pControlBus ) {
-        recompileState();
+        reloadNodeContainer();
+        return;
     }
-
-     if ( property == IDs::staticSynth ) {
-        resetStaticSynth();
-        recompileState();
-     }
 
     if ( property == IDs::cbName ) {
         int idx = treeWhosePropertyHasChanged.getProperty(IDs::cbIdx);
@@ -371,6 +330,7 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
         controlBus[idx]->setName(name);
         const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
         updateHostDisplay(details);
+        return;
     }
 
     if ( property == IDs::cbRange ) {
@@ -379,77 +339,33 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
         controlBus[idx]->setRange(range);
         const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
         updateHostDisplay(details);
+        return;
+    }
+
+    /* From here, we reload nodes only if requested */
+    if ( ! static_cast<bool>(pluginState.getChildWithName(IDs::srvRoot).getProperty(IDs::srvAlwaysSyncNodes, false)) )
+        return;
+
+    if ( property == IDs::synthBlob ) {
+        reloadNodeContainer();
+        return;
     }
 }
 
-void PluginColliderAudioProcessor::valueTreeChildRemoved (juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
-    if ( childWhichHasBeenRemoved.getType() == IDs::synth ) {
-        command.push([this](PluginColliderAudioProcessor &proc) {
-            superCollider.rt_freeGroup(kDefaultGroupId);
-        });
-    }
+void PluginColliderAudioProcessor::valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) {
+    if ( ! isNodeReloadBaseEvent(parentTree) )
+        return;
+    reloadNodeContainer();
 }
 
-//==============================================================================
-void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
-    std::unique_ptr<juce::XmlElement> xml(pluginState.createXml());
-    copyXmlToBinary(*xml, destData);
+void PluginColliderAudioProcessor::valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childTree) {
+    // We don't care about childTree node add, only if there is a synthBlob change (see valueTreePropertyChanged)
 }
 
-void PluginColliderAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
-    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-    juce::ValueTree tmpState = juce::ValueTree::fromXml(*xmlState);
-
-    if ( tmpState.getProperty(IDs::version) != IDS_VERSION ) {
-        resetPluginState();
-        recompileState();
-    } else {
-        pluginState = tmpState;
-    }
-
-    for (int idx=0;idx<NUMBER_OF_CONTROL_BUSES;idx++) {
-        juce::ValueTree rootbus = pluginState.getChildWithName(IDs::controlbuses);
-        if ( rootbus.isValid() && rootbus.getNumChildren() > idx ) {
-            juce::ValueTree cb = rootbus.getChild(idx);
-            if ( cb.hasProperty(IDs::cbRange) ) {
-                PluginColliderRange range(cb.getProperty(IDs::cbRange));
-                controlBus[idx]->setRange(range);
-            }
-            if ( cb.hasProperty(IDs::cbName) ) {
-                juce::String name = cb.getProperty(IDs::cbName);
-                controlBus[idx]->setName(name);
-            }
-        }
-        const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
-        updateHostDisplay(details);
-    }
-}
-
-void PluginColliderAudioProcessor::resetPluginState() {
-    pluginState.removeListener(this);
-    pluginState.removeAllChildren(nullptr);
-
-    juce::ValueTree synths = juce::ValueTree(IDs::synths);
-    pluginState.addChild(synths, 1, nullptr);
-    synths.addChild(juce::ValueTree(IDs::synth), 1, nullptr);
-
-    juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);
-    for(int i=0;i<NUMBER_OF_CONTROL_BUSES;i++) {
-        juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
-        controlBus.setProperty(IDs::cbName, juce::String("Control Bus ") + juce::String(i), nullptr);
-        controlBus.setProperty(IDs::cbIdx, i, nullptr);
-        controlBus.setProperty(IDs::cbRange, "0 1 0.001", nullptr);
-        controlBusses.addChild(controlBus, i, nullptr);
-    }
-    pluginState.addChild(controlBusses, 0, nullptr);
-    juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
-
-    juce::ValueTree scratchpad = juce::ValueTree(IDs::scratchpad);
-    scratchpad.setProperty(IDs::spCode, "", nullptr);
-    pluginState.addChild(scratchpad, 0, nullptr);
-
-    pluginState.setProperty(IDs::version, IDS_VERSION, nullptr);
-    pluginState.addListener(this);
+void PluginColliderAudioProcessor::valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIdx, int newIdx) {
+    if ( ! isNodeReloadBaseEvent(parentTree) )
+        return;
+    reloadNodeContainer();
 }
 
 bool PluginColliderAudioProcessor::getActivityMonitor() {

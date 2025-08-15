@@ -37,8 +37,7 @@
 #include <juce_osc/juce_osc.h>
 
 /**
- * @brief This class represent a compiled SynthDef file.
- *
+ * @brief This class represent a compiled SynthDef file.1
  */
 class SynthDef {
     juce::MemoryBlock memoryBlock;
@@ -47,15 +46,7 @@ class SynthDef {
     std::unique_ptr<float []> parametersValues;
 
 public:
-    static SynthDef *fromFile(juce::File file) {
-        if (!file.existsAsFile())
-            return nullptr;
-        juce::MemoryBlock content;
-        if (!file.loadFileAsData(content))
-            return nullptr;
-        return SynthDef::fromMemory(content);
-    }
-    static SynthDef *fromMemory(juce::MemoryBlock &newContent);
+    SynthDef(juce::MemoryBlock &newContent);
 
     juce::MemoryBlock &getContent() {
         return memoryBlock;
@@ -106,7 +97,6 @@ public:
     }
 };
 
-
 // Dirty cheap logger
 class SuperLogger : public juce::Logger {
 public:
@@ -120,7 +110,7 @@ public:
     }
 
     /**
-     * Overriden messasge that might be called from static context.
+     * Overridden message that might be called from static context.
      */
     void logMessage(const juce::String &message) override {
         if (content.size() > 4096)
@@ -219,7 +209,6 @@ public:
     }
 
     void freeNodes(int rootNodeId = 0);
-    void showRegistredSynthdef();
     juce::StringArray getRegistredUnits();
 
     // Anything rt_ should be called from the audio thread since the worldLock is already acquired
@@ -232,7 +221,9 @@ public:
     void rt_setNodeValue(int destNode, int idx, float value);
     void rt_getSynthDef(HeapStringList<64,4096> &list);
     SCErr rt_newGroup(int parentNode, int destGroup);
-    int32_t rt_newSynth(juce::String name, int newId, int destNode);
+
+    int32_t rt_newSynth(int *hashname, int newId, int destNode);
+
     SCErr rt_queryTree(int rootGroup, big_scpacket *packet, bool flagParameters = false);
     void rt_dumpTree();
     void rt_assignControlBus(int nodeId, int nodeParamIdx, int busIdx);
@@ -254,6 +245,12 @@ public:
     void setOSCDumpLevel(int level) {
         if ( world != nullptr )
             world->mDumpOSC = level;
+    }
+
+    bool isRunning() {
+        if ( world == nullptr )
+            return false;
+        return world->mRunning;
     }
 
 private:

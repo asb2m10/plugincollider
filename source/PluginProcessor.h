@@ -23,44 +23,10 @@
 #include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "UDPPort.h"
-
+#include "PluginModel.h"
+#include "NodeContainer.h"
 
 class PluginColliderAudioProcessorEditor;
-
-#define IDS_VERSION "A"
-const int NUMBER_OF_CONTROL_BUSES = 32;
-
-namespace IDs {
-#define DECLARE_ID(name) const juce::Identifier name (#name);
-    DECLARE_ID(root)
-    DECLARE_ID(version)
-    DECLARE_ID(udpport)
-    DECLARE_ID(controlbuses)
-    DECLARE_ID(controlbus)
-    DECLARE_ID(cbName)
-    DECLARE_ID(cbRange)
-    DECLARE_ID(cbIdx)
-
-    DECLARE_ID(synths)
-    DECLARE_ID(synth)
-    DECLARE_ID(staticSynth)
-    DECLARE_ID(synthName)
-    DECLARE_ID(synthBlob)
-
-    DECLARE_ID(parameters)
-    DECLARE_ID(parameter)
-
-    DECLARE_ID(pName)
-    DECLARE_ID(pIdx)
-    DECLARE_ID(pCurrentValue)
-    DECLARE_ID(pDefaultValue)
-    DECLARE_ID(pControlBus)
-    DECLARE_ID(pRange)
-
-    DECLARE_ID(scratchpad)
-    DECLARE_ID(spCode)
-};
-
 //==============================================================================
 /**
  */
@@ -85,7 +51,7 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 #endif
 
     void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
-
+    void processBlockBypassed(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
     //==============================================================================
     juce::AudioProcessorEditor *createEditor() override;
     bool hasEditor() const override;
@@ -108,6 +74,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     //==============================================================================
     void getStateInformation(juce::MemoryBlock &destData) override;
     void setStateInformation(const void *data, int sizeInBytes) override;
+    juce::ValueTree createMidiNoteNodeVT();
+    juce::ValueTree createFxNodeVT();
+    juce::ValueTree createGroupNodeVT();
 
     bool getActivityMonitor();
 
@@ -119,22 +88,18 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
+    void valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&) override;
+    void valueTreeChildOrderChanged(juce::ValueTree&, int, int) override;
 
-    bool loadSynthDef(SynthDef *def);
-    int rt_playSynth();
-    void stopSynth();
+    /**
+     * Replace the synthdef in the plugin state with the one in the memory block.
+     */
+    bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target);
 
-    void resetStaticSynth() {
-        juce::ValueTree synth = pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth);
-        bool isStaticSynth = synth.getProperty(IDs::staticSynth);
-        if ( synth.isValid() ) {
-            command.push([this, isStaticSynth](PluginColliderAudioProcessor &proc) {
-                superCollider.rt_freeGroup(kDefaultGroupId);
-                if ( isStaticSynth )
-                    rt_playSynth();
-            });
-        }
-    }
+    /**
+     * Load the synthdef from the plugin state into the supercollider world ; usually when the server is booted.
+     */
+    void rt_loadSynthDef(juce::ValueTree root);
 
     juce::MidiKeyboardState midiKeyboardState;
     CommandFifo<PluginColliderAudioProcessor> command;
@@ -143,12 +108,24 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
         return &loadMeasurer;
     }
 
-    void recompileState();
-    
+    void reloadNodeContainer();
+
+    int getFreeNodeId() {
+        int nodeCount = pluginState.getProperty(IDs::nodeCount, 1000);
+        pluginState.setProperty(IDs::nodeCount, nodeCount + 1, nullptr);
+        return nodeCount;
+    }
+
+    // Reaper doesnt signal the plugin that it is suspended, we need to check the timestamp of the
+    // last audio proc call to detect that the audioProc is not run anymore
+    bool isAudioProcSuspended();
+
+    template <typename Item>
+    bool execOnAudioThread(Item&& item) noexcept;
+
   private:
     juce::String pluginPath;
     juce::String synthPath;
-
     juce::AudioParameterFloat *gain;
     ControlBusParameter *controlBus[NUMBER_OF_CONTROL_BUSES];
 
@@ -158,26 +135,22 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     juce::ApplicationProperties appProp;
 
-    void parameterValueChanged (int parameterIndex, float newValue) override;
-    void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override {
+    void parameterValueChanged(int parameterIndex, float newValue) override;
+    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {
     }
+
+    /**
+     * Tells if the event is a base event for reloading nodes.
+     * @param parentTree the parent tree of the event
+     */
+    bool isNodeReloadBaseEvent(juce::ValueTree& parentTree);
 
     bool bindUdpPort();
 
-    struct SynthState {
-        char synthName[127];
-        // While easy to use, this allocates memory on the audio thread
-        std::unordered_map<int, float> precompiledMapValue;
-        std::unordered_map<int, int> controlBusMap;
-        int freqIdx;
-        int velocityIdx;
-        int gateIdx;
-        bool isStaticSynth;
-    };
-    SynthState synthState;
+    std::unique_ptr<NodeContainer> container;
 
-    int boundedMidiVoice[127];
-
+    double lastProcThreshold;
+    double lastProcRun;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)
 };

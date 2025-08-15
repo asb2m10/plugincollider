@@ -156,7 +156,7 @@ public:
     }
 
     void setContent(juce::ValueTree vt) {
-        // Force empty table to free previous components that was assigned to a preivous ValueTree
+        // Force empty table to free previous components that was assigned to a previous ValueTree
         juce::ValueTree emptyTree;
         this->vt = emptyTree;
         table.updateContent();

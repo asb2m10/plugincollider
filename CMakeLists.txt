@@ -279,6 +279,7 @@ target_sources(PluginCollider
 	source/UDPPort.cpp
 	source/OSCMessages.cpp
     source/PluginProcessor.cpp
+	source/PluginModel.cpp
 	source/SCProcess.cpp
 	source/SCPluginDriver.cpp
 	source/UIUGenJUCE.cpp

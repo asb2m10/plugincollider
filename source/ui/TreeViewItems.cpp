@@ -21,6 +21,7 @@
 #include "TreeViewItems.h"
 #include "SC_OscUtils.hpp"
 
+
 // class ProjectSynthDefItem : public PCTreeItem {
 //     PluginColliderAudioProcessor &audioProcessor;
 // public:
@@ -87,81 +88,215 @@ public:
     }
 };
 
-class SynthEditItem: public PCTreeItem {
-    PluginColliderAudioProcessor &audioProcessor;
+class SynthDefNodeItem : public PCTreeItem, public juce::ValueTree::Listener {
+    PluginColliderAudioProcessor &processor;
+    juce::ValueTree vt;
     DynamicViewPanel &panel;
+
+    void setItemName() {
+        juce::String fxPrefix = vt.hasType(IDs::fxnode) ? "FX " : "";
+        itemName = vt.getProperty(IDs::nodeid).toString() + ": " + fxPrefix + vt.getProperty(IDs::synthName).toString();
+    }
 public:
-    SynthEditItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
-        itemName = "Synthdef";
+    SynthDefNodeItem(PluginColliderAudioProcessor &processor, juce::ValueTree node, DynamicViewPanel &panel) : processor(processor), vt(node), panel(panel) {
+        setItemName();
         containsSubItems = false;
+        vt.addListener(this);
     }
 
     void itemSelectionChanged(bool isNowSelected) override {
         if ( isNowSelected ) {
-            juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths).getChild(0);
-            panel.setEditableItem(vt, audioProcessor);
+            panel.setEditableItem(vt, processor);
         } else {
             panel.clearEditableItem();
+        }
+    }
+
+    juce::ValueTree getNodeValueTree() const {
+        return vt;
+    }
+
+    juce::var getDragSourceDescription() override {
+        return juce::var("synthdef");
+    }
+
+    void itemClicked(const juce::MouseEvent&event) override {
+        if (event.mods.isPopupMenu()) {
+            juce::PopupMenu menu;
+            menu.addItem("Remove Node", true, false, [this] {
+                panel.clearEditableItem();
+                juce::ValueTree parent = vt.getParent();
+                parent.removeChild(vt, nullptr);
+            });
+            menu.showMenuAsync(juce::PopupMenu::Options());
+        }
+    }
+
+    void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged, const juce::Identifier& property) override {
+        if ( treeWhosePropertyHasChanged == vt && property == IDs::synthName ) {
+            setItemName();
+            repaintItem();
+        }
+    }
+};
+
+class GroupNodeItem : public PCTreeItem, public juce::ValueTree::Listener {
+    PluginColliderAudioProcessor &processor;
+    juce::ValueTree vt;
+    DynamicViewPanel &panel;
+public:
+    GroupNodeItem(PluginColliderAudioProcessor &processor, juce::ValueTree node, DynamicViewPanel &panel) : processor(processor), vt(node), panel(panel) {
+        if ( node.hasType(IDs::rootnode) ) {
+            itemName = "1: Root Node";
+        } else {
+            itemName = node.getProperty(IDs::nodeid).toString() + ": " + node.getProperty(IDs::nodename).toString();
+        }
+        containsSubItems = true;
+        vt.addListener(this);
+    }
+
+    void itemSelectionChanged(bool isNowSelected) override {
+        if ( isNowSelected ) {
+            panel.setEditableItem(vt, processor);
+        } else {
+            panel.clearEditableItem();
+        }
+    }
+
+    void itemOpennessChanged(bool isNowOpen) {
+        if ( isNowOpen ) {
+            for(int i=0; i < vt.getNumChildren(); i++) {
+                juce::ValueTree child = vt.getChild(i);
+                if ( child.hasType(IDs::groupnode) ) {
+                    addSubItem(new GroupNodeItem(processor, child, panel), -1);
+                } else {
+                    addSubItem(new SynthDefNodeItem(processor, child, panel), -1);
+                }
+            }
+        } else {
+            clearSubItems();
         }
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
         if (event.mods.isPopupMenu()) {
             juce::PopupMenu menu;
-            menu.addItem("Reset Synthdef", true, false, [this] {
-                audioProcessor.pluginState.getChildWithName(IDs::synths).removeAllChildren(nullptr);
-                audioProcessor.pluginState.getChildWithName(IDs::synths).addChild(juce::ValueTree(IDs::synth), 0, nullptr);
-                audioProcessor.recompileState();
-                panel.clearEditableItem();
-                juce::ValueTree vt = audioProcessor.pluginState.getChildWithName(IDs::synths).getChild(0);
-                panel.setEditableItem(vt, audioProcessor);
+            menu.addItem("Add SynthDef effect", true, false, [this] {
+                setOpen(true);                
+                vt.addChild(processor.createFxNodeVT(), -1, nullptr);
+
             });
-            menu.addItem("Reset Synthdef default values", true, false, [this] {
-                juce::ValueTree params = audioProcessor.pluginState.getChildWithName(IDs::synths).getChildWithName(IDs::synth).getChildWithName(IDs::parameters);
-                if ( params.isValid() ) {
-                    for(int i=0;i<params.getNumChildren();i++) {
-                        juce::ValueTree param = params.getChild(i);
-                        param.removeProperty(IDs::pCurrentValue, nullptr);
-                        audioProcessor.recompileState();
-                    }
-                }
-            });            
+            menu.addItem("Add SynthDef trigger by midi notes", true, false, [this] {
+                setOpen(true);
+                vt.addChild(processor.createMidiNoteNodeVT(), -1, nullptr);
+            });
+            menu.addItem("Add Group", true, false, [this] {
+                setOpen(true);
+                vt.addChild(processor.createGroupNodeVT(), -1, nullptr);
+            });
+            menu.addSeparator();
+            if ( ! vt.hasType(IDs::rootnode) ) {
+                menu.addItem("Remove Group", true, false, [this] {
+                    panel.clearEditableItem();
+                    juce::ValueTree parent = vt.getParent();
+                    parent.removeChild(vt, nullptr);
+                });
+                menu.addSeparator();
+            }
+            menu.addItem("Re-sync configuration with server", true, false, [this] {
+                processor.reloadNodeContainer();
+            });
+
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
-    }    
+    }
+
+    bool isInterestedInDragSource (const juce::DragAndDropTarget::SourceDetails& dragSourceDetails) override {
+        return dragSourceDetails.description == "group" || dragSourceDetails.description == "synthdef";
+    }
+
+    juce::var getDragSourceDescription() override {
+        if ( vt.hasType(IDs::rootnode) )
+            return juce::var();
+        return juce::var("group");
+    }
+
+    void itemDropped(const juce::DragAndDropTarget::SourceDetails& source, int insertIndex) override {
+        juce::TreeView *owner = getOwnerView();
+        juce::TreeViewItem *sourceItem = owner->getSelectedItem(0);
+        juce::ValueTree sourceNode;
+        if ( source.description == "synthdef" ) {
+            SynthDefNodeItem* source = dynamic_cast<SynthDefNodeItem*>(sourceItem);
+            if ( source != nullptr ) {
+                sourceNode = source->getNodeValueTree();
+            }
+        }
+        if ( source.description == "group" ) {
+            GroupNodeItem* source = dynamic_cast<GroupNodeItem*>(sourceItem);
+            if ( source != nullptr ) {
+                sourceNode = source->vt;
+            }
+        }
+
+        if ( sourceNode.getParent().isValid() && vt != sourceNode && ! vt.isAChildOf(sourceNode) ) {
+            if ( sourceNode.getParent() == vt ) {
+                int currentIndex = vt.indexOf(sourceNode);
+                vt.moveChild(currentIndex, insertIndex, nullptr);
+                return;
+            }
+            sourceNode.getParent().removeChild(sourceNode, nullptr);
+            vt.addChild(sourceNode, insertIndex, nullptr);
+        }
+    }
+
+    void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override {
+        if ( parentTree == vt && isOpen() ) {
+            removeSubItem(indexFromWhichChildWasRemoved, true);
+        }
+    }
+
+    void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) override {
+        if ( parentTree == vt ) {
+            juce::MessageManager::callAsync([this] {
+                setOpenness(Openness::opennessClosed);
+                setOpenness(Openness::opennessOpen);
+            });
+        }
+    }
+
+    void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override {
+        if ( parentTree == vt && isOpen() ) {
+            juce::TreeViewItem *moved = getSubItem(oldIndex);
+            removeSubItem(oldIndex, false);
+            addSubItem(moved, newIndex);
+        }
+    }
 };
 
 class ProjectItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
     DynamicViewPanel &panel;
+
 public:
     ProjectItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
         itemName = "Project";
-        /*
-        * Mock up 
-        PCTreeItem *group = new PCTreeItem("Node 1 - Root Group");
-        PCTreeItem *fx = new PCTreeItem("Node 5 - Fx group");
-        group->addSubItem(fx);
-        fx->addSubItem(new PCTreeItem("Node 10 - Midi note group"));
-        */
 
         //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new ControlBusItem(processor, panel));
-        addSubItem(new SynthEditItem(processor, panel));
+        addSubItem(new GroupNodeItem(processor, processor.pluginState.getChildWithName(IDs::rootnode), panel));
         addSubItem(new ScratchpadItem(processor, panel));
-        // addSubItem(new ProjectSynthDefItem(processor));
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
         if (event.mods.isPopupMenu()) {
             juce::PopupMenu menu;
             menu.addItem("Reset Project", true, false, [this] {
+                // Clear group nodes before resetting whole node tree
+                this->removeSubItem(1);
+                audioProcessor.resetPluginState();
                 audioProcessor.superCollider.reboot();
-                setOpen(false);
+                this->addSubItem(new GroupNodeItem(audioProcessor, audioProcessor.pluginState.getChildWithName(IDs::rootnode), panel), 1);
             });
-            // menu.addSeparator();
-            // menu.addItem("Sync project with server", true, false, [this] {
-            // });
             menu.showMenuAsync(juce::PopupMenu::Options());
         }
     }
@@ -176,7 +311,7 @@ public:
         itemName = "Unit";
     }
 
-    void itemOpennessChanged(bool isNowOpen) {
+    void itemOpennessChanged(bool isNowOpen) override {
         if ( isNowOpen ) {
             juce::StringArray units = audioProcessor.superCollider.getRegistredUnits();
             units.sort(true);
@@ -204,7 +339,7 @@ public:
             });
             reply.wait();
             for(int i=0;i<reply.content.size();i++) {
-                addSubItem(new PCTreeItem(reply.content.getItem(i), false));
+                addSubItem(new PCTreeItem(reply.content.getItem(i)));
             }            
         } else {
             clearSubItems();
@@ -277,13 +412,15 @@ public:
             menu.addSubMenu("Map to control bus...", controlBusSelection);
             menu.addSeparator();
             */
-            menu.addItem("Free node", true, false, [this] {
-                processor.command.push([this](PluginColliderAudioProcessor &proc) {
-                    proc.superCollider.rt_freeNode(nodeId);
+            if ( nodeId != 1 ) {
+                menu.addItem("Free node", true, false, [this] {
+                    processor.command.push([this](PluginColliderAudioProcessor &proc) {
+                        proc.superCollider.rt_freeNode(nodeId);
+                    });
+                    getParentItem()->setOpen(false);
                 });
-                getParentItem()->setOpen(false);
-            });
-            menu.showMenuAsync(juce::PopupMenu::Options());
+                menu.showMenuAsync(juce::PopupMenu::Options());
+            }
         }
     }
 };
@@ -295,7 +432,7 @@ public:
         itemName = "Nodes";
     }
 
-    void itemOpennessChanged(bool isNowOpen) {
+    void itemOpennessChanged(bool isNowOpen) override {
         if ( isNowOpen ) {
             ASyncReply<big_scpacket> reply;
             audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
@@ -344,6 +481,7 @@ public:
 
 RootItem::RootItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) {
     setOpen(true);
+    itemName = "PluginCollider";
     addSubItem(new ProjectItem(processor, panel));
     addSubItem(new ServerItem(processor));
 }

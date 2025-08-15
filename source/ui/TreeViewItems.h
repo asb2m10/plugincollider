@@ -45,6 +45,10 @@ public:
     virtual void refresh() {
     }
 
+    juce::String getUniqueName() const override {
+        return itemName;
+    }
+
     void paintItem (juce::Graphics& g, int width, int height) override {
         g.setColour(getOwnerView()->findColour(juce::Label::textColourId));
         g.setFont(height * 0.7f);
