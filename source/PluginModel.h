@@ -19,7 +19,7 @@
 #pragma once 
 #include <juce_core/juce_core.h>
 
-#define IDS_VERSION "A"
+#define IDS_VERSION "B"
 const int NUMBER_OF_CONTROL_BUSES = 32;
 
 namespace IDs {
@@ -30,8 +30,7 @@ namespace IDs {
     DECLARE_ID(controlbuses)
     DECLARE_ID(controlbus)
     DECLARE_ID(cbName)
-    DECLARE_ID(cbRange)
-    DECLARE_ID(cbIdx)
+    DECLARE_ID(cbRange)    DECLARE_ID(cbIdx)
 
     DECLARE_ID(rootnode)
     DECLARE_ID(fxnode)
