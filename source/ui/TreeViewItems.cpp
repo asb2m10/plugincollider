@@ -282,6 +282,19 @@ public:
         itemName = "Project";
         processor.pluginState.addListener(this);
     }
+    
+    ~ProjectItem() {
+        audioProcessor.pluginState.removeListener(this);
+    }
+
+    void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) override {
+        if ( parentTree == audioProcessor.pluginState ) {
+            juce::MessageManager::callAsync([this] {
+                setOpenness(Openness::opennessClosed);
+                setOpenness(Openness::opennessOpen);
+            });
+        }
+    }
 
     void itemOpennessChanged(bool isNowOpen) override {
         if ( isNowOpen ) {

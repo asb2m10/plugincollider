@@ -127,15 +127,22 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     command.reset();
 
-    if ( superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
-                        getTotalNumOutputChannels(), pluginPath, synthPath) ) {
-        try {
-            rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
-            container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
-            container->rt_allocate(superCollider);
-        } catch (std::exception &e) {
-            logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
+    superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
+                        getTotalNumOutputChannels(), pluginPath, synthPath);
+
+    if ( ! superCollider.isRunning() ) 
+        return;
+
+    try {
+        if ( container != nullptr ) {
+            container->rt_free(superCollider);
+            container.release();
         }
+        rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
+        container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
+        container->rt_allocate(superCollider);
+    } catch (std::exception &e) {
+        logger.scprintf("!!! Catching exception on dsp thread: %s\n", e.what());
     }
     loadMeasurer.reset(sampleRate, samplesPerBlock);
     lastProcRun = juce::Time::getMillisecondCounterHiRes();
@@ -148,14 +155,15 @@ void PluginColliderAudioProcessor::releaseResources() {
         container.release();
     }
     loadMeasurer.reset();
-    superCollider.quit();
 }
 
 void PluginColliderAudioProcessor::reloadNodeContainer() {
     scprintf("Rebuilding node tree\n");
     std::unique_ptr<NodeContainer> newContainer = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
     execSyncWorld([this, &newContainer]() {
-        container->rt_free(superCollider);
+        jassert(container);
+        if ( container != nullptr )
+            container->rt_free(superCollider);
         std::swap(container, newContainer);
         container->rt_allocate(superCollider);
     });
@@ -248,7 +256,6 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
         if ( ! synthDefLoaded ) {
             return false;
         }
-
         target.setProperty(IDs::synthName, synthDef.getName(), nullptr);
 
         target.removeChild(target.getChildWithName(IDs::parameters), nullptr);
