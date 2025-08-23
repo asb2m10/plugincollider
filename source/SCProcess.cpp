@@ -144,12 +144,9 @@ SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
 SCProcess::~SCProcess() {
     const juce::ScopedLock lock(worldLock);
     if (world) {
-#ifdef STATIC_PLUGINS
         World_Cleanup(world, false);
-#else
-        World_Cleanup(world, true);
-#endif
     }
+    world = nullptr;
 }
 
 bool SCProcess::setup(float sampleRate, int buffSize, int numInputs,
