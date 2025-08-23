@@ -143,24 +143,22 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
-    if ( container != nullptr )
+    if ( container != nullptr ) {
         container->rt_free(superCollider);
+        container.release();
+    }
     loadMeasurer.reset();
     superCollider.quit();
 }
 
 void PluginColliderAudioProcessor::reloadNodeContainer() {
     scprintf("Rebuilding node tree\n");
-
-    ASyncReply<std::unique_ptr<NodeContainer>> reply;
-    reply.content = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
-    command.push([this, &reply](PluginColliderAudioProcessor &proc) {
+    std::unique_ptr<NodeContainer> newContainer = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
+    execSyncWorld([this, &newContainer]() {
         container->rt_free(superCollider);
-        std::swap(container, reply.content);
+        std::swap(container, newContainer);
         container->rt_allocate(superCollider);
-        reply.notify(0);
     });
-    reply.wait();
     // since we swap the container, the unique_ptr will automatically free the old one
 }
 
@@ -218,34 +216,36 @@ juce::AudioProcessorEditor *PluginColliderAudioProcessor::createEditor() {
 }
 
 void PluginColliderAudioProcessor::parameterValueChanged(int parameterIndex, float newValue) {
-    command.push([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
+    execOnAudioThread([this, parameterIndex, newValue](PluginColliderAudioProcessor &proc) {
         float targetValue = controlBus[parameterIndex-1]->getRangedValue(newValue);
         superCollider.rt_setControlBusValue(parameterIndex-1, targetValue);
     });
 }
 
-template <typename Item>
-bool PluginColliderAudioProcessor::execOnAudioThread(Item&& item) noexcept {
-    if ( isAudioProcSuspended() )
+
+bool PluginColliderAudioProcessor::execSyncWorld(std::function<void()> func) {
+    const juce::ScopedLock lock(superCollider.worldLock);
+    if ( ! superCollider.isRunning() )
         return false;
 
-    command.push(std::forward<Item>(item));
+    try {
+        func();
+    } catch (std::exception &e) {
+        logger.scprintf("!!! Catching exception on world thread: %s\n", e.what());
+    }
     return true;
 }
 
 bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
     try {
         SynthDef synthDef(block);
+        int synthDefLoaded = true;
 
-        ASyncReply<int> reply;
-        command.push([this, &reply, &block](PluginColliderAudioProcessor &proc) {
-            reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
+        execSyncWorld([this, &block, &synthDefLoaded]() {
+            synthDefLoaded = superCollider.rt_loadSynthDef(&block);
         });
-        // execOnAudioThread([this, &reply, &block](PluginColliderAudioProcessor &proc) {
-        //      reply.notify(proc.superCollider.rt_loadSynthDef(&block) ? 0 : 1);
-        // });
 
-        if ( reply.wait() != 0 ) {
+        if ( ! synthDefLoaded ) {
             return false;
         }
 
@@ -312,7 +312,7 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
         juce::ValueTree node = treeWhosePropertyHasChanged.getParent().getParent();
         int nodeid = node.getProperty(IDs::nodeid, -1);
         if ( nodeid != -1 ) {
-            command.push([this, nodeid, idx, value](PluginColliderAudioProcessor &proc) {
+            execOnAudioThread([this, nodeid, idx, value](PluginColliderAudioProcessor &proc) {
                 superCollider.rt_setNodeValue(nodeid, idx, value);
             });
         }

@@ -273,31 +273,44 @@ public:
     }
 };
 
-class ProjectItem : public PCTreeItem {
+class ProjectItem : public PCTreeItem, public juce::ValueTree::Listener {
     PluginColliderAudioProcessor &audioProcessor;
     DynamicViewPanel &panel;
 
 public:
     ProjectItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &panel) : audioProcessor(processor), panel(panel) {
         itemName = "Project";
+        processor.pluginState.addListener(this);
+    }
 
-        //addSubItem(new PCTreeItem("Buffers"));
-        addSubItem(new ControlBusItem(processor, panel));
-        addSubItem(new GroupNodeItem(processor, processor.pluginState.getChildWithName(IDs::rootnode), panel));
-        addSubItem(new ScratchpadItem(processor, panel));
+    void itemOpennessChanged(bool isNowOpen) override {
+        if ( isNowOpen ) {
+            //addSubItem(new PCTreeItem("Buffers"));
+            addSubItem(new ControlBusItem(audioProcessor, panel));
+            addSubItem(new GroupNodeItem(audioProcessor, audioProcessor.pluginState.getChildWithName(IDs::rootnode), panel));
+            addSubItem(new ScratchpadItem(audioProcessor, panel));
+        } else {
+            clearSubItems();
+        }
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
         if (event.mods.isPopupMenu()) {
             juce::PopupMenu menu;
             menu.addItem("Reset Project", true, false, [this] {
-                // Clear group nodes before resetting whole node tree
-                this->removeSubItem(1);
                 audioProcessor.resetPluginState();
-                audioProcessor.superCollider.reboot();
-                this->addSubItem(new GroupNodeItem(audioProcessor, audioProcessor.pluginState.getChildWithName(IDs::rootnode), panel), 1);
+                audioProcessor.reloadNodeContainer();
             });
             menu.showMenuAsync(juce::PopupMenu::Options());
+        }
+    }
+
+    void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override {
+        if ( childWhichHasBeenRemoved.getType() == IDs::rootnode ) {
+            juce::MessageManager::callAsync([this] {
+                panel.clearEditableItem();
+                setOpenness(Openness::opennessClosed);
+            });
         }
     }
 };
@@ -332,14 +345,12 @@ public:
 
     void itemOpennessChanged(bool isNowOpen) override {
         if ( isNowOpen ) {
-            ASyncReply<HeapStringList<64,4096>> reply;
-            audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
-                proc.superCollider.rt_getSynthDef(reply.content);
-                reply.notify(0);
+            HeapStringList<64,4096> reply;
+            audioProcessor.execSyncWorld([this, &reply]() {
+                this->audioProcessor.superCollider.rt_getSynthDef(reply);
             });
-            reply.wait();
-            for(int i=0;i<reply.content.size();i++) {
-                addSubItem(new PCTreeItem(reply.content.getItem(i)));
+            for(int i=0;i<reply.size();i++) {
+                addSubItem(new PCTreeItem(reply.getItem(i)));
             }            
         } else {
             clearSubItems();
@@ -414,7 +425,7 @@ public:
             */
             if ( nodeId != 1 ) {
                 menu.addItem("Free node", true, false, [this] {
-                    processor.command.push([this](PluginColliderAudioProcessor &proc) {
+                    processor.execOnAudioThread([this](PluginColliderAudioProcessor &proc) {
                         proc.superCollider.rt_freeNode(nodeId);
                     });
                     getParentItem()->setOpen(false);
@@ -434,12 +445,15 @@ public:
 
     void itemOpennessChanged(bool isNowOpen) override {
         if ( isNowOpen ) {
-            ASyncReply<big_scpacket> reply;
-            audioProcessor.command.push([this, &reply](PluginColliderAudioProcessor &proc) {
-                reply.notify(proc.superCollider.rt_queryTree(0, &reply.content, true));
+            big_scpacket packet;
+            SCErr err = 1;
+
+            audioProcessor.execSyncWorld([this, &packet, &err]() {
+                err = this->audioProcessor.superCollider.rt_queryTree(0, &packet, true);
             });
-            if ( reply.wait() == 0 ) {
-                juce::OSCMessage msg = OSCMemoryBlock::parseMessage(reply.content.data(), reply.content.size());
+            
+            if ( err == 0 ) {
+                juce::OSCMessage msg = OSCMemoryBlock::parseMessage(packet.data(), packet.size());
                 OSCArgumentWalker walker(msg);
                 // if synthControl value included
                 walker.next();

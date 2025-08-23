@@ -31,7 +31,10 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
     if ( tmpState.getProperty(IDs::version) != IDS_VERSION ) {
         resetPluginState();
     } else {
+        pluginState.removeAllChildren(nullptr);
+        pluginState.removeListener(this);
         pluginState = tmpState;
+        pluginState.addListener(this);
     }
 
     for (int idx=0;idx<NUMBER_OF_CONTROL_BUSES;idx++) {
@@ -51,18 +54,15 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
         updateHostDisplay(details);
     }
 
-    if ( superCollider.isRunning() ) {
-        command.push([&] (PluginColliderAudioProcessor &proc) {
-            proc.rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
-        });
-
-        reloadNodeContainer();
-    }
+    execSyncWorld([this]() {
+        rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
+    });
+    reloadNodeContainer();
 }
 
 void PluginColliderAudioProcessor::resetPluginState() {
-    pluginState.removeListener(this);
     pluginState.removeAllChildren(nullptr);
+    pluginState.removeListener(this);
 
     juce::ValueTree srvRoot = juce::ValueTree(IDs::srvRoot);
     srvRoot.setProperty(IDs::srvAlwaysSyncNodes, true, nullptr);
