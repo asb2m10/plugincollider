@@ -116,31 +116,32 @@ public:
  * This could be done with a std::promise, but we want to avoid the overhead of std::future that would 
  * allocate from the audio thread.
  */
-template <class T>
-class ASyncReply {
-    const int TIMEOUT_SECONDS = 1;
-    int rc = -1;
+// template <class T>
+// class ASyncReply {
+//     const int TIMEOUT_SECONDS = 30;
+//     int rc = -1;
 
-    std::condition_variable cv;
-    std::mutex cv_m;
-    std::unique_lock<std::mutex> lk;
-public:
-    T content;
+//     std::condition_variable cv;
+//     std::mutex cv_m;
+//     std::unique_lock<std::mutex> lk;
 
-    ASyncReply() : lk(cv_m) {
-    }
+// public:
+//     T content;
 
-    /**
-     * Waits for the audio thread to notify this object.
-     * If the audio thread does not notify within TIMEOUT_SECONDS, it returns -1.
-     */
-    int wait() {
-        cv.wait_for(lk, std::chrono::seconds(TIMEOUT_SECONDS));
-        return rc;
-    }
+//     ASyncReply() : lk(cv_m) {
+//     }
 
-    void notify(int rc) {
-        this->rc = rc;
-        cv.notify_one();
-    }
-};
+//     /**
+//      * Waits for the audio thread to notify this object.
+//      * If the audio thread does not notify within TIMEOUT_SECONDS, it returns -1.
+//      */
+//     int wait() {
+//         cv.wait_for(lk, std::chrono::seconds(TIMEOUT_SECONDS));
+//         return rc;
+//     }
+
+//     void notify(int rc) {
+//         this->rc = rc;
+//         cv.notify_one();
+//     }
+// };

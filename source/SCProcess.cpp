@@ -106,9 +106,33 @@ SynthDef::SynthDef(juce::MemoryBlock &newContent) {
     int numParameters = stream.readIntBigEndian();
     jassert(numParameters<256);
 
+    int lastParameterPos = 0;
     for(int i=0;i<numParameters;i++) {
-        parameters.add(stream.readPString());
+        juce::String currentName = stream.readPString();
         int pos = stream.readIntBigEndian();
+        if ( lastParameterPos != pos ) {
+            // It was an array parameter, remove it and reinsert it with the array parameter postfix
+            juce::String arrayname = parameters[parameters.size()-1];
+            parameters.remove(parameters.size()-1);
+
+            int items = pos - lastParameterPos + 1;
+            for (int i=0;i<items;i++) {
+                parameters.add(arrayname + "[" + juce::String(i+1) + "]");
+            }
+        }
+        lastParameterPos = pos + 1;
+        parameters.add(currentName);
+    }
+
+    // We still have to check if the last parameter name was an array
+    if ( lastParameterPos != numParametersValues ) {
+        juce::String name = parameters[parameters.size()-1];
+        parameters.remove(parameters.size()-1);
+
+        int items = numParametersValues - lastParameterPos + 1;
+        for (int i=0;i<items;i++) {
+            parameters.add(name + "[" + juce::String(i+1) + "]");
+        }
     }
 }
 
@@ -120,12 +144,9 @@ SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
 SCProcess::~SCProcess() {
     const juce::ScopedLock lock(worldLock);
     if (world) {
-#ifdef STATIC_PLUGINS
         World_Cleanup(world, false);
-#else
-        World_Cleanup(world, true);
-#endif
     }
+    world = nullptr;
 }
 
 bool SCProcess::setup(float sampleRate, int buffSize, int numInputs,

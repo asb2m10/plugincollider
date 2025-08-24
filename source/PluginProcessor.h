@@ -102,7 +102,6 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void rt_loadSynthDef(juce::ValueTree root);
 
     juce::MidiKeyboardState midiKeyboardState;
-    CommandFifo<PluginColliderAudioProcessor> command;
 
     juce::AudioProcessLoadMeasurer *getLoadMeasurer() {
         return &loadMeasurer;
@@ -120,10 +119,27 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     // last audio proc call to detect that the audioProc is not run anymore
     bool isAudioProcSuspended();
 
+    /**
+     * Executes a function on the audio thread. Might not get executed or delayed if the plugin
+     * is bypassed. Avoid using this for synchronous (request/response) operations
+     */
     template <typename Item>
-    bool execOnAudioThread(Item&& item) noexcept;
+    bool execOnAudioThread(Item&& item) noexcept {
+        if ( isAudioProcSuspended() )
+            return false;
+
+        command.push(std::forward<Item>(item));
+        return true;
+    }
+
+    /**
+     * Executes a function by locking the SuperCollider global lock. The block might not
+     * get executed if the supercollider world is not running.
+     */
+    bool execSyncWorld(std::function<void()> func);
 
   private:
+    CommandFifo<PluginColliderAudioProcessor> command;
     juce::String pluginPath;
     juce::String synthPath;
     juce::AudioParameterFloat *gain;

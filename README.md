@@ -12,6 +12,7 @@ Now support Linux, macOS and Windows.
 # Changelog
 ## Version 0.4.0
 * Multiple SynthDef snapshot tree configuration: route midi SynthDef outputs to dedicated SynthDef effects
+* Support for array parameters
 
 ## Version 0.3.1
 * Fix sessions issue upon reloading plugin FX
