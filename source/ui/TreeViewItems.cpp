@@ -484,14 +484,24 @@ public:
 
 class ServerItem : public PCTreeItem {
     PluginColliderAudioProcessor &audioProcessor;
+    DynamicViewPanel &panel;
+
 public:
-    ServerItem(PluginColliderAudioProcessor &p) : audioProcessor(p) {
+    ServerItem(PluginColliderAudioProcessor &p, DynamicViewPanel &panel) : audioProcessor(p), panel(panel) {
         itemName = "Server";
 
         //addSubItem(new PCTreeItem("Buffers"));
         addSubItem(new NodeTreeRoot(p));
         addSubItem(new SynthDefsServerItem(p));
         addSubItem(new UnitItem(p));
+    }
+
+    void itemSelectionChanged(bool isNowSelected) override {
+        if ( isNowSelected ) {
+            panel.setEditableItem(audioProcessor.pluginState.getChildWithName(IDs::srvRoot), audioProcessor);
+        } else {
+            panel.clearEditableItem();
+        }
     }
 
     void itemClicked(const juce::MouseEvent&event) override {
@@ -510,5 +520,5 @@ RootItem::RootItem(PluginColliderAudioProcessor &processor, DynamicViewPanel &pa
     setOpen(true);
     itemName = "PluginCollider";
     addSubItem(new ProjectItem(processor, panel));
-    addSubItem(new ServerItem(processor));
+    addSubItem(new ServerItem(processor, panel));
 }
