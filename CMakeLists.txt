@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.5...4.0)
 
 # The top-level CMakeLists.txt file for a project must contain a literal, direct call to the
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
@@ -8,7 +8,7 @@ if(NOT SC_DIR)
 set(SC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/supercollider)
 endif()
 
-enable_language(C CXX)
+#enable_language(C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 if(NOT MSVC) # should be enought with line above
