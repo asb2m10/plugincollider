@@ -52,7 +52,7 @@ else()
 	FetchContent_Declare(
     	sndfile
     	GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
-    	GIT_TAG 52b803f57a1f4d23471f5c5f77e1a21e0721ea0e
+    	GIT_TAG 1.2.2
     	GIT_PROGRESS TRUE
     	GIT_SHALLOW TRUE
 	)
@@ -163,7 +163,7 @@ endif()
 
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS c)
 
-project(PluginCollider VERSION 0.2.1)
+project(PluginCollider VERSION 0.4.0)
 
 add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory called JUCE
 
