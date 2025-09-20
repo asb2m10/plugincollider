@@ -1,14 +1,16 @@
-cmake_minimum_required(VERSION 3.5...4.0)
+cmake_minimum_required(VERSION 3.5)
 
 # The top-level CMakeLists.txt file for a project must contain a literal, direct call to the
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
+project(PluginCollider VERSION 0.4.0)
+
+enable_language(C CXX)
+
 if(NOT SC_DIR)
 set(SC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/supercollider)
 endif()
-
-#enable_language(C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 if(NOT MSVC) # should be enought with line above
@@ -52,7 +54,7 @@ else()
 	FetchContent_Declare(
     	sndfile
     	GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
-    	GIT_TAG 1.2.2
+    	GIT_TAG 52b803f57a1f4d23471f5c5f77e1a21e0721ea0e
     	GIT_PROGRESS TRUE
     	GIT_SHALLOW TRUE
 	)
@@ -162,8 +164,6 @@ if (NOT Boost_FOUND)
 endif()
 
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS c)
-
-project(PluginCollider VERSION 0.4.0)
 
 add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory called JUCE
 
