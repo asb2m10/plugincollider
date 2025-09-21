@@ -190,8 +190,7 @@ public:
     void quit();
 
     /* returns true if the server has booted / rebooted */
-    bool setup(float sampleRate, int buffSize, int numInputs, int numOutput,
-               juce::String pluginPath, juce::String synthdefPath);
+    bool setup(float sampleRate, int buffSize, int numInputs, int numOutput);
     void reboot();
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
@@ -253,6 +252,14 @@ public:
         return world->mRunning;
     }
 
+    void setPluginPath(const juce::String &path) {
+        pluginPath = path;
+    }
+
+    void setSynthDefPath(const juce::String &path) {
+        synthDefPath = path;
+    }
+
 private:
     friend class PluginColliderAudioProcessor;
 
@@ -273,5 +280,5 @@ private:
     int numInputs;
     int numOutputs;
     juce::String pluginPath;
-    juce::String synthdefPath;
+    juce::String synthDefPath;
 };

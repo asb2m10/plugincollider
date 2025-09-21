@@ -498,7 +498,7 @@ public:
         if (event.mods.isPopupMenu()) {
             juce::PopupMenu menu;
             menu.addItem("Reboot SuperCollider server", true, false, [this] {
-                audioProcessor.superCollider.reboot();
+                audioProcessor.rebootServer();
                 setOpen(false);
             });
             menu.showMenuAsync(juce::PopupMenu::Options());

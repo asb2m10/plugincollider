@@ -138,10 +138,12 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
      */
     bool execSyncWorld(std::function<void()> func);
 
+    void rebootServer();
+
   private:
     CommandFifo<PluginColliderAudioProcessor> command;
     juce::String pluginPath;
-    juce::String synthPath;
+    juce::String synthDefPath;
     juce::AudioParameterFloat *gain;
     ControlBusParameter *controlBus[NUMBER_OF_CONTROL_BUSES];
 

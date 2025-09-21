@@ -198,7 +198,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         ret.addItem("Configure scplugin path...", true, false, [this] {
             settingsWindow = new juce::AlertWindow("SCSynDef path", "", juce::AlertWindow::NoIcon);
             settingsWindow->addTextBlock("SCSynDef path");
-            settingsWindow->addTextEditor("scsynthdef", audioProcessor.synthPath);
+            settingsWindow->addTextEditor("scsynthdef", audioProcessor.synthDefPath);
             settingsWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
             settingsWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
 
@@ -207,6 +207,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
                     audioProcessor.logger.scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
                     juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
                     prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("scsynthdef"));
+                    audioProcessor.synthDefPath = this->settingsWindow->getTextEditorContents("scsynthdef");
                     audioProcessor.appProp.saveIfNeeded();
                 }
             }), true);
@@ -225,6 +226,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
                     audioProcessor.logger.scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
                     juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
                     prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
+                    audioProcessor.pluginPath = this->settingsWindow->getTextEditorContents("pluginPath");
                     audioProcessor.appProp.saveIfNeeded();
                 }
             }), true);
@@ -234,7 +236,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         ret.addSubMenu("Logging", logging);
         ret.addSeparator();
         ret.addItem("Reboot server", true, false, [this] {
-            audioProcessor.superCollider.reboot();
+            audioProcessor.rebootServer();
         });
         }
         break;

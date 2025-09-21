@@ -30,6 +30,7 @@
 #include "SC_GraphDef.h"
 #include "SC_Group.h"
 #include "SC_UnitDef.h"
+#include <stdlib.h>
 
 #include "NodeContainer.h"
 
@@ -149,9 +150,7 @@ SCProcess::~SCProcess() {
     world = nullptr;
 }
 
-bool SCProcess::setup(float sampleRate, int buffSize, int numInputs,
-                      int numOutputs, juce::String pluginPath, juce::String synthdefPath) {
-
+bool SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutputs) {
     // avoid restarting server if the settings are the same
     if (world != nullptr) {
         bool same = true;
@@ -160,8 +159,6 @@ bool SCProcess::setup(float sampleRate, int buffSize, int numInputs,
         same &= buffSize == world->mBufLength;
         same &= numInputs == world->mNumInputs;
         same &= numOutputs == world->mNumOutputs;
-        same &= pluginPath == this->pluginPath;
-        same &= synthdefPath == this->synthdefPath;
         if (same)
             return false;
     }
@@ -174,8 +171,6 @@ bool SCProcess::setup(float sampleRate, int buffSize, int numInputs,
     bufferSize = buffSize;
     this->numInputs = numInputs;
     this->numOutputs = numOutputs;
-    this->pluginPath = pluginPath;
-    this->synthdefPath = synthdefPath;
 
     bootServer();
     return true;
@@ -214,8 +209,13 @@ void SCProcess::bootServer() {
 #endif
 
     // For now the only way to set SynthDefs path
-    if (! synthdefPath.isEmpty() )
-        putenv((char*) (juce::String("SC_SYNTHDEF_PATH=") + synthdefPath).toRawUTF8());
+    if (! synthDefPath.isEmpty() ) {
+#ifdef WIN32
+        _putenv_s("SC_SYNTHDEF_PATH", synthDefPath.toRawUTF8());
+#else
+        setenv("SC_SYNTHDEF_PATH", synthDefPath.toRawUTF8(), 1);
+#endif
+    }
 
     world = World_New(&options);
 

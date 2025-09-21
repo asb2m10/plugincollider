@@ -55,7 +55,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 
     // TODO: move this to the .config directory.
     juce::PropertiesFile *prop = appProp.getUserSettings();
-    synthPath = prop->getValue("synthPath", "");
+    synthDefPath = prop->getValue("synthPath", "");
 #ifdef WIN32
     pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");
 #elif __APPLE__
@@ -127,8 +127,9 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 
     command.reset();
 
-    superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(),
-                        getTotalNumOutputChannels(), pluginPath, synthPath);
+    superCollider.setPluginPath(pluginPath);
+    superCollider.setSynthDefPath(synthDefPath);
+    superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(), getTotalNumOutputChannels());
 
     if ( ! superCollider.isRunning() ) 
         return;
@@ -242,6 +243,12 @@ bool PluginColliderAudioProcessor::execSyncWorld(std::function<void()> func) {
         logger.scprintf("!!! Catching exception on world thread: %s\n", e.what());
     }
     return true;
+}
+
+void PluginColliderAudioProcessor::rebootServer() {
+    superCollider.setPluginPath(pluginPath);
+    superCollider.setSynthDefPath(synthDefPath);
+    superCollider.reboot();
 }
 
 bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
