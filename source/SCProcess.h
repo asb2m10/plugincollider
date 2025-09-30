@@ -93,7 +93,10 @@ public:
             low = defaultValue / 5;
             high = defaultValue * 5;
         }
-        return juce::String(low) + " " + juce::String(high) + " 0.001";
+        if ( defaultValue < 0 )
+            return juce::String(high) + " " + juce::String(low) + " 0.001";
+        else
+            return juce::String(low) + " " + juce::String(high) + " 0.001";
     }
 };
 
