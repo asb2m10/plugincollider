@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.5)
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
-project(PluginCollider VERSION 0.4.0)
+project(PluginCollider VERSION 0.4.1)
 
 enable_language(C CXX)
 
@@ -311,3 +311,6 @@ target_link_libraries(PluginCollider
 		${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY}
 		${SNDFILE_LIBRARIES}
 		)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/assets/installers")
+include(installer)
