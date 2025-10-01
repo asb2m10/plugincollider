@@ -68,8 +68,7 @@ jobs:
 
     - name: Build
       run: |
-        ls /usr/lib/libsnd*
-        ls /usr/lib/x86_64-linux-gnu/libsnd*
+        find /usr/lib -name "libsnd*"
         cmake -S . -B ./build -DCMAKE_BUILD_TYPE=${{ needs.component_version.outputs.build_type }} -DBUILD_ID=${{ needs.component_version.outputs.build_version }} -DJUCE_COPY_PLUGIN_AFTER_BUILD=FALSE
         cmake --build ./build --config ${{ needs.component_version.outputs.build_type }} --target installer --parallel 3
 
