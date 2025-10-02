@@ -52,6 +52,7 @@ jobs:
     needs: [ component_version ]
 
     steps:
+    # Sadly the cahing of 'apt get' doesn't render symbolic link corretly for libsndfile, hope this will be fixed soon
     # - uses: awalsh128/cache-apt-pkgs-action@master
     #   if: runner.os == 'linux'
     #   with:
@@ -68,7 +69,6 @@ jobs:
 
     - name: Build
       run: |
-        ls -l /usr/lib/x86_64-linux-gnu
         cmake -S . -B ./build -DCMAKE_BUILD_TYPE=${{ needs.component_version.outputs.build_type }} -DBUILD_ID=${{ needs.component_version.outputs.build_version }} -DJUCE_COPY_PLUGIN_AFTER_BUILD=FALSE
         cmake --build ./build --config ${{ needs.component_version.outputs.build_type }} --target installer --parallel 3
 
@@ -83,7 +83,7 @@ jobs:
     runs-on: windows-2022
     name: "Windows Build"
     environment: default
-    if: ${{ vars.SKIP_WINDOWS == 'true' }}
+    if: ${{ vars.SKIP_WINDOWS != 'true' }}
     needs: [ component_version ]
 
     steps:
@@ -107,7 +107,7 @@ jobs:
     runs-on: macos-14
     name: "macOS Build"
     environment: default
-    if: ${{ vars.SKIP_MACOS == 'true' }}
+    if: ${{ vars.SKIP_MACOS != 'true' }}
     needs: [ component_version ]
 
     steps:
