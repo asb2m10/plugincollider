@@ -73,9 +73,9 @@ Source: "{#StagedAssets}\{#Name}.clap"; DestDir: "{autocf}\CLAP\{#Publisher}\"; 
 
 #ifdef VST3
 #ifdef VST3_IS_SINGLE_FILE
-Source: "{#StagedAssets}\{#Name}.vst3"; DestDir: "{autocf}\VST3\{#Publisher}\"; Components: VST3; Flags: ignoreversion
+Source: "{#StagedAssets}\{#Name}.vst3"; DestDir: "{autocf}\VST3\"; Components: VST3; Flags: ignoreversion
 #else
-Source: "{#StagedAssets}\{#Name}.vst3\*"; DestDir: "{autocf}\VST3\{#Publisher}\{#Name}.vst3\"; Components: VST3; Flags: ignoreversion recursesubdirs
+Source: "{#StagedAssets}\{#Name}.vst3\*"; DestDir: "{autocf}\VST3\{#Name}.vst3\"; Components: VST3; Flags: ignoreversion recursesubdirs
 #endif
 #endif
 
