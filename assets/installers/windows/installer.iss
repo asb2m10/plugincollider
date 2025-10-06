@@ -54,6 +54,7 @@ Name: "standalone"; Description: "Standalone"
 #endif
 
 [Components]
+Name: "RUNTIME"; Description "Runtime files"; Flags: fixed
 #ifdef CLAP
 Name: "CLAP"; Description: "CLAP"; Types: full custom clap; Flags: checkablealone
 #endif
@@ -83,6 +84,8 @@ Source: "{#StagedAssets}\{#Name}.vst3\*"; DestDir: "{autocf}\VST3\{#Name}.vst3\"
 Source: "{#StagedAssets}\{#Name}.exe"; DestDir: "{app}"; Components: SA; Flags: ignoreversion
 #endif
 
+Source: "{#StagedAssets}\sndfile.dll"; DestDir: "{app}"; Components: RUNTIME; Flags: ignoreversion
+
 #define FORMATS ""
 
 #ifdef Data
@@ -96,6 +99,10 @@ Source: "{#StagedAssets}\{#Name}.exe"; DestDir: "{app}"; Components: SA; Flags: 
 #ifdef SA
 #define FORMATS FORMATS + " standalone"
 #endif
+
+[Registry]
+Root: HKLM; Subkey: "Software\Digital Suburban"; Flags: uninsdeletekeyifempty
+Root: HKLM; Subkey: "Software\Digital Suburban\PluginCollider"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"
 
 Name: "Data"; Description: "Data files"; Types: full custom{#FORMATS}; Flags: fixed disablenouninstallwarning
 [Files]

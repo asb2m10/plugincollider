@@ -49,21 +49,17 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     juce::PropertiesFile::Options options;
     options.applicationName = "PluginCollider";
     options.osxLibrarySubFolder = "Application Support";
+#ifdef JUCE_LINUX
+    options.folderName = ".config/PluginCollider";
+#else
     options.folderName = "PluginCollider";
+#endif
     options.filenameSuffix = "settings";
     appProp.setStorageParameters(options);
 
-    // TODO: move this to the .config directory.
     juce::PropertiesFile *prop = appProp.getUserSettings();
-    synthDefPath = prop->getValue("synthPath", "");
-#ifdef WIN32
-    pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");
-#elif __APPLE__
-    pluginPath = prop->getValue("pluginPath", "/Applications/SuperCollider.app/Contents/Resources/plugins");
-#else
-    pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
-#endif
 
+    performBootstrap();
     udpPort.handleMessage = [this] (char *msg, int size, OSC_Packet *packet) {
         return superCollider.unrollOSCPacket(size, msg, packet);
     };
@@ -125,7 +121,7 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     // juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application
     // Support/SuperCollider/synthdefs");
 
-    command.reset();
+    command.reset(); 
 
     superCollider.setPluginPath(pluginPath);
     superCollider.setSynthDefPath(synthDefPath);

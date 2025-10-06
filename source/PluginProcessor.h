@@ -169,6 +169,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     double lastProcThreshold;
     double lastProcRun;
+
+    void performBootstrap();
+    bool bootstrapSucessfull = false;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginColliderAudioProcessor)
 };

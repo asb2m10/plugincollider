@@ -30,8 +30,8 @@
 #include "SC_GraphDef.h"
 #include "SC_Group.h"
 #include "SC_UnitDef.h"
+#include "SC_Lib_Cintf.h"
 #include <stdlib.h>
-
 #include "NodeContainer.h"
 
 const int kDefaultNumWireBufs = 64;
@@ -137,9 +137,21 @@ SynthDef::SynthDef(juce::MemoryBlock &newContent) {
     }
 }
 
+
+
 SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
     SetPrintFunc(scprocess_scprintf);
     world = nullptr;
+#ifdef STATIC_PLUGINS
+    static std::atomic_flag pluginCleaner = ATOMIC_FLAG_INIT;
+    if (!pluginCleaner.test_and_set()) {
+        // Make sure the library is deinitialized at exit, since the plugincollider destructor
+        // might be called multiple times if there are multiple instances of the plugin
+        atexit([]() {
+            deinitialize_library();
+        });
+    }
+#endif
 }
 
 SCProcess::~SCProcess() {
