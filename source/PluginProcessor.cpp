@@ -55,6 +55,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 
     // TODO: move this to the .config directory.
     juce::PropertiesFile *prop = appProp.getUserSettings();
+    scprintf("%s\n", prop->getFile().getFullPathName().toRawUTF8());
     synthDefPath = prop->getValue("synthPath", "");
 #ifdef WIN32
     pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");

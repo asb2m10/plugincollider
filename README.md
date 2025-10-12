@@ -10,6 +10,9 @@ Now support Linux, macOS and Windows.
 *PluginCollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
+## Version 0.5.0
+* Hybrid plugin mode; standard SuperCollider plugins are statically linked but can still loaded extended plugins
+
 ## Version 0.4.0
 * Multiple SynthDef snapshot tree configuration: route midi SynthDef outputs to dedicated SynthDef effects
 * Support for array parameters
@@ -44,7 +47,6 @@ Follow [PluginCollider WIKI](https://github.com/asb2m10/plugincollider/wiki) for
 
 * Be sure to set your DAW latency size to a power of two (256, 512, 1024) otherwise some SC plugins might not work properly.
 * If you are running multiple VST instances, scsynth errors messages might end up into one specific unrelated vst logs since scsynth is design to be run into one single process. Some DAWs has a "Dedicated process" runtime that might resolve this issue.
-* PluginCollider is currently built with "static" SC-plugin. It is great because you don't need any SuperCollider installation but it cannot load additional SC-plugins. This will be resolved when we will be able to package the plugin on any platform. (you can disable this by building PluginCollider with the SC_DYNAMIC_PLUGINS directive)
 * On Windows, if you are using the github releases, be sure to update the [MSVC Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022) to the latest version
 
 # TODO
@@ -52,8 +54,8 @@ Follow [PluginCollider WIKI](https://github.com/asb2m10/plugincollider/wiki) for
 - [x] assign scsyndef parameters to controlbus (and plug parameters values)
 - [x] multi scsyndef support
 - [x] implement /freq and /amp from DAW midi message
-- [ ] *macOS* enable PluginCollider to use SuperCollider scsynth plugin that the user previously installed (handle notarization)
-- [x] *Windows* bundle sndfile.dll within the plugin installation
+- [o] *macOS* enable PluginCollider to use SuperCollider scsynth plugin that the user previously installed (handle notarization)
+- [o] *Windows* bundle sndfile.dll within the plugin installation
 - [ ] more accurate OSC DAW timing
 
 # Build instructions

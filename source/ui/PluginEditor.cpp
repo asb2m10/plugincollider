@@ -78,38 +78,12 @@ PluginColliderAudioProcessorEditor::PluginColliderAudioProcessorEditor(
     //         if (r) {
     //             scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
     //             juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
-    //             prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
+    //             prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("pluginPath"));
     //             prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("synthPath"));
     //             audioProcessor.appProp.saveIfNeeded();
     //         }
     //     }), true);
 
-    // };
-
-    // synthDefPanel.loaddef.onClick = [this] () {
-    //     scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the moose you want to load...",
-    //                                         juce::File(), "*.scsyndef");
-    //     auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
-    //     scsynthChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
-    //         juce::File scfile (chooser.getResult());
-    //         if ( !scfile.exists() )
-    //             return;
-
-    //         std::unique_ptr<SynthDef> def;
-    //         def.reset(SynthDef::fromFile(scfile));
-
-    //         if ( def != nullptr ) {
-    //             if ( !audioProcessor.loadSynthDef(def.get()) ) {
-    //                 auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
-    //                 juce::AlertWindow::showAsync(opts, [](int res) {});
-    //                 return;
-    //             }
-    //             synthDefPanel.refresh();
-    //         } else {
-    //             auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("Unable to read Synthdef file").withButton("OK");
-    //             juce::AlertWindow::showAsync(opts, [](int res) {});
-    //         }
-    //     });
     // };
 
     // For now this is for debugging
@@ -195,7 +169,8 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         logging.addSubMenu("UDP", udpLogging);
         logging.addSubMenu("Server", serverLogging);
 
-        ret.addItem("Configure scplugin path...", true, false, [this] {
+        
+        ret.addItem("Configure synthdef path...", true, false, [this] {
             settingsWindow = new juce::AlertWindow("SCSynDef path", "", juce::AlertWindow::NoIcon);
             settingsWindow->addTextBlock("SCSynDef path");
             settingsWindow->addTextEditor("scsynthdef", audioProcessor.synthDefPath);
@@ -213,8 +188,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
             }), true);
         });
 
-#ifndef STATIC_PLUGINS
-        ret.addItem("Configure plugin path...", true, false, [this] {
+        ret.addItem("Configure supercollider plugin path...", true, false, [this] {
             settingsWindow = new juce::AlertWindow("Plugin path", "", juce::AlertWindow::NoIcon);
             settingsWindow->addTextBlock("Plugin path");
             settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);
@@ -223,15 +197,15 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
 
             settingsWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
                 if (r) {
-                    audioProcessor.logger.scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
+                    audioProcessor.logger.scprintf("RESTART DAW FOR SETTINGS TO TAKE EFFECT\n");
                     juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
                     prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
                     audioProcessor.pluginPath = this->settingsWindow->getTextEditorContents("pluginPath");
-                    audioProcessor.appProp.saveIfNeeded();
+                    prop->saveIfNeeded();
                 }
             }), true);
         });
-#endif
+
         ret.addSeparator();
         ret.addSubMenu("Logging", logging);
         ret.addSeparator();
