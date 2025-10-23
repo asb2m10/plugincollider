@@ -32,7 +32,13 @@ else()
     set(ARCH_NAME "lnx")
 endif()
 
-set(PACKAGE_NAME ${PROJECT_NAME}-${PROJECT_VERSION}-n${BUILD_ID}-${ARCH_NAME})
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(VERSION_NAME ${PROJECT_VERSION})
+else()
+    set(VERSION_NAME ${PROJECT_VERSION}-NIGHTLY-${BUILD_ID})
+endif()
+
+set(PACKAGE_NAME ${PROJECT_NAME}-${VERSION_NAME}-${ARCH_NAME})
 
 add_custom_command(
         TARGET installer
@@ -74,16 +80,15 @@ elseif (WIN32)
             STATUS
             "Inno Setup compiler found: ${INNOSETUP_COMPILER_EXECUTABLE}"
         )
-
         add_executable(innosetup::compiler IMPORTED GLOBAL)
-
-        set_target_properties(
-            innosetup::compiler
-            PROPERTIES
-                IMPORTED_LOCATION "${INNOSETUP_COMPILER_EXECUTABLE}"
-                INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/assets/installers/windows/installer.iss"
-        )
     endif()
+
+    set_target_properties(
+        innosetup::compiler
+        PROPERTIES
+            IMPORTED_LOCATION "${INNOSETUP_COMPILER_EXECUTABLE}"
+            INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/assets/installers/windows/installer.iss"
+    )
 
     add_custom_command(
             TARGET installer
@@ -92,7 +97,7 @@ elseif (WIN32)
             COMMAND ${CMAKE_COMMAND} -E make_directory installer
             COMMAND innosetup::compiler
             /O"${CMAKE_BINARY_DIR}/installer" /DName="${PROJECT_NAME}"
-            /DNameCondensed="${PROJECT_NAME}" /DVersion="${PROJECT_VERSION}-${BUILD_ID}"
+            /DNameCondensed="${PROJECT_NAME}" /DVersion="${VERSION_NAME}"
             /DVST3 /DSA
             /DLicense="${CMAKE_SOURCE_DIR}/LICENSE"
             /DStagedAssets="${DIST_DIR}"
