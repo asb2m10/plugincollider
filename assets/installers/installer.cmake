@@ -81,26 +81,26 @@ elseif (WIN32)
             "Inno Setup compiler found: ${INNOSETUP_COMPILER_EXECUTABLE}"
         )
         add_executable(innosetup::compiler IMPORTED GLOBAL)
-    endif()
 
-    set_target_properties(
-        innosetup::compiler
-        PROPERTIES
-            IMPORTED_LOCATION "${INNOSETUP_COMPILER_EXECUTABLE}"
-            INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/assets/installers/windows/installer.iss"
-    )
+        set_target_properties(
+            innosetup::compiler
+            PROPERTIES
+                IMPORTED_LOCATION "${INNOSETUP_COMPILER_EXECUTABLE}"
+                INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/assets/installers/windows/installer.iss"
+        )
 
-    add_custom_command(
-            TARGET installer
-            POST_BUILD
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            COMMAND ${CMAKE_COMMAND} -E make_directory installer
-            COMMAND innosetup::compiler
-            /O"${CMAKE_BINARY_DIR}/installer" /DName="${PROJECT_NAME}"
-            /DNameCondensed="${PROJECT_NAME}" /DVersion="${VERSION_NAME}"
-            /DVST3 /DSA
-            /DLicense="${CMAKE_SOURCE_DIR}/LICENSE"
-            /DStagedAssets="${DIST_DIR}"
-            /DData="${CMAKE_SOURCE_DIR}/assets/installers/windows" "$<TARGET_PROPERTY:innosetup::compiler,INSTALL_SCRIPT>"
-    )
+        add_custom_command(
+                TARGET installer
+                POST_BUILD
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                COMMAND ${CMAKE_COMMAND} -E make_directory installer
+                COMMAND innosetup::compiler
+                /O"${CMAKE_BINARY_DIR}/installer" /DName="${PROJECT_NAME}"
+                /DNameCondensed="${PROJECT_NAME}" /DVersion="${VERSION_NAME}"
+                /DVST3 /DSA
+                /DLicense="${CMAKE_SOURCE_DIR}/LICENSE"
+                /DStagedAssets="${DIST_DIR}"
+                /DData="${CMAKE_SOURCE_DIR}/assets/installers/windows" "$<TARGET_PROPERTY:innosetup::compiler,INSTALL_SCRIPT>"
+        )        
+        endif()
 endif()
