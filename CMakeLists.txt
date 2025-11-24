@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.5)
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
-project(PluginCollider VERSION 0.4.1)
+project(PluginCollider VERSION 0.5.0)
 
 enable_language(C CXX)
 
@@ -54,7 +54,7 @@ else()
 	FetchContent_Declare(
     	sndfile
     	GIT_REPOSITORY "https://github.com/libsndfile/libsndfile"
-    	GIT_TAG 52b803f57a1f4d23471f5c5f77e1a21e0721ea0e
+    	GIT_TAG d9a35ea0d5c64c19dd635ae578e0028df8f66d6a
     	GIT_PROGRESS TRUE
     	GIT_SHALLOW TRUE
 	)
@@ -102,9 +102,8 @@ if(NOT APPLE)
 	add_definitions("-DSC_FFT_GREEN")
 endif()
 
-if (NOT SC_DYNAMIC_PLUGINS)
-	add_definitions("-DSTATIC_PLUGINS")
-endif()
+# Supercollider is build with static plugins, but we will load the others dynamically afterwards
+add_definitions("-DSTATIC_PLUGINS")
 
 if (APPLE)
 	add_definitions("-DSC_DARWIN")
@@ -165,6 +164,9 @@ endif()
 
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS c)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 add_subdirectory(libs/JUCE)             # If you've put JUCE in a subdirectory called JUCE
 
 juce_add_plugin(PluginCollider
@@ -210,7 +212,6 @@ target_sources(PluginCollider
 PRIVATE
 source/ext/value_tree_debugger.cpp)
 
-if (NOT SC_DYNAMIC_PLUGINS)
 target_sources(PluginCollider
     PRIVATE
 	# sc plugins ==========================================
@@ -240,7 +241,6 @@ target_sources(PluginCollider
 	${SC_DIR}/server/plugins/FFT2InterfaceTable.cpp
 	${SC_DIR}/server/plugins/PartitionedConvolution.cpp
 	${SC_DIR}/server/plugins/PV_UGens.cpp)
-endif()
 
 target_sources(PluginCollider
     PRIVATE
@@ -264,7 +264,6 @@ target_sources(PluginCollider
 	${SC_DIR}/server/scsynth/SC_Graph.cpp
 	${SC_DIR}/server/scsynth/SC_GraphDef.cpp
 	${SC_DIR}/server/scsynth/SC_Group.cpp
-	${SC_DIR}/server/scsynth/SC_Lib_Cintf.cpp
 	${SC_DIR}/server/scsynth/SC_Lib.cpp
 	${SC_DIR}/server/scsynth/SC_MiscCmds.cpp
 	${SC_DIR}/server/scsynth/SC_Node.cpp
@@ -286,6 +285,9 @@ target_sources(PluginCollider
 	source/ui/PluginEditor.cpp
 	source/ui/TreeViewItems.cpp
 	source/ui/DynamicViewPanel.cpp
+
+	# Forked Supercollider source files =================
+	source/supercollider/scsynth/SC_Lib_Cintf.cpp
 
 	${boost_system_sources}
 	${boost_filesystem_sources})

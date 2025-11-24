@@ -48,6 +48,9 @@ int scprocess_scprintf(const char *format, va_list ap);
 ///// from SC_ComPort.cpp ///////////
 bool ProcessOSCPacket(World *inWorld, OSC_Packet *inPacket);
 
+///// from SC_Lib_Cintf.cpp ; needed for hybrid plugins ///////////
+extern std::set<std::string> gExcludedPlugins;
+
 /**
  * @brief Helper Stream class to read Pascal Strings
  *
@@ -140,6 +143,11 @@ SynthDef::SynthDef(juce::MemoryBlock &newContent) {
 SCProcess::SCProcess(SuperLogger &logger) : logger(logger) {
     SetPrintFunc(scprocess_scprintf);
     world = nullptr;
+
+    // Avoid loading UIUGen from SuperCollider, we want to load UIGenJUCE
+    if ( gExcludedPlugins.count("UIUGens") == 0 ) {
+        gExcludedPlugins.insert("UIUGens");
+    }
 }
 
 SCProcess::~SCProcess() {
@@ -202,11 +210,7 @@ void SCProcess::bootServer() {
     options.mNumOutputBusChannels = numOutputs;
     options.mVerbosity = 2;
     options.mMaxLogins = 32;
-#if STATIC_PLUGINS
-    logger.scprintf("SC_PLUGIN_PATH is ignored since PluginCollider is compiled with SC static plugins\n");
-#else
     options.mUGensPluginPath = pluginPath.toRawUTF8();
-#endif
 
     // For now the only way to set SynthDefs path
     if (! synthDefPath.isEmpty() ) {
@@ -223,9 +227,7 @@ void SCProcess::bootServer() {
         world->mDumpOSC = 0;
         rt_newGroup(0, kDefaultGroupId);
 
-#if STATIC_PLUGINS
         UIUGens_Load(&gInterfaceTable);
-#endif
         logger.scprintf("WorldOptions: BufLength(%d) MaxWireBufs(%d) RealTimeMemorySize(%d) "
                  "mNumInputBusChannels(%d) mNumOutputBusChannels(%d)\n",
                 options.mBufLength, options.mMaxWireBufs, options.mRealTimeMemorySize,
