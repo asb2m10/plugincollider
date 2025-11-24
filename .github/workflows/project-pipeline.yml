@@ -138,10 +138,11 @@ jobs:
         name: macos-bin
         path: |
           ${{github.workspace}}/build/installer/*
-
+          
   publish-nightly:
     name: "Publish Nightly"
     runs-on: ubuntu-latest
+    if: github.ref_type == 'branch'
     needs: [ build-linux, build-windows, build-macos ]
     steps:
       - name: "Upload to nightly"
@@ -150,4 +151,18 @@ jobs:
           tag: Nightly
           reuse_tag: true
           create_tag: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-release:
+    name: "Publish Release"
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: [ build-linux, build-windows, build-macos ]
+    steps:
+      - name: "Upload to release"
+        uses: surge-synthesizer/sst-githubactions/upload-to-release@main
+        with:
+          tag: ${{ github.ref_name }}
+          reuse_tag: false
+          create_tag: true
           token: ${{ secrets.GITHUB_TOKEN }}
