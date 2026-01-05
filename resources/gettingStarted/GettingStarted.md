@@ -124,7 +124,8 @@ SynthDef(\dynamicDelays, { |varyingDelayTime = 10, mix = 0, amp = 1|
 ```
 
 ## DAW Integration (Reaper Example)
-To see these examples in action within a DAW environment, you can reference the sample Reaper project.
+To see these examples in action within a DAW environment, you can reference the sample Reaper project:
+[Download GettingStarted.RPP](./GettingStarted.RPP)
 
 [!NOTE] The .RPP file must be located in your SuperCollider Help/Guides directory for the following command to work.
 
