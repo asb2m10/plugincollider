@@ -158,7 +158,9 @@ SCProcess::~SCProcess() {
     world = nullptr;
 }
 
-bool SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutputs) {
+bool SCProcess::setup(float sampleRate, int buffSize, int numInputs, int numOutputs, juce::ValueTree srvconf) {
+    this->srvconf = srvconf;
+
     // avoid restarting server if the settings are the same
     if (world != nullptr) {
         bool same = true;
@@ -203,13 +205,14 @@ void SCProcess::bootServer() {
     options.mPreferredSampleRate = sampleRate;
     options.mBufLength = bufferSize;
     options.mPreferredHardwareBufferFrameSize = bufferSize;
-    options.mMaxWireBufs = kDefaultNumWireBufs;
-    options.mRealTimeMemorySize = kDefaultRtMemorySize;
-    options.mNumBuffers = 8192;
+    options.mMaxWireBufs = static_cast<int>(srvconf.getProperty(IDs::srvMaxWireBufs, kDefaultNumWireBufs));
+    options.mRealTimeMemorySize = static_cast<int>(srvconf.getProperty(IDs::srvRealTimeMemorySize, kDefaultRtMemorySize));
+    options.mNumBuffers = static_cast<int>(srvconf.getProperty(IDs::srvNumBuffers, 8192));
     options.mNumInputBusChannels = numInputs;
     options.mNumOutputBusChannels = numOutputs;
     options.mVerbosity = 2;
-    options.mMaxLogins = 32;
+    options.mMaxLogins = static_cast<int>(srvconf.getProperty(IDs::srvMaxLogins, 32));
+    pluginPath = srvconf.getProperty(IDs::srvPluginPath);
     options.mUGensPluginPath = pluginPath.toRawUTF8();
 
     // For now the only way to set SynthDefs path

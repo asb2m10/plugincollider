@@ -139,19 +139,16 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     bool execSyncWorld(std::function<void()> func);
 
     void rebootServer();
+    juce::ApplicationProperties appProp;
 
   private:
     CommandFifo<PluginColliderAudioProcessor> command;
-    juce::String pluginPath;
-    juce::String synthDefPath;
     juce::AudioParameterFloat *gain;
     ControlBusParameter *controlBus[NUMBER_OF_CONTROL_BUSES];
 
     juce::AudioProcessLoadMeasurer loadMeasurer;
 
     bool curActivity;
-
-    juce::ApplicationProperties appProp;
 
     void parameterValueChanged(int parameterIndex, float newValue) override;
     void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {

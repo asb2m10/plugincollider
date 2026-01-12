@@ -193,7 +193,7 @@ public:
     void quit();
 
     /* returns true if the server has booted / rebooted */
-    bool setup(float sampleRate, int buffSize, int numInputs, int numOutput);
+    bool setup(float sampleRate, int buffSize, int numInputs, int numOutput, juce::ValueTree srvconf);
     void reboot();
     void run(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages);
     bool unrollOSCPacket(int inSize, char *inData, OSC_Packet *inPacket);
@@ -269,7 +269,7 @@ private:
     SuperLogger &logger;
     World *world;
     juce::CriticalSection worldLock;
-
+    juce::ValueTree srvconf;
     void bootServer();
 
     // ATTIC
