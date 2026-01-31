@@ -31,6 +31,8 @@ TARGET_DIR=$4
 OUTPUT_BASE_FILENAME=$5
 
 TMPDIR="./installer-tmp"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENTITLEMENTS="$SCRIPT_DIR/app.entitlements"
 VST3="${PRODUCT}.vst3"
 AU="${PRODUCT}.component"
 CLAP="${PRODUCT}.clap"
@@ -81,7 +83,7 @@ build_flavor()
     if [[ ! -z $MAC_SIGNING_CERT ]]; then
       [[ -z $MAC_INSTALLING_CERT ]] && echo "You need an installing cert too " && exit 2
       echo "Singning $workdir/$flavorprod"
-      codesign --force -s "$MAC_SIGNING_CERT" -o runtime --deep "$workdir/$flavorprod"
+      codesign --force -s "$MAC_SIGNING_CERT" -o runtime --deep --entitlements "$ENTITLEMENTS" "$workdir/$flavorprod"
       codesign  -vvv --deep --stric "$workdir/$flavorprod"
 
       pkgbuild --sign "$MAC_INSTALLING_CERT" --root $workdir --identifier $ident --version $VERSION --install-location "$loc" "$TMPDIR/${PRODUCTFILE}_${flavor}.pkg" $sca || exit 1
