@@ -23,6 +23,7 @@
 #include "PanelSynthDef.h"
 #include "PanelScratchpad.h"
 #include "PanelGroup.h"
+#include "PanelServer.h"
 
 void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudioProcessor &processor) {
     if ( currentItem == item ) {
@@ -71,6 +72,14 @@ void DynamicViewPanel::setEditableItem(juce::ValueTree item, PluginColliderAudio
 
     if ( type == IDs::groupnode || type == IDs::rootnode ) {
         GroupPanel *panel = new GroupPanel(item, processor);
+        component.reset(panel);
+        addAndMakeVisible(panel);
+        resized();
+        return;
+    }
+
+    if ( type == IDs::srvRoot ) {
+        ServerPanel *panel = new ServerPanel(item, processor);
         component.reset(panel);
         addAndMakeVisible(panel);
         resized();

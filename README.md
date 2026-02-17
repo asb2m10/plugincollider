@@ -10,6 +10,10 @@ Now support Linux, macOS and Windows.
 *PluginCollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
+## Version 0.5.1
+* Added server configuration options
+* On macOS, support loading external SuperCollider plugins installed by the user
+
 ## Version 0.5.0
 * Hybrid plugin mode; standard SuperCollider plugins are statically linked but can still loaded extended plugins
 

@@ -53,18 +53,6 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
     options.filenameSuffix = "settings";
     appProp.setStorageParameters(options);
 
-    // TODO: move this to the .config directory.
-    juce::PropertiesFile *prop = appProp.getUserSettings();
-    scprintf("%s\n", prop->getFile().getFullPathName().toRawUTF8());
-    synthDefPath = prop->getValue("synthPath", "");
-#ifdef WIN32
-    pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");
-#elif __APPLE__
-    pluginPath = prop->getValue("pluginPath", "/Applications/SuperCollider.app/Contents/Resources/plugins");
-#else
-    pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
-#endif
-
     udpPort.handleMessage = [this] (char *msg, int size, OSC_Packet *packet) {
         return superCollider.unrollOSCPacket(size, msg, packet);
     };
@@ -127,10 +115,7 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     // Support/SuperCollider/synthdefs");
 
     command.reset();
-
-    superCollider.setPluginPath(pluginPath);
-    superCollider.setSynthDefPath(synthDefPath);
-    superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(), getTotalNumOutputChannels());
+    superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(), getTotalNumOutputChannels(), pluginState.getChildWithName(IDs::srvRoot));
 
     if ( ! superCollider.isRunning() ) 
         return;
@@ -247,8 +232,6 @@ bool PluginColliderAudioProcessor::execSyncWorld(std::function<void()> func) {
 }
 
 void PluginColliderAudioProcessor::rebootServer() {
-    superCollider.setPluginPath(pluginPath);
-    superCollider.setSynthDefPath(synthDefPath);
     superCollider.reboot();
 }
 

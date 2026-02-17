@@ -65,7 +65,25 @@ void PluginColliderAudioProcessor::resetPluginState() {
     pluginState.removeListener(this);
 
     juce::ValueTree srvRoot = juce::ValueTree(IDs::srvRoot);
+    juce::PropertiesFile *prop = appProp.getUserSettings();
+    srvRoot.setProperty(IDs::srvMaxWireBufs, prop->getIntValue("srvMaxWireBufs", 64), nullptr);
+    srvRoot.setProperty(IDs::srvRealTimeMemorySize, prop->getIntValue("srvRealTimeMemorySize", 8192), nullptr);
+    srvRoot.setProperty(IDs::srvNumBuffers, prop->getIntValue("srvNumBuffers", 1024), nullptr);
+    srvRoot.setProperty(IDs::srvMaxLogins, prop->getIntValue("srvMaxLogins", 32), nullptr);
     srvRoot.setProperty(IDs::srvAlwaysSyncNodes, true, nullptr);
+
+#ifdef WIN32
+    juce::String pluginPath = prop->getValue("pluginPath", "C:\\Program Files\\SuperCollider\\plugins");
+#elif __APPLE__
+    juce::String pluginPath = prop->getValue("pluginPath", "/Applications/SuperCollider.app/Contents/Resources/plugins");
+#else
+    juce::String pluginPath = prop->getValue("pluginPath", "/usr/lib/SuperCollider/plugins");
+#endif
+    srvRoot.setProperty(IDs::srvPluginPath, pluginPath, nullptr);
+
+    juce::String synthDefPath = prop->getValue("synthPath", "");
+    srvRoot.setProperty(IDs::srvSynthDefPath, synthDefPath, nullptr);
+
     pluginState.addChild(srvRoot, -1, nullptr);
 
     juce::ValueTree controlBusses = juce::ValueTree(IDs::controlbuses);

@@ -169,49 +169,7 @@ juce::PopupMenu PluginColliderAudioProcessorEditor::getMenuForIndex(int topLevel
         logging.addSubMenu("UDP", udpLogging);
         logging.addSubMenu("Server", serverLogging);
 
-        
-        ret.addItem("Configure synthdef path...", true, false, [this] {
-            settingsWindow = new juce::AlertWindow("SCSynDef path", "", juce::AlertWindow::NoIcon);
-            settingsWindow->addTextBlock("SCSynDef path");
-            settingsWindow->addTextEditor("scsynthdef", audioProcessor.synthDefPath);
-            settingsWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
-            settingsWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
-
-            settingsWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
-                if (r) {
-                    audioProcessor.logger.scprintf("RESTART PLUGIN FOR SETTINGS TO TAKE EFFECT\n");
-                    juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
-                    prop->setValue("synthPath", this->settingsWindow->getTextEditorContents("scsynthdef"));
-                    audioProcessor.synthDefPath = this->settingsWindow->getTextEditorContents("scsynthdef");
-                    audioProcessor.appProp.saveIfNeeded();
-                }
-            }), true);
-        });
-
-        ret.addItem("Configure supercollider plugin path...", true, false, [this] {
-            settingsWindow = new juce::AlertWindow("Plugin path", "", juce::AlertWindow::NoIcon);
-            settingsWindow->addTextBlock("Plugin path");
-            settingsWindow->addTextEditor("pluginPath", audioProcessor.pluginPath);
-            settingsWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
-            settingsWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
-
-            settingsWindow->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
-                if (r) {
-                    audioProcessor.logger.scprintf("RESTART DAW FOR SETTINGS TO TAKE EFFECT\n");
-                    juce::PropertiesFile *prop = audioProcessor.appProp.getUserSettings();
-                    prop->setValue("pluginPath", this->settingsWindow->getTextEditorContents("pluginPath"));
-                    audioProcessor.pluginPath = this->settingsWindow->getTextEditorContents("pluginPath");
-                    prop->saveIfNeeded();
-                }
-            }), true);
-        });
-
-        ret.addSeparator();
         ret.addSubMenu("Logging", logging);
-        ret.addSeparator();
-        ret.addItem("Reboot server", true, false, [this] {
-            audioProcessor.rebootServer();
-        });
         }
         break;
     case 1:
