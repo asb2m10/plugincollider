@@ -35,23 +35,38 @@ class RangeEditor : public juce::Component {
         }
     }
 
+    static juce::String textToValue(double val) {
+        juce::String s = juce::String(val, 5);
+        if (s.containsChar('.')) {
+            while (s.endsWithChar('0'))
+                s = s.dropLastCharacters(1);
+            if (s.endsWithChar('.'))
+                s = s.dropLastCharacters(1);
+        }
+        return s;
+    }
+
 public:
     RangeEditor() {
-        low.setRange(-GLOBAL_RANGE, GLOBAL_RANGE, 0.1);
+        low.setRange(-GLOBAL_RANGE, GLOBAL_RANGE, 0.00001);
         low.setSliderStyle(juce::Slider::SliderStyle::LinearBarVertical);
         low.setSliderSnapsToMousePosition(false);
         low.setColour(juce::Slider::trackColourId, juce::Colours::transparentBlack);
+        low.textFromValueFunction = textToValue;
+        low.setNumDecimalPlacesToDisplay(0);
         addAndMakeVisible(low);
         
         label.setText("-", juce::NotificationType::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
         addAndMakeVisible(label);
         
-        high.setRange(-GLOBAL_RANGE, GLOBAL_RANGE, 0.1);
+        high.setRange(-GLOBAL_RANGE, GLOBAL_RANGE, 0.00001);
         high.setValue(1, juce::NotificationType::dontSendNotification);
         high.setSliderStyle(juce::Slider::SliderStyle::LinearBarVertical);
         high.setSliderSnapsToMousePosition(false);
-        high.setColour(juce::Slider::trackColourId, juce::Colours::transparentBlack);        
+        high.setColour(juce::Slider::trackColourId, juce::Colours::transparentBlack);
+        high.textFromValueFunction = textToValue;
+        high.setNumDecimalPlacesToDisplay(0);
         addAndMakeVisible(high);
 
         stepLabel.setText("Step", juce::NotificationType::dontSendNotification);
