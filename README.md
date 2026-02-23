@@ -12,6 +12,7 @@ Now support Linux, macOS and Windows.
 # Changelog
 ## Version 0.5.2 (In development)
 * Added more precision for ranges
+* ControlBus state synchronization with DAW and parameters values
 
 ## Version 0.5.1
 * Added server configuration options

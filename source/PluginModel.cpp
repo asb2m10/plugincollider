@@ -1,5 +1,5 @@
 /*
-    PluginCollider Copyright (c) 2025 Pascal Gauthier.
+    PluginCollider Copyright (c) 2025-2026 Pascal Gauthier.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +20,14 @@
 #include "PluginProcessor.h"
 
 void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
+    juce::ValueTree controlBuses = pluginState.getChildWithName(IDs::controlbuses);
+    for (int idx=0;idx<NUMBER_OF_CONTROL_BUSES;idx++) {
+        juce::ValueTree cb = controlBuses.getChild(idx);
+        if ( cb.isValid() ) {
+            float dawValue = controlBus[idx]->convertTo0to1(controlBus[idx]->get());
+            cb.setProperty(IDs::cbValue, dawValue, nullptr);
+        }
+    }
     std::unique_ptr<juce::XmlElement> xml(pluginState.createXml());
     copyXmlToBinary(*xml, destData);
 }
@@ -48,6 +56,10 @@ void PluginColliderAudioProcessor::setStateInformation(const void *data, int siz
             if ( cb.hasProperty(IDs::cbName) ) {
                 juce::String name = cb.getProperty(IDs::cbName);
                 controlBus[idx]->setName(name);
+            }
+            if ( cb.hasProperty(IDs::cbValue) ) {
+                float value = cb.getProperty(IDs::cbValue);
+                controlBus[idx]->setValueNotifyingHost(value);
             }
         }
         const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);

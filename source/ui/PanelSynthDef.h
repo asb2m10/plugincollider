@@ -214,6 +214,14 @@ public:
                             juce::ValueTree cbVt = this->vtControlBus.getChild(idx);
                             cbVt.setProperty(IDs::cbName, parameter.getProperty(IDs::pName), nullptr);
                             cbVt.setProperty(IDs::cbRange, parameter.getProperty(IDs::pRange), nullptr);
+
+                            float value;
+                            if ( parameter.hasProperty(IDs::pCurrentValue) )
+                                value = parameter.getProperty(IDs::pCurrentValue);
+                            else
+                                value = parameter.getProperty(IDs::pDefaultValue);
+
+                            this->processor.setControlBusValue(idx, value);
                         }
                         parameter.setProperty(IDs::pControlBus, idx, nullptr);
                         refresh();

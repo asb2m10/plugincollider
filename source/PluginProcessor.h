@@ -141,6 +141,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     void rebootServer();
     juce::ApplicationProperties appProp;
 
+    void setControlBusValue(int busIdx, float value) const;
+
   private:
     CommandFifo<PluginColliderAudioProcessor> command;
     juce::AudioParameterFloat *gain;
