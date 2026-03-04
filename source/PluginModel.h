@@ -1,5 +1,5 @@
 /*
-    PluginCollider Copyright (c) 2025 Pascal Gauthier.
+    PluginCollider Copyright (c) 2025-2026 Pascal Gauthier.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ namespace IDs {
             DECLARE_ID(cbName)
             DECLARE_ID(cbRange)
             DECLARE_ID(cbIdx)
+            DECLARE_ID(cbValue)
 
     DECLARE_ID(rootnode)
         DECLARE_ID(fxnode)

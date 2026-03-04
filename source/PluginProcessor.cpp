@@ -1,5 +1,5 @@
 /*
-    PluginCollider Copyright (c) 2025 Pascal Gauthier.
+    PluginCollider Copyright (c) 2025-2026 Pascal Gauthier.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -233,6 +233,16 @@ bool PluginColliderAudioProcessor::execSyncWorld(std::function<void()> func) {
 
 void PluginColliderAudioProcessor::rebootServer() {
     superCollider.reboot();
+}
+
+void PluginColliderAudioProcessor::setControlBusValue(int busIdx, float value) const {
+    if ( busIdx < 0 || busIdx >= NUMBER_OF_CONTROL_BUSES )
+        return;
+
+    ControlBusParameter *bus = controlBus[busIdx];
+    bus->beginChangeGesture();
+    bus->setValueNotifyingHost(bus->getNormalisableRange().convertTo0to1(value));
+    bus->endChangeGesture();
 }
 
 bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
