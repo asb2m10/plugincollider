@@ -21,6 +21,7 @@
 
 #define IDS_VERSION "B"
 const int NUMBER_OF_CONTROL_BUSES = 32;
+const int HOST_TEMPO_BUS_BASE = NUMBER_OF_CONTROL_BUSES; // buses 32-35
 
 namespace IDs {
 #define DECLARE_ID(name) const juce::Identifier name (#name);

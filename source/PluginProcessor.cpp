@@ -186,6 +186,20 @@ void PluginColliderAudioProcessor::processBlock(
     midiKeyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(), true);
 
     const juce::ScopedLock lock(superCollider.worldLock);
+
+    if (auto* playHead = getPlayHead()) {
+        auto pos = playHead->getPosition();
+        if (pos.hasValue()) {
+            if (auto bpm = pos->getBpm())
+                superCollider.rt_setControlBusValue(HOST_TEMPO_BUS_BASE + 0, static_cast<float>(*bpm));
+            if (auto ppq = pos->getPpqPosition())
+                superCollider.rt_setControlBusValue(HOST_TEMPO_BUS_BASE + 1, static_cast<float>(*ppq));
+            superCollider.rt_setControlBusValue(HOST_TEMPO_BUS_BASE + 2, pos->getIsPlaying() ? 1.0f : 0.0f);
+            if (auto timeSig = pos->getTimeSignature())
+                superCollider.rt_setControlBusValue(HOST_TEMPO_BUS_BASE + 3, static_cast<float>(timeSig->numerator));
+        }
+    }
+
     try {
         command.call(*this);
         container->rt_processMidiMessages(superCollider, midiMessages);
