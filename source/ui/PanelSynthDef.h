@@ -200,32 +200,21 @@ public:
                 int idx = cb.getProperty(IDs::cbIdx);
                 menu.addItem(name, true, false, [this, idx, rowNumber, name] {
                     juce::ValueTree parameter = this->vtSynth.getChildWithName(IDs::parameters).getChild(rowNumber);
-                    juce::String msg = juce::String("Assign parameters value '") + parameter.getProperty(IDs::pName).toString()
-                        + "' to control bus '" + name + "' ?";
-                    auto msgbox = juce::MessageBoxOptions::makeOptionsYesNoCancel(
-                        juce::MessageBoxIconType::QuestionIcon, "Confirmation", msg);
-                    juce::NativeMessageBox::showAsync(msgbox, [this, idx, name, rowNumber](int result) {
-                        if ( result == 2 )
-                            return;
 
-                        // We copy the value of the parameter to the control bus
-                        juce::ValueTree parameter = this->vtSynth.getChildWithName(IDs::parameters).getChild(rowNumber);
-                        if ( result == 0 ) {
-                            juce::ValueTree cbVt = this->vtControlBus.getChild(idx);
-                            cbVt.setProperty(IDs::cbName, parameter.getProperty(IDs::pName), nullptr);
-                            cbVt.setProperty(IDs::cbRange, parameter.getProperty(IDs::pRange), nullptr);
+                    // Assign directly — copy param name/range to the control bus
+                    juce::ValueTree cbVt = this->vtControlBus.getChild(idx);
+                    cbVt.setProperty(IDs::cbName, parameter.getProperty(IDs::pName), nullptr);
+                    cbVt.setProperty(IDs::cbRange, parameter.getProperty(IDs::pRange), nullptr);
 
-                            float value;
-                            if ( parameter.hasProperty(IDs::pCurrentValue) )
-                                value = parameter.getProperty(IDs::pCurrentValue);
-                            else
-                                value = parameter.getProperty(IDs::pDefaultValue);
+                    float value;
+                    if ( parameter.hasProperty(IDs::pCurrentValue) )
+                        value = parameter.getProperty(IDs::pCurrentValue);
+                    else
+                        value = parameter.getProperty(IDs::pDefaultValue);
 
-                            this->processor.setControlBusValue(idx, value);
-                        }
-                        parameter.setProperty(IDs::pControlBus, idx, nullptr);
-                        refresh();
-                     });
+                    this->processor.setControlBusValue(idx, value);
+                    parameter.setProperty(IDs::pControlBus, idx, nullptr);
+                    refresh();
                 });
             }
             menu.showMenuAsync(juce::PopupMenu::Options());

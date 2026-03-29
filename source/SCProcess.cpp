@@ -215,7 +215,8 @@ void SCProcess::bootServer() {
     pluginPath = srvconf.getProperty(IDs::srvPluginPath);
     options.mUGensPluginPath = pluginPath.toRawUTF8();
 
-    // For now the only way to set SynthDefs path
+    // Read SynthDef path from config (same as pluginPath above)
+    synthDefPath = srvconf.getProperty(IDs::srvSynthDefPath);
     if (! synthDefPath.isEmpty() ) {
 #ifdef WIN32
         _putenv_s("SC_SYNTHDEF_PATH", synthDefPath.toRawUTF8());
