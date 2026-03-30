@@ -25,6 +25,7 @@
 #include "UDPPort.h"
 #include "PluginModel.h"
 #include "NodeContainer.h"
+#include "SynthDefWatcher.h"
 #include "SpecFile.h"
 
 class PluginColliderAudioProcessorEditor;
@@ -85,7 +86,9 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
     bool setUdpPort(juce::String value);
 
     friend PluginColliderAudioProcessorEditor;
+    friend SynthDefWatcher;
     juce::ValueTree pluginState;
+    SynthDefWatcher synthDefWatcher;
     
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) override;
     void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
@@ -94,7 +97,8 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     /**
      * Replace the synthdef in the plugin state with the one in the memory block.
-     * Optionally provide an ordered spec list (paramName -> "min max step") to override range guessing.
+     * Optionally provide an ordered spec list (paramName, "min max step") to override
+     * range guessing and drive control bus auto-assignment order.
      */
     bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target,
                          const SpecList &specs = {});

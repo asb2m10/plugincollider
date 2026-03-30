@@ -31,7 +31,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)
               .withOutput("Out-3-4", juce::AudioChannelSet::stereo(), false)
               .withOutput("Out-5-6", juce::AudioChannelSet::stereo(), false)
-              .withOutput("Out-7-8", juce::AudioChannelSet::stereo(), false)), superCollider(logger)
+              .withOutput("Out-7-8", juce::AudioChannelSet::stereo(), false)), superCollider(logger), synthDefWatcher(*this)
 #endif
 {
     addParameter(gain = new juce::AudioParameterFloat("gain", // parameterID
@@ -66,6 +66,7 @@ PluginColliderAudioProcessor::PluginColliderAudioProcessor()
 }
 
 PluginColliderAudioProcessor::~PluginColliderAudioProcessor() {
+    synthDefWatcher.stop();
     logger.scprintf("PluginCollider bye\n");
     superCollider.quit();
     juce::Logger::setCurrentLogger(nullptr);
@@ -117,13 +118,21 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
     command.reset();
     superCollider.setup(sampleRate, samplesPerBlock, getTotalNumInputChannels(), getTotalNumOutputChannels(), pluginState.getChildWithName(IDs::srvRoot));
 
-    if ( ! superCollider.isRunning() ) 
+    if ( ! superCollider.isRunning() )
         return;
+
+    {
+        juce::ValueTree srvRoot = pluginState.getChildWithName(IDs::srvRoot);
+        if (static_cast<bool>(srvRoot.getProperty(IDs::srvAutoReloadSynthDefs, false))) {
+            juce::String synthDefPath = srvRoot.getProperty(IDs::srvSynthDefPath).toString();
+            synthDefWatcher.start(synthDefPath);
+        }
+    }
 
     try {
         if ( container != nullptr ) {
             container->rt_free(superCollider);
-            container.release();
+            container.reset();
         }
         rt_loadSynthDef(pluginState.getChildWithName(IDs::rootnode));
         container = std::make_unique<NodeContainer>(pluginState.getChildWithName(IDs::rootnode));
@@ -137,9 +146,10 @@ void PluginColliderAudioProcessor::prepareToPlay(double sampleRate,
 }
 
 void PluginColliderAudioProcessor::releaseResources() {
+    synthDefWatcher.stop();
     if ( container != nullptr ) {
         container->rt_free(superCollider);
-        container.release();
+        container.reset();
     }
     loadMeasurer.reset();
 }
@@ -158,9 +168,7 @@ void PluginColliderAudioProcessor::reloadNodeContainer() {
 }
 
 bool PluginColliderAudioProcessor::isAudioProcSuspended() {
-    if ( juce::Time::getMillisecondCounterHiRes() - lastProcRun > lastProcThreshold )
-        return true;
-    return false;
+    return juce::Time::getMillisecondCounterHiRes() - lastProcRun > lastProcThreshold;
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -263,7 +271,7 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
                                                    const SpecList &specs) {
     try {
         SynthDef synthDef(block);
-        int synthDefLoaded = true;
+        bool synthDefLoaded = true;
 
         execSyncWorld([this, &block, &synthDefLoaded]() {
             synthDefLoaded = superCollider.rt_loadSynthDef(&block);
@@ -358,11 +366,10 @@ void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
 }
 
 bool PluginColliderAudioProcessor::isNodeReloadBaseEvent(juce::ValueTree &parentTree) {
-    if ( ! static_cast<bool>(pluginState.getChildWithName(IDs::srvRoot).getProperty(IDs::srvAlwaysSyncNodes, false)) )
+    if (!static_cast<bool>(pluginState.getChildWithName(IDs::srvRoot).getProperty(IDs::srvAlwaysSyncNodes, false)))
         return false;
-    if ( pluginState.getChildWithName(IDs::rootnode) != parentTree && !parentTree.isAChildOf(pluginState.getChildWithName(IDs::rootnode)) )
-        return false;
-    return true;
+    auto rootnode = pluginState.getChildWithName(IDs::rootnode);
+    return parentTree == rootnode || parentTree.isAChildOf(rootnode);
 }
 
 void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged, const juce::Identifier &property) {
@@ -399,6 +406,17 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
         controlBus[idx]->setRange(range);
         const auto details = juce::AudioProcessorListener::ChangeDetails{}.withParameterInfoChanged(true);
         updateHostDisplay(details);
+        return;
+    }
+
+    if ( property == IDs::srvAutoReloadSynthDefs || property == IDs::srvSynthDefPath ) {
+        juce::ValueTree srvRoot = pluginState.getChildWithName(IDs::srvRoot);
+        if (static_cast<bool>(srvRoot.getProperty(IDs::srvAutoReloadSynthDefs, false))) {
+            juce::String path = srvRoot.getProperty(IDs::srvSynthDefPath).toString();
+            synthDefWatcher.start(path);
+        } else {
+            synthDefWatcher.stop();
+        }
         return;
     }
 

@@ -46,6 +46,8 @@ class ServerPanel : public juce::Component {
     juce::Label synthDefPathLabel;
     juce::TextEditor synthDefPath;
 
+    juce::ToggleButton autoReloadSynthDefs;
+
     juce::TextButton rebootServerButton;
     juce::TextButton defaultConfigButton;
 public:
@@ -97,6 +99,11 @@ public:
         synthDefPath.setText(vt.getProperty(IDs::srvSynthDefPath), juce::dontSendNotification);
         addAndMakeVisible(synthDefPath);
 
+        // Auto-reload SynthDefs
+        autoReloadSynthDefs.setButtonText("Auto-reload SynthDefs");
+        autoReloadSynthDefs.setToggleState(vt.getProperty(IDs::srvAutoReloadSynthDefs, false), juce::dontSendNotification);
+        addAndMakeVisible(autoReloadSynthDefs);
+
         // Reboot Server Button
         rebootServerButton.setButtonText("Reboot Server");
         addAndMakeVisible(rebootServerButton);
@@ -129,6 +136,10 @@ public:
             vt.setProperty(IDs::srvSynthDefPath, synthDefPath.getText(), nullptr);
         };
 
+        autoReloadSynthDefs.onStateChange = [this]() {
+            vt.setProperty(IDs::srvAutoReloadSynthDefs, autoReloadSynthDefs.getToggleState(), nullptr);
+        };
+
         rebootServerButton.onClick = [this]() {
             this->processor.rebootServer();
         };
@@ -141,6 +152,7 @@ public:
             prop->setValue("srvMaxLogins", maxLogins.getText().getIntValue());
             prop->setValue("pluginPath", pluginPath.getText());
             prop->setValue("synthPath", synthDefPath.getText());
+            prop->setValue("autoReloadSynthDefs", autoReloadSynthDefs.getToggleState());
             this->processor.appProp.saveIfNeeded();
         };
     }
@@ -171,7 +183,7 @@ public:
         bounds.removeFromTop(spacing);
 
         // Real-time Memory Size
-        // rowBounds = bounds.removeFromTop(componentHeight);
+        rowBounds = bounds.removeFromTop(componentHeight);
         realTimeMemorySizeLabel.setBounds(rowBounds.removeFromLeft(labelWidth));
         rowBounds.removeFromLeft(spacing);
         realTimeMemorySize.setBounds(rowBounds.removeFromLeft(labelWidth));
@@ -185,7 +197,7 @@ public:
         bounds.removeFromTop(spacing);
 
         // Max Logins
-        // rowBounds = bounds.removeFromTop(componentHeight);
+        rowBounds = bounds.removeFromTop(componentHeight);
         maxLoginsLabel.setBounds(rowBounds.removeFromLeft(labelWidth));
         rowBounds.removeFromLeft(spacing);
         maxLogins.setBounds(rowBounds.removeFromLeft(labelWidth));
@@ -198,10 +210,12 @@ public:
         pluginPath.setBounds(rowBounds);
         bounds.removeFromTop(spacing * 2);
 
-        // SynthDef Path
+        // SynthDef Path + Auto-reload toggle
         rowBounds = bounds.removeFromTop(componentHeight);
         synthDefPathLabel.setBounds(rowBounds.removeFromLeft(labelWidth));
         rowBounds.removeFromLeft(spacing);
+        autoReloadSynthDefs.setBounds(rowBounds.removeFromRight(200));
+        rowBounds.removeFromRight(spacing);
         synthDefPath.setBounds(rowBounds);
         bounds.removeFromTop(spacing * 2);
     }

@@ -280,6 +280,7 @@ target_sources(PluginCollider
     source/PluginProcessor.cpp
 	source/PluginModel.cpp
 	source/SCProcess.cpp
+	source/SynthDefWatcher.cpp
 	source/SCPluginDriver.cpp
 	source/UIUGenJUCE.cpp
 	source/ui/PluginEditor.cpp

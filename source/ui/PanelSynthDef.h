@@ -37,12 +37,9 @@ class SynthDefTable : public VTTableList {
      */
     bool disabledControl(juce::ValueTree &param) {
         int cbIdx = param.getProperty(IDs::pControlBus, -1);
-        if ( cbIdx != -1 )
+        if (cbIdx != -1)
             return true;
-        juce::String name = param.getProperty(IDs::pName);
-        if ( filterParameter.contains(name, false) )
-            return true;
-        return false;
+        return filterParameter.contains(param.getProperty(IDs::pName).toString(), false);
     }
 public:
     std::function<void(int)> onControlBusAssign;
@@ -142,7 +139,7 @@ public:
     }
 };
 
-class PanelSynthDefFx : public juce::Component {
+class PanelSynthDefFx : public juce::Component, private juce::ValueTree::Listener {
 protected:
     PluginColliderAudioProcessor &processor;
     juce::Label synthname;
@@ -151,6 +148,7 @@ protected:
     juce::TextButton loaddef;
     juce::ValueTree vtSynth;
     juce::ValueTree vtControlBus;
+    bool refreshPending = false;
 public:
     PanelSynthDefFx(juce::ValueTree vt, PluginColliderAudioProcessor &processor) :  vtSynth(vt), processor(processor) {
         vtControlBus = this->processor.pluginState.getChildWithName(IDs::controlbuses);
@@ -260,7 +258,37 @@ public:
 
         synthDefTable.setSynthContent(vtSynth, vtControlBus);
         refresh();
+        vtSynth.addListener(this);
     }
+
+    ~PanelSynthDefFx() override {
+        vtSynth.removeListener(this);
+    }
+
+    void scheduleRefresh() {
+        if (refreshPending) return;
+        refreshPending = true;
+        juce::Component::SafePointer<PanelSynthDefFx> safeThis(this);
+        juce::MessageManager::callAsync([safeThis]() {
+            if (auto *p = safeThis.getComponent()) {
+                p->refreshPending = false;
+                p->synthDefTable.setSynthContent(p->vtSynth, p->vtControlBus);
+                p->refresh();
+            }
+        });
+    }
+
+    void valueTreePropertyChanged(juce::ValueTree &, const juce::Identifier &property) override {
+        if (property == IDs::synthBlob)
+            scheduleRefresh();
+    }
+
+    void valueTreeChildAdded(juce::ValueTree &, juce::ValueTree &child) override {
+        if (child.hasType(IDs::parameters))
+            scheduleRefresh();
+    }
+
+    void valueTreeChildRemoved(juce::ValueTree &, juce::ValueTree &, int) override {}
 
     void refresh() {
         juce::String synthName = vtSynth.getProperty(IDs::synthName);

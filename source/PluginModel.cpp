@@ -16,7 +16,6 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#pragma once
 #include "PluginProcessor.h"
 
 void PluginColliderAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
@@ -95,6 +94,7 @@ void PluginColliderAudioProcessor::resetPluginState() {
 
     juce::String synthDefPath = prop->getValue("synthPath", "");
     srvRoot.setProperty(IDs::srvSynthDefPath, synthDefPath, nullptr);
+    srvRoot.setProperty(IDs::srvAutoReloadSynthDefs, prop->getBoolValue("autoReloadSynthDefs", false), nullptr);
 
     pluginState.addChild(srvRoot, -1, nullptr);
 
@@ -108,7 +108,6 @@ void PluginColliderAudioProcessor::resetPluginState() {
     }
     pluginState.addChild(juce::ValueTree(IDs::rootnode), 0, nullptr);
     pluginState.addChild(controlBusses, 0, nullptr);
-    juce::ValueTree controlBus = juce::ValueTree(IDs::controlbus);
 
     juce::ValueTree scratchpad = juce::ValueTree(IDs::scratchpad);
     scratchpad.setProperty(IDs::spCode, "", nullptr);

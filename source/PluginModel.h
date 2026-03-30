@@ -70,5 +70,6 @@ namespace IDs {
         DECLARE_ID(srvRealTimeMemorySize)
         DECLARE_ID(srvNumBuffers)
         DECLARE_ID(srvMaxLogins)
+        DECLARE_ID(srvAutoReloadSynthDefs)
 };
 
