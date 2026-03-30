@@ -259,7 +259,8 @@ void PluginColliderAudioProcessor::setControlBusValue(int busIdx, float value) c
     bus->endChangeGesture();
 }
 
-bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target) {
+bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target,
+                                                   const std::map<juce::String, juce::String> &specs) {
     try {
         SynthDef synthDef(block);
         int synthDefLoaded = true;
@@ -280,7 +281,11 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
             parameter.setProperty(IDs::pName, synthDef.getParameters()[i], nullptr);
             parameter.setProperty(IDs::pIdx, i, nullptr);
             parameter.setProperty(IDs::pDefaultValue, synthDef.getParametersValues()[i], nullptr);
-            parameter.setProperty(IDs::pRange, synthDef.guessParameterRange(i), nullptr);
+            auto specIt = specs.find(synthDef.getParameters()[i]);
+            if (specIt != specs.end())
+                parameter.setProperty(IDs::pRange, specIt->second, nullptr);
+            else
+                parameter.setProperty(IDs::pRange, synthDef.guessParameterRange(i), nullptr);
             parameter.setProperty(IDs::pControlBus, -1, nullptr);
             parameters.addChild(parameter, i, nullptr);
         }
