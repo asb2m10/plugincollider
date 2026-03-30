@@ -87,8 +87,17 @@ static std::map<juce::String, juce::String> loadSpecFile(const juce::File &scsyn
 
         // Extract minval, maxval, step
         int blockStart = content.indexOf(lineStart, "[");
-        int blockEnd = content.indexOf(blockStart, "]");
-        if (blockStart < 0 || blockEnd < 0) break;
+        if (blockStart < 0) break;
+        // Find matching ] — skip nested o[N] references
+        int blockEnd = blockStart + 1;
+        int depth = 1;
+        while (blockEnd < content.length() && depth > 0) {
+            if (content[blockEnd] == '[') depth++;
+            else if (content[blockEnd] == ']') depth--;
+            blockEnd++;
+        }
+        if (depth != 0) break;
+        blockEnd--; // point at the ]
         auto block = content.substring(blockStart, blockEnd + 1);
 
         auto extractValue = [&block](const juce::String &key) -> juce::String {

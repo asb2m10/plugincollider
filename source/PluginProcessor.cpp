@@ -291,6 +291,41 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
         }
         target.addChild(parameters, -1, nullptr);
 
+        // Auto-assign parameters with specs to control buses
+        if (!specs.empty()) {
+            pluginState.removeListener(this);
+            juce::ValueTree controlBuses = pluginState.getChildWithName(IDs::controlbuses);
+            int nextBus = 0;
+            for (int i = 0; i < parameters.getNumChildren() && nextBus < NUMBER_OF_CONTROL_BUSES; i++) {
+                juce::ValueTree param = parameters.getChild(i);
+                juce::String paramName = param.getProperty(IDs::pName);
+                if (specs.find(paramName) == specs.end())
+                    continue;
+
+                // Find next available bus (not already assigned by another param in this SynthDef)
+                while (nextBus < NUMBER_OF_CONTROL_BUSES) {
+                    bool busUsed = false;
+                    for (int j = 0; j < i; j++) {
+                        if (static_cast<int>(parameters.getChild(j).getProperty(IDs::pControlBus, -1)) == nextBus) {
+                            busUsed = true;
+                            break;
+                        }
+                    }
+                    if (!busUsed) break;
+                    nextBus++;
+                }
+                if (nextBus >= NUMBER_OF_CONTROL_BUSES) break;
+
+                juce::ValueTree cbVt = controlBuses.getChild(nextBus);
+                cbVt.setProperty(IDs::cbName, paramName, nullptr);
+                cbVt.setProperty(IDs::cbRange, param.getProperty(IDs::pRange), nullptr);
+                setControlBusValue(nextBus, param.getProperty(IDs::pDefaultValue));
+                param.setProperty(IDs::pControlBus, nextBus, nullptr);
+                nextBus++;
+            }
+            pluginState.addListener(this);
+        }
+
         target.setProperty(IDs::synthBlob, block, nullptr);
     } catch (InvalidSynthDef &except) {
         return false;
