@@ -20,110 +20,9 @@
 
 #include "PanelCommon.h"
 #include "PluginModel.h"
+#include "SpecFile.h"
 
 const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
-
-static std::map<juce::String, juce::String> loadSpecFile(const juce::File &scsyndef) {
-    std::map<juce::String, juce::String> specs;
-
-    // Try .txarcmeta (SC's metadata archive format)
-    auto metaFile = scsyndef.withFileExtension("txarcmeta");
-    if (!metaFile.existsAsFile()) {
-        // Fall back to .spec (simple text format)
-        auto specFile = scsyndef.withFileExtension("spec");
-        if (!specFile.existsAsFile())
-            return specs;
-        auto lines = juce::StringArray::fromLines(specFile.loadFileAsString());
-        for (auto &line : lines) {
-            line = line.trim();
-            if (line.isEmpty() || line.startsWith("#"))
-                continue;
-            auto tokens = juce::StringArray::fromTokens(line, " \t", "");
-            if (tokens.size() >= 4)
-                specs[tokens[0]] = tokens[1] + " " + tokens[2] + " " + tokens[3];
-        }
-        return specs;
-    }
-
-    // Parse .txarcmeta: extract ControlSpec minval/maxval/step keyed by param name
-    auto content = metaFile.loadFileAsString();
-
-    // 1. Find param name -> object index mapping from the array line like:
-    //    'stutter',  o[4],  'div',  o[7],  ...  'ffreq',  o[9],
-    std::map<int, juce::String> indexToName;
-    int searchPos = 0;
-    while (true) {
-        int quoteStart = content.indexOf(searchPos, "'");
-        if (quoteStart < 0) break;
-        int quoteEnd = content.indexOf(quoteStart + 1, "'");
-        if (quoteEnd < 0) break;
-        auto paramName = content.substring(quoteStart + 1, quoteEnd);
-        // Look for o[N] after the param name
-        int oRef = content.indexOf(quoteEnd, "o[");
-        if (oRef < 0) break;
-        // Make sure we don't jump past the next param name
-        int nextQuote = content.indexOf(quoteEnd + 1, "'");
-        if (nextQuote >= 0 && oRef > nextQuote) {
-            searchPos = quoteEnd + 1;
-            continue;
-        }
-        int oBracketEnd = content.indexOf(oRef, "]");
-        if (oBracketEnd < 0) break;
-        int objIdx = content.substring(oRef + 2, oBracketEnd).getIntValue();
-        if (paramName != "specs" && paramName != "spec")
-            indexToName[objIdx] = paramName;
-        searchPos = oBracketEnd + 1;
-    }
-
-    // 2. Extract ControlSpec entries: "N, [ minval: X, maxval: Y, ... step: Z, ..."
-    searchPos = 0;
-    while (true) {
-        int csPos = content.indexOf(searchPos, "// ControlSpec");
-        if (csPos < 0) break;
-        // Find the object index on the next line: "N, ["
-        int lineStart = content.indexOf(csPos, "\n") + 1;
-        auto idxToken = content.substring(lineStart, content.indexOf(lineStart, ",")).trim();
-        int objIdx = idxToken.getIntValue();
-
-        // Extract minval, maxval, step
-        int blockStart = content.indexOf(lineStart, "[");
-        if (blockStart < 0) break;
-        // Find matching ] — skip nested o[N] references
-        int blockEnd = blockStart + 1;
-        int depth = 1;
-        while (blockEnd < content.length() && depth > 0) {
-            if (content[blockEnd] == '[') depth++;
-            else if (content[blockEnd] == ']') depth--;
-            blockEnd++;
-        }
-        if (depth != 0) break;
-        blockEnd--; // point at the ]
-        auto block = content.substring(blockStart, blockEnd + 1);
-
-        auto extractValue = [&block](const juce::String &key) -> juce::String {
-            int pos = block.indexOf(key + ":");
-            if (pos < 0) return "";
-            int valStart = pos + key.length() + 1;
-            int valEnd = block.indexOf(valStart, ",");
-            if (valEnd < 0) valEnd = block.indexOf(valStart, "]");
-            return block.substring(valStart, valEnd).trim();
-        };
-
-        auto minval = extractValue("minval");
-        auto maxval = extractValue("maxval");
-        auto step = extractValue("step");
-
-        if (minval.isNotEmpty() && maxval.isNotEmpty() && step.isNotEmpty()) {
-            auto nameIt = indexToName.find(objIdx);
-            if (nameIt != indexToName.end()) {
-                specs[nameIt->second] = minval + " " + maxval + " " + step;
-            }
-        }
-        searchPos = blockEnd + 1;
-    }
-
-    return specs;
-}
 
 class SynthDefTable : public VTTableList {
     juce::StringArray filterParameter;
@@ -277,11 +176,47 @@ public:
                 if (!scfile.loadFileAsData(content))
                     return;
 
+                // Save existing parameter state before replacing (issue #64)
+                struct ParamState { int controlBus; juce::var currentValue; };
+                std::map<juce::String, ParamState> savedParams;
+                bool hadExistingDef = vtSynth.hasProperty(IDs::synthBlob);
+                if (hadExistingDef) {
+                    auto oldParams = vtSynth.getChildWithName(IDs::parameters);
+                    for (int i = 0; i < oldParams.getNumChildren(); i++) {
+                        auto p = oldParams.getChild(i);
+                        savedParams[p[IDs::pName].toString()] = {
+                            static_cast<int>(p.getProperty(IDs::pControlBus, -1)),
+                            p.getProperty(IDs::pCurrentValue)
+                        };
+                    }
+                }
+
                 auto specs = loadSpecFile(scfile);
                 if (!this->processor.replaceSynthDef(content, vtSynth, specs)) {
                     auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
                     juce::AlertWindow::showAsync(opts, [](int res) {});
                     return;
+                }
+
+                // Restore saved control bus assignments and current values
+                if (hadExistingDef) {
+                    auto newParams = vtSynth.getChildWithName(IDs::parameters);
+                    for (int i = 0; i < newParams.getNumChildren(); i++) {
+                        auto p = newParams.getChild(i);
+                        auto it = savedParams.find(p[IDs::pName].toString());
+                        if (it != savedParams.end()) {
+                            int cbIdx = it->second.controlBus;
+                            p.setProperty(IDs::pControlBus, cbIdx, nullptr);
+                            if (!it->second.currentValue.isVoid())
+                                p.setProperty(IDs::pCurrentValue, it->second.currentValue, nullptr);
+
+                            // Sync control bus range with updated param range
+                            if (cbIdx >= 0 && cbIdx < NUMBER_OF_CONTROL_BUSES) {
+                                vtControlBus.getChild(cbIdx).setProperty(
+                                    IDs::cbRange, p.getProperty(IDs::pRange), nullptr);
+                            }
+                        }
+                    }
                 }
 
                 synthDefTable.setSynthContent(vtSynth, vtControlBus);

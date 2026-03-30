@@ -22,10 +22,10 @@
 #include "SCProcess.h"
 #include "CommandFifo.h"
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <map>
 #include "UDPPort.h"
 #include "PluginModel.h"
 #include "NodeContainer.h"
+#include "SpecFile.h"
 
 class PluginColliderAudioProcessorEditor;
 //==============================================================================
@@ -94,10 +94,10 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
 
     /**
      * Replace the synthdef in the plugin state with the one in the memory block.
-     * Optionally provide a spec map (paramName -> "min max step") to override range guessing.
+     * Optionally provide an ordered spec list (paramName -> "min max step") to override range guessing.
      */
     bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target,
-                         const std::map<juce::String, juce::String> &specs = {});
+                         const SpecList &specs = {});
 
     /**
      * Load the synthdef from the plugin state into the supercollider world ; usually when the server is booted.

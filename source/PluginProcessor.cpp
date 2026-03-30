@@ -260,7 +260,7 @@ void PluginColliderAudioProcessor::setControlBusValue(int busIdx, float value) c
 }
 
 bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target,
-                                                   const std::map<juce::String, juce::String> &specs) {
+                                                   const SpecList &specs) {
     try {
         SynthDef synthDef(block);
         int synthDefLoaded = true;
@@ -281,9 +281,9 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
             parameter.setProperty(IDs::pName, synthDef.getParameters()[i], nullptr);
             parameter.setProperty(IDs::pIdx, i, nullptr);
             parameter.setProperty(IDs::pDefaultValue, synthDef.getParametersValues()[i], nullptr);
-            auto specIt = specs.find(synthDef.getParameters()[i]);
-            if (specIt != specs.end())
-                parameter.setProperty(IDs::pRange, specIt->second, nullptr);
+            auto specRange = findSpec(specs, synthDef.getParameters()[i]);
+            if (specRange.isNotEmpty())
+                parameter.setProperty(IDs::pRange, specRange, nullptr);
             else
                 parameter.setProperty(IDs::pRange, synthDef.guessParameterRange(i), nullptr);
             parameter.setProperty(IDs::pControlBus, -1, nullptr);
@@ -291,39 +291,37 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
         }
         target.addChild(parameters, -1, nullptr);
 
-        // Auto-assign parameters with specs to control buses
+        // Auto-assign parameters with specs to control buses (in SynthDef argument order)
         if (!specs.empty()) {
-            pluginState.removeListener(this);
             juce::ValueTree controlBuses = pluginState.getChildWithName(IDs::controlbuses);
+
+            // Phase 1: assign pControlBus with listener disabled (avoids reloadNodeContainer per-param)
+            struct BusAssignment { int bus; juce::String name; juce::String range; float defaultValue; };
+            std::vector<BusAssignment> assignments;
+            pluginState.removeListener(this);
             int nextBus = 0;
             for (int i = 0; i < parameters.getNumChildren() && nextBus < NUMBER_OF_CONTROL_BUSES; i++) {
                 juce::ValueTree param = parameters.getChild(i);
                 juce::String paramName = param.getProperty(IDs::pName);
-                if (specs.find(paramName) == specs.end())
+                if (findSpec(specs, paramName).isEmpty())
                     continue;
 
-                // Find next available bus (not already assigned by another param in this SynthDef)
-                while (nextBus < NUMBER_OF_CONTROL_BUSES) {
-                    bool busUsed = false;
-                    for (int j = 0; j < i; j++) {
-                        if (static_cast<int>(parameters.getChild(j).getProperty(IDs::pControlBus, -1)) == nextBus) {
-                            busUsed = true;
-                            break;
-                        }
-                    }
-                    if (!busUsed) break;
-                    nextBus++;
-                }
-                if (nextBus >= NUMBER_OF_CONTROL_BUSES) break;
-
-                juce::ValueTree cbVt = controlBuses.getChild(nextBus);
-                cbVt.setProperty(IDs::cbName, paramName, nullptr);
-                cbVt.setProperty(IDs::cbRange, param.getProperty(IDs::pRange), nullptr);
-                setControlBusValue(nextBus, param.getProperty(IDs::pDefaultValue));
                 param.setProperty(IDs::pControlBus, nextBus, nullptr);
+                assignments.push_back({nextBus, paramName,
+                    param.getProperty(IDs::pRange).toString(),
+                    static_cast<float>(param.getProperty(IDs::pDefaultValue))});
                 nextBus++;
             }
             pluginState.addListener(this);
+
+            // Phase 2: update control bus names/ranges with listener active
+            // (triggers cbName/cbRange handlers → setName + setRange + updateHostDisplay)
+            for (const auto &a : assignments) {
+                juce::ValueTree cbVt = controlBuses.getChild(a.bus);
+                cbVt.setProperty(IDs::cbName, a.name, nullptr);
+                cbVt.setProperty(IDs::cbRange, a.range, nullptr);
+                setControlBusValue(a.bus, a.defaultValue);
+            }
         }
 
         target.setProperty(IDs::synthBlob, block, nullptr);
