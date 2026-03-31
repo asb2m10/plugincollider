@@ -209,7 +209,7 @@ public:
         opendef.setButtonText("Open");
 
         addAndMakeVisible(mapdef);
-        mapdef.setButtonText("Map");
+        mapdef.setButtonText("Remap");
 
         addAndMakeVisible(synthname);
         synthname.setJustificationType(juce::Justification::centredRight);
@@ -268,7 +268,7 @@ public:
             });
         };
 
-        mapdef.onClick = [this] () {
+        mapdef.onClick = [this]() {
             if (!vtSynth.hasProperty(IDs::synthName))
                 return;
 
@@ -276,19 +276,64 @@ public:
             if (!params.isValid())
                 return;
 
-            // Match param names to existing control bus names
-            for (int i = 0; i < params.getNumChildren(); i++) {
+            // Look up specs from cache or disk
+            juce::String synthName = vtSynth.getProperty(IDs::synthName).toString();
+            SpecList specs;
+            auto specIt = this->processor.synthDefSpecCache.find(synthName);
+            if (specIt != this->processor.synthDefSpecCache.end()) {
+                specs = specIt->second;
+            } else {
+                juce::String synthDefPath = this->processor.pluginState.getChildWithName(IDs::srvRoot)
+                                                .getProperty(IDs::srvSynthDefPath).toString();
+                if (synthDefPath.isNotEmpty()) {
+                    juce::File candidate = juce::File(synthDefPath).getChildFile(synthName + ".scsyndef");
+                    if (candidate.existsAsFile())
+                        specs = loadSpecFile(candidate);
+                }
+            }
+
+            // Build assignment plan before touching any state
+            struct BusAssignment { int bus; int paramIdx; juce::String name; juce::String range; float value; };
+            std::vector<BusAssignment> assignments;
+            int nextBus = 0;
+            for (int i = 0; i < params.getNumChildren() && nextBus < NUMBER_OF_CONTROL_BUSES; i++) {
                 auto p = params.getChild(i);
                 juce::String paramName = p.getProperty(IDs::pName).toString();
+                if (!specs.empty() && findSpec(specs, paramName).isEmpty())
+                    continue;
 
-                for (int j = 0; j < vtControlBus.getNumChildren(); j++) {
-                    auto cb = vtControlBus.getChild(j);
-                    if (cb.getProperty(IDs::cbName).toString() == paramName) {
-                        p.setProperty(IDs::pControlBus, j, nullptr);
-                        cb.setProperty(IDs::cbRange, p.getProperty(IDs::pRange), nullptr);
-                        break;
-                    }
-                }
+                float value = p.hasProperty(IDs::pCurrentValue)
+                    ? static_cast<float>(p.getProperty(IDs::pCurrentValue))
+                    : static_cast<float>(p.getProperty(IDs::pDefaultValue));
+                assignments.push_back({nextBus, i, paramName, p.getProperty(IDs::pRange).toString(), value});
+                nextBus++;
+            }
+
+            // Phase 1: listener off — set pControlBus values (avoids N rebuilds)
+            this->processor.pluginState.removeListener(&this->processor);
+
+            for (int i = 0; i < params.getNumChildren(); i++)
+                params.getChild(i).setProperty(IDs::pControlBus, -1, nullptr);
+
+            for (const auto &a : assignments)
+                params.getChild(a.paramIdx).setProperty(IDs::pControlBus, a.bus, nullptr);
+
+            this->processor.pluginState.addListener(&this->processor);
+
+            // Single rebuild
+            this->processor.reloadNodeContainer();
+
+            // Phase 2: listener on — set bus names/ranges (triggers host parameter updates)
+            for (int i = 0; i < vtControlBus.getNumChildren(); i++) {
+                auto cb = vtControlBus.getChild(i);
+                cb.setProperty(IDs::cbName, juce::String("Control Bus ") + juce::String(i), nullptr);
+                cb.setProperty(IDs::cbRange, "0 1 0.001", nullptr);
+            }
+            for (const auto &a : assignments) {
+                auto cb = vtControlBus.getChild(a.bus);
+                cb.setProperty(IDs::cbName, a.name, nullptr);
+                cb.setProperty(IDs::cbRange, a.range, nullptr);
+                this->processor.setControlBusValue(a.bus, a.value);
             }
 
             synthDefTable.setSynthContent(vtSynth, vtControlBus);
@@ -380,7 +425,7 @@ public:
         top.removeFromLeft(4);
         opendef.setBounds(top.removeFromLeft(50));
         top.removeFromLeft(4);
-        mapdef.setBounds(top.removeFromLeft(40));
+        mapdef.setBounds(top.removeFromLeft(60));
         top.removeFromLeft(10);
         synthname.setBounds(top.removeFromRight(200));
         synthDefTable.setBounds(bounds);
@@ -464,7 +509,7 @@ public:
         top.removeFromLeft(4);
         opendef.setBounds(top.removeFromLeft(50));
         top.removeFromLeft(4);
-        mapdef.setBounds(top.removeFromLeft(40));
+        mapdef.setBounds(top.removeFromLeft(60));
         top.removeFromLeft(2);
         labelRange.setBounds(top.removeFromLeft(80));
         lowNote.setBounds(top.removeFromLeft(30));
