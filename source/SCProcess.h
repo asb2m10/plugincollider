@@ -80,7 +80,7 @@ public:
         } else if ( name == "pitch" ) {
             return "-12 12 0.01"; // pitch range
         } else if ( name == "out" ) {
-            return "1 16 1";
+            return "0 15 1";
         }
 
         // we do our best to find the best low / high values based on the defaultValue
