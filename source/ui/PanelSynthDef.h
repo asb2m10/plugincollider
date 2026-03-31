@@ -21,6 +21,7 @@
 #include "PanelCommon.h"
 #include "PluginModel.h"
 #include "SpecFile.h"
+#include "CommandFifo.h"
 
 const juce::StringArray synthParmsToMidi( { "gate", "freq", "amp" } );
 
@@ -146,9 +147,57 @@ protected:
     SynthDefTable synthDefTable;
     std::unique_ptr<juce::FileChooser> scsynthChooser;
     juce::TextButton loaddef;
+    juce::TextButton opendef;
+    juce::TextButton mapdef;
     juce::ValueTree vtSynth;
     juce::ValueTree vtControlBus;
     bool refreshPending = false;
+
+    bool applyBlobToNode(juce::MemoryBlock &content, const SpecList &specs = {}) {
+        struct ParamState { int controlBus; juce::var currentValue; };
+        std::map<juce::String, ParamState> savedParams;
+        bool hadExistingDef = vtSynth.hasProperty(IDs::synthBlob);
+        if (hadExistingDef) {
+            auto oldParams = vtSynth.getChildWithName(IDs::parameters);
+            for (int i = 0; i < oldParams.getNumChildren(); i++) {
+                auto p = oldParams.getChild(i);
+                savedParams[p[IDs::pName].toString()] = {
+                    static_cast<int>(p.getProperty(IDs::pControlBus, -1)),
+                    p.getProperty(IDs::pCurrentValue)
+                };
+            }
+        }
+
+        if (!processor.replaceSynthDef(content, vtSynth, specs)) {
+            auto opts = juce::MessageBoxOptions().withTitle("Error")
+                .withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
+            juce::AlertWindow::showAsync(opts, [](int) {});
+            return false;
+        }
+
+        if (hadExistingDef) {
+            auto newParams = vtSynth.getChildWithName(IDs::parameters);
+            for (int i = 0; i < newParams.getNumChildren(); i++) {
+                auto p = newParams.getChild(i);
+                auto it = savedParams.find(p[IDs::pName].toString());
+                if (it == savedParams.end())
+                    continue;
+
+                int cbIdx = it->second.controlBus;
+                p.setProperty(IDs::pControlBus, cbIdx, nullptr);
+                if (!it->second.currentValue.isVoid())
+                    p.setProperty(IDs::pCurrentValue, it->second.currentValue, nullptr);
+                if (cbIdx >= 0 && cbIdx < NUMBER_OF_CONTROL_BUSES) {
+                    vtControlBus.getChild(cbIdx).setProperty(
+                        IDs::cbRange, p.getProperty(IDs::pRange), nullptr);
+                }
+            }
+        }
+
+        synthDefTable.setSynthContent(vtSynth, vtControlBus);
+        refresh();
+        return true;
+    }
 public:
     PanelSynthDefFx(juce::ValueTree vt, PluginColliderAudioProcessor &processor) :  vtSynth(vt), processor(processor) {
         vtControlBus = this->processor.pluginState.getChildWithName(IDs::controlbuses);
@@ -156,12 +205,53 @@ public:
         addAndMakeVisible(loaddef);
         loaddef.setButtonText("Load");
 
+        addAndMakeVisible(opendef);
+        opendef.setButtonText("Open");
+
+        addAndMakeVisible(mapdef);
+        mapdef.setButtonText("Map");
+
         addAndMakeVisible(synthname);
         synthname.setJustificationType(juce::Justification::centredRight);
 
         addAndMakeVisible(synthDefTable);
 
         loaddef.onClick = [this] () {
+            HeapStringList<64, 4096> reply;
+            bool ok = this->processor.execSyncWorld([this, &reply]() {
+                this->processor.superCollider.rt_getSynthDef(reply);
+            });
+
+            if (!ok || reply.size() == 0) {
+                auto opts = juce::MessageBoxOptions().withTitle("No SynthDefs")
+                    .withMessage("No SynthDefs available. Is the server running?").withButton("OK");
+                juce::AlertWindow::showAsync(opts, [](int) {});
+                return;
+            }
+
+            juce::StringArray names;
+            for (int i = 0; i < reply.size(); i++)
+                names.add(reply.getItem(i));
+            names.sort(true);
+
+            juce::PopupMenu menu;
+            for (const auto &name : names) {
+                menu.addItem(name, [this, name]() {
+                    juce::MemoryBlock blob;
+                    SpecList specs;
+                    if (!this->processor.resolveKnownSynthDef(name, blob, specs)) {
+                        auto opts = juce::MessageBoxOptions().withTitle("Error")
+                            .withMessage("Could not find binary for SynthDef: " + name).withButton("OK");
+                        juce::AlertWindow::showAsync(opts, [](int) {});
+                        return;
+                    }
+                    applyBlobToNode(blob, specs);
+                });
+            }
+            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&loaddef));
+        };
+
+        opendef.onClick = [this] () {
             scsynthChooser = std::make_unique<juce::FileChooser> ("Please select the SynthDef you want to load...",
                                                 juce::File(), "*.scsyndef;*.scd");
             auto folderChooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
@@ -174,52 +264,35 @@ public:
                 if (!scfile.loadFileAsData(content))
                     return;
 
-                // Save existing parameter state before replacing (issue #64)
-                struct ParamState { int controlBus; juce::var currentValue; };
-                std::map<juce::String, ParamState> savedParams;
-                bool hadExistingDef = vtSynth.hasProperty(IDs::synthBlob);
-                if (hadExistingDef) {
-                    auto oldParams = vtSynth.getChildWithName(IDs::parameters);
-                    for (int i = 0; i < oldParams.getNumChildren(); i++) {
-                        auto p = oldParams.getChild(i);
-                        savedParams[p[IDs::pName].toString()] = {
-                            static_cast<int>(p.getProperty(IDs::pControlBus, -1)),
-                            p.getProperty(IDs::pCurrentValue)
-                        };
-                    }
-                }
-
-                auto specs = loadSpecFile(scfile);
-                if (!this->processor.replaceSynthDef(content, vtSynth, specs)) {
-                    auto opts = juce::MessageBoxOptions().withTitle("Error").withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
-                    juce::AlertWindow::showAsync(opts, [](int res) {});
-                    return;
-                }
-
-                // Restore saved control bus assignments and current values
-                if (hadExistingDef) {
-                    auto newParams = vtSynth.getChildWithName(IDs::parameters);
-                    for (int i = 0; i < newParams.getNumChildren(); i++) {
-                        auto p = newParams.getChild(i);
-                        auto it = savedParams.find(p[IDs::pName].toString());
-                        if (it != savedParams.end()) {
-                            int cbIdx = it->second.controlBus;
-                            p.setProperty(IDs::pControlBus, cbIdx, nullptr);
-                            if (!it->second.currentValue.isVoid())
-                                p.setProperty(IDs::pCurrentValue, it->second.currentValue, nullptr);
-
-                            // Sync control bus range with updated param range
-                            if (cbIdx >= 0 && cbIdx < NUMBER_OF_CONTROL_BUSES) {
-                                vtControlBus.getChild(cbIdx).setProperty(
-                                    IDs::cbRange, p.getProperty(IDs::pRange), nullptr);
-                            }
-                        }
-                    }
-                }
-
-                synthDefTable.setSynthContent(vtSynth, vtControlBus);
-                refresh();
+                applyBlobToNode(content, loadSpecFile(scfile));
             });
+        };
+
+        mapdef.onClick = [this] () {
+            if (!vtSynth.hasProperty(IDs::synthName))
+                return;
+
+            auto params = vtSynth.getChildWithName(IDs::parameters);
+            if (!params.isValid())
+                return;
+
+            // Match param names to existing control bus names
+            for (int i = 0; i < params.getNumChildren(); i++) {
+                auto p = params.getChild(i);
+                juce::String paramName = p.getProperty(IDs::pName).toString();
+
+                for (int j = 0; j < vtControlBus.getNumChildren(); j++) {
+                    auto cb = vtControlBus.getChild(j);
+                    if (cb.getProperty(IDs::cbName).toString() == paramName) {
+                        p.setProperty(IDs::pControlBus, j, nullptr);
+                        cb.setProperty(IDs::cbRange, p.getProperty(IDs::pRange), nullptr);
+                        break;
+                    }
+                }
+            }
+
+            synthDefTable.setSynthContent(vtSynth, vtControlBus);
+            refresh();
         };
 
         synthDefTable.onControlBusAssign = [this](int rowNumber) {
@@ -304,6 +377,10 @@ public:
         auto top = bounds.removeFromTop(25);
         bounds.removeFromTop(8);
         loaddef.setBounds(top.removeFromLeft(50));
+        top.removeFromLeft(4);
+        opendef.setBounds(top.removeFromLeft(50));
+        top.removeFromLeft(4);
+        mapdef.setBounds(top.removeFromLeft(40));
         top.removeFromLeft(10);
         synthname.setBounds(top.removeFromRight(200));
         synthDefTable.setBounds(bounds);
@@ -384,6 +461,10 @@ public:
         auto top = bounds.removeFromTop(25);
         bounds.removeFromTop(8);
         loaddef.setBounds(top.removeFromLeft(50));
+        top.removeFromLeft(4);
+        opendef.setBounds(top.removeFromLeft(50));
+        top.removeFromLeft(4);
+        mapdef.setBounds(top.removeFromLeft(40));
         top.removeFromLeft(2);
         labelRange.setBounds(top.removeFromLeft(80));
         lowNote.setBounds(top.removeFromLeft(30));

@@ -27,6 +27,7 @@
 #include "NodeContainer.h"
 #include "SynthDefWatcher.h"
 #include "SpecFile.h"
+#include <map>
 
 class PluginColliderAudioProcessorEditor;
 //==============================================================================
@@ -102,6 +103,19 @@ class PluginColliderAudioProcessor : public juce::AudioProcessor,
      */
     bool replaceSynthDef(juce::MemoryBlock &block, juce::ValueTree &target,
                          const SpecList &specs = {});
+
+    /**
+     * Resolve a known SynthDef name to its binary blob and specs.
+     * Checks: blob cache, project tree, then srvSynthDefPath on disk.
+     */
+    bool resolveKnownSynthDef(const juce::String &name, juce::MemoryBlock &outBlock,
+                              SpecList &outSpecs);
+
+    /** Session-lifetime cache of SynthDef blobs, keyed by name. Not serialized. */
+    std::map<juce::String, juce::MemoryBlock> synthDefBlobCache;
+
+    /** Session-lifetime cache of spec sidecars, keyed by SynthDef name. Not serialized. */
+    std::map<juce::String, SpecList> synthDefSpecCache;
 
     /**
      * Load the synthdef from the plugin state into the supercollider world ; usually when the server is booted.

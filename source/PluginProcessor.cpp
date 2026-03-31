@@ -299,45 +299,81 @@ bool PluginColliderAudioProcessor::replaceSynthDef(juce::MemoryBlock &block, juc
         }
         target.addChild(parameters, -1, nullptr);
 
-        // Auto-assign parameters with specs to control buses (in SynthDef argument order)
-        if (!specs.empty()) {
-            juce::ValueTree controlBuses = pluginState.getChildWithName(IDs::controlbuses);
-
-            // Phase 1: assign pControlBus with listener disabled (avoids reloadNodeContainer per-param)
-            struct BusAssignment { int bus; juce::String name; juce::String range; float defaultValue; };
-            std::vector<BusAssignment> assignments;
-            pluginState.removeListener(this);
-            int nextBus = 0;
-            for (int i = 0; i < parameters.getNumChildren() && nextBus < NUMBER_OF_CONTROL_BUSES; i++) {
-                juce::ValueTree param = parameters.getChild(i);
-                juce::String paramName = param.getProperty(IDs::pName);
-                if (findSpec(specs, paramName).isEmpty())
-                    continue;
-
-                param.setProperty(IDs::pControlBus, nextBus, nullptr);
-                assignments.push_back({nextBus, paramName,
-                    param.getProperty(IDs::pRange).toString(),
-                    static_cast<float>(param.getProperty(IDs::pDefaultValue))});
-                nextBus++;
-            }
-            pluginState.addListener(this);
-
-            // Phase 2: update control bus names/ranges with listener active
-            // (triggers cbName/cbRange handlers → setName + setRange + updateHostDisplay)
-            for (const auto &a : assignments) {
-                juce::ValueTree cbVt = controlBuses.getChild(a.bus);
-                cbVt.setProperty(IDs::cbName, a.name, nullptr);
-                cbVt.setProperty(IDs::cbRange, a.range, nullptr);
-                setControlBusValue(a.bus, a.defaultValue);
-            }
-        }
-
         target.setProperty(IDs::synthBlob, block, nullptr);
+        synthDefBlobCache[synthDef.getName()] = block;
+        if (!specs.empty())
+            synthDefSpecCache[synthDef.getName()] = specs;
     } catch (InvalidSynthDef &except) {
         return false;
     }
 
     return true;
+}
+
+bool PluginColliderAudioProcessor::resolveKnownSynthDef(const juce::String &name,
+                                                        juce::MemoryBlock &outBlock,
+                                                        SpecList &outSpecs) {
+    // Strategy 1: blob cache (covers deleted nodes)
+    auto cacheIt = synthDefBlobCache.find(name);
+    if (cacheIt != synthDefBlobCache.end()) {
+        outBlock = cacheIt->second;
+        // Check spec cache first, then disk sidecar
+        auto specIt = synthDefSpecCache.find(name);
+        if (specIt != synthDefSpecCache.end()) {
+            outSpecs = specIt->second;
+        } else {
+            juce::String synthDefPath = pluginState.getChildWithName(IDs::srvRoot)
+                                            .getProperty(IDs::srvSynthDefPath).toString();
+            if (synthDefPath.isNotEmpty()) {
+                juce::File candidate = juce::File(synthDefPath).getChildFile(name + ".scsyndef");
+                if (candidate.existsAsFile())
+                    outSpecs = loadSpecFile(candidate);
+            }
+        }
+        return true;
+    }
+
+    // Strategy 2: project tree — find node with matching synthName
+    std::function<bool(juce::ValueTree)> searchTree = [&](juce::ValueTree vt) -> bool {
+        if (vt.hasType(IDs::fxnode) || vt.hasType(IDs::notenode)) {
+            if (vt.getProperty(IDs::synthName).toString() == name
+                    && vt.hasProperty(IDs::synthBlob)) {
+                auto *bin = vt.getProperty(IDs::synthBlob).getBinaryData();
+                if (bin != nullptr) {
+                    outBlock = *bin;
+                    // Extract specs from existing node's parameter ranges
+                    auto srcParams = vt.getChildWithName(IDs::parameters);
+                    for (int i = 0; i < srcParams.getNumChildren(); i++) {
+                        auto p = srcParams.getChild(i);
+                        outSpecs.emplace_back(
+                            p.getProperty(IDs::pName).toString(),
+                            p.getProperty(IDs::pRange).toString());
+                    }
+                    return true;
+                }
+            }
+        }
+        for (int i = 0; i < vt.getNumChildren(); i++)
+            if (searchTree(vt.getChild(i)))
+                return true;
+        return false;
+    };
+
+    if (searchTree(pluginState.getChildWithName(IDs::rootnode)))
+        return true;
+
+    // Strategy 3: disk — srvSynthDefPath/<name>.scsyndef
+    juce::String synthDefPath = pluginState.getChildWithName(IDs::srvRoot)
+                                    .getProperty(IDs::srvSynthDefPath).toString();
+    if (synthDefPath.isNotEmpty()) {
+        juce::File candidate = juce::File(synthDefPath).getChildFile(name + ".scsyndef");
+        if (candidate.existsAsFile() && candidate.loadFileAsData(outBlock)) {
+            outSpecs = loadSpecFile(candidate);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void PluginColliderAudioProcessor::rt_loadSynthDef(juce::ValueTree vt) {
