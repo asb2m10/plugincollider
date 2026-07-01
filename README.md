@@ -13,6 +13,10 @@ Now support Linux, macOS and Windows.
 ## Version 0.5.2 (In development)
 * Added more precision for ranges
 * ControlBus state synchronization with DAW and parameters values
+* Write host tempo/transport to control buses 32-35 (thanks @unthingable)
+* Read ControlSpec metadata from .txarcmeta when loading SynthDef (thanks @unthingable)
+* Preserve parameter state when reloading SynthDefs (thanks @unthingable)
+* Fix out parameter range from 1-16 to 0-15 (thanks @unthingable)
 
 ## Version 0.5.1
 * Added server configuration options
