@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.5)
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
-project(PluginCollider VERSION 0.5.0)
+project(PluginCollider VERSION 0.5.2)
 
 enable_language(C CXX)
 
