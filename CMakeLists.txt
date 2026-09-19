@@ -117,7 +117,11 @@ if (NOT Boost_FOUND)
 endif()
 
 if(WIN32)
-    add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX -D_WIN32_WINNT=0x0600)
+    # NOTE: this is directory-wide and also applies to the JUCE plugin target added below.
+    # Must stay >= 0x0A00 (Windows 10) or GetDpiForWindow etc. fail to compile in the JUCE
+    # VST3 client, since the VST3 SDK headers pull in <windows.h> before JUCE can bump
+    # _WIN32_WINNT itself, locking in whatever value is set here for the whole build.
+    add_definitions(-DWIN32_LEAN_AND_MEAN -DNOMINMAX -D_WIN32_WINNT=0x0A00)
 
     #avoid unnecesary autolink
     add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_ALL_NO_LIB)
