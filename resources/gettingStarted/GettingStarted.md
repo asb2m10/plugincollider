@@ -120,7 +120,7 @@ The following code demonstrates a complex [SynthDef](https://docs.supercollider.
         var vibDelaySelected = Select.kr(
             vibDelaySelector.poll(0, \vibDelaySelector),
             [
-                DC.kr(0).(0, \noVibDelay),
+                DC.kr(0).poll(0, \noVibDelay),
                 delayStartingFromAttack.poll(0, \delayStartingFromAttack),
                 vibStartingAfterTransient.poll(0, \vibStartingAfterTransient)
             ]
@@ -155,7 +155,7 @@ The following code demonstrates a complex [SynthDef](https://docs.supercollider.
                 var synth = { |channelFreqs|
                     var frequencies = freqModulated * channelFreqs *.t (1..numHarmonics);
                     var amplitudes = \amplitudes.kr(1 ! numHarmonics / numHarmonics);
-                    var amplitudesModifiedByFreqs = frequencies.size.collect { |i|
+                    var amplitudesModifiedByFreqs = numHarmonics.collect { |i|
                         Select.kr(frequencies[i] > (SampleRate.ir / 2), [amplitudes[i], 0])
                     };
                     DynKlang.ar(
@@ -241,7 +241,7 @@ After testing, export the [SynthDef](https://docs.supercollider.online/Classes/S
         var vibDelaySelected = Select.kr(
             vibDelaySelector/*.poll(0, \vibDelaySelector)*/,
             [
-                DC.kr(0)/*.(0, \noVibDelay)*/,
+                DC.kr(0)/*.poll(0, \noVibDelay)*/,
                 delayStartingFromAttack/*.poll(0, \delayStartingFromAttack)*/,
                 vibStartingAfterTransient/*.poll(0, \vibStartingAfterTransient)*/
             ]
@@ -276,7 +276,7 @@ After testing, export the [SynthDef](https://docs.supercollider.online/Classes/S
                 var synth = { |channelFreqs|
                     var frequencies = freqModulated * channelFreqs *.t (1..numHarmonics);
                     var amplitudes = \amplitudes.kr(1 ! numHarmonics / numHarmonics);
-                    var amplitudesModifiedByFreqs = frequencies.size.collect { |i|
+                    var amplitudesModifiedByFreqs = numHarmonics.collect { |i|
                         Select.kr(frequencies[i] > (SampleRate.ir / 2), [amplitudes[i], 0])
                     };
                     DynKlang.ar(
@@ -294,7 +294,7 @@ After testing, export the [SynthDef](https://docs.supercollider.online/Classes/S
             warnTrig,
             0,
             "WARN: vibDelayFromAttack & vibDelayPostTransient both non-zero.\n" ++
-            " No sound is poduced. Set one to"
+            " No sound is produced. Set one to"
         );
 
         sig = sig * ampModulated * env * (1 - conflictDetector);
