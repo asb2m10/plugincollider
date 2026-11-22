@@ -37,6 +37,8 @@ public:
     };
     NodeType type;
 
+    virtual ~BaseNode() = default;
+
     BaseNode(juce::ValueTree &vt, int parentid) : parentid(parentid) {
         nodeid = vt[IDs::nodeid];
         type = NodeType::Group;
@@ -48,7 +50,23 @@ protected:
     std::unordered_map<int, float> precompiledMapValue;
     std::unordered_map<int, int> controlBusMap;
     char synthName[127] = { 0 };
+
+    /** Parameter indexes handled by the node itself (never stored in precompiledMapValue) */
+    virtual bool isReservedParam(int idx) const { return false; }
 public:
+    /**
+     * Keep the precompiled values up to date so newly allocated synths use the current value.
+     * Must be called with the world lock held / on the audio thread, same as rt_start/noteOn.
+     */
+    void rt_updatePrecompiledValue(int idx, float value, bool isDefault) {
+        if ( isReservedParam(idx) || controlBusMap.count(idx) )
+            return;
+        if ( isDefault )
+            precompiledMapValue.erase(idx);
+        else
+            precompiledMapValue[idx] = value;
+    }
+
     SynthNode(juce::ValueTree &vt, int parentid) : BaseNode(vt, parentid) {
         if ( ! (vt.hasProperty(IDs::synthBlob) && vt.hasProperty(IDs::synthName)) )
             throw InvalidSynthDef("Missing synth blob or name");
@@ -93,6 +111,10 @@ class MidiNode : public SynthNode {
     bool mono = false, legato = false;
     int activeSynths[127] = { 0 };
 
+    bool isReservedParam(int idx) const override {
+        return idx == freqIdx || idx == velocityIdx || idx == gateIdx;
+    }
+
 public:
     MidiNode(juce::ValueTree &vt, int parentid) : SynthNode(vt, parentid) {
         juce::String range = vt[IDs::synthNoteRange];
@@ -106,7 +128,6 @@ public:
         juce::ValueTree parameters = vt.getChildWithName(IDs::parameters);
         for(int i=0;i< parameters.getNumChildren(); i++) {
             juce::ValueTree param = parameters.getChild(i);
-
             juce::String pName = param.getProperty(IDs::pName);
             if ( pName == "freq" ) {
                 freqIdx = i;
@@ -252,6 +273,16 @@ public:
                     break;
                 }
             }
+        }
+    }
+
+    void rt_updatePrecompiledValue(int nodeid, int idx, float value, bool isDefault) {
+        for(auto &n: globalnodes) {
+            if ( n->nodeid != nodeid )
+                continue;
+            if ( n->type != BaseNode::NodeType::Group )
+                static_cast<SynthNode *>(n.get())->rt_updatePrecompiledValue(idx, value, isDefault);
+            return;
         }
     }
 
