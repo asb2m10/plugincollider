@@ -104,7 +104,7 @@ jobs:
           ${{github.workspace}}/build/installer/*
 
   build-macos:
-    runs-on: macos-14
+    runs-on: macos-15
     name: "macOS Build"
     environment: default
     if: ${{ vars.SKIP_MACOS != 'true' }}

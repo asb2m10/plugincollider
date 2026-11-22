@@ -170,7 +170,7 @@ protected:
 
         if (!processor.replaceSynthDef(content, vtSynth, specs)) {
             auto opts = juce::MessageBoxOptions().withTitle("Error")
-                .withMessage("SuperCollider refused to load the SynthDef").withButton("OK");
+                .withMessage("SuperCollider refused to load the SynthDef").withButton("OK", 0);
             juce::AlertWindow::showAsync(opts, [](int) {});
             return false;
         }
@@ -224,7 +224,7 @@ public:
 
             if (!ok || reply.size() == 0) {
                 auto opts = juce::MessageBoxOptions().withTitle("No SynthDefs")
-                    .withMessage("No SynthDefs available. Is the server running?").withButton("OK");
+                    .withMessage("No SynthDefs available. Is the server running?").withButton("OK", 0);
                 juce::AlertWindow::showAsync(opts, [](int) {});
                 return;
             }
@@ -241,7 +241,7 @@ public:
                     SpecList specs;
                     if (!this->processor.resolveKnownSynthDef(name, blob, specs)) {
                         auto opts = juce::MessageBoxOptions().withTitle("Error")
-                            .withMessage("Could not find binary for SynthDef: " + name).withButton("OK");
+                            .withMessage("Could not find binary for SynthDef: " + name).withButton("OK", 0);
                         juce::AlertWindow::showAsync(opts, [](int) {});
                         return;
                     }

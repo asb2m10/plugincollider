@@ -10,7 +10,10 @@ Now support Linux, macOS and Windows.
 *PluginCollider is based on AU version of https://github.com/supercollider/SuperColliderAU*
 
 # Changelog
-## Version 0.5.2 (In development)
+## Version 0.5.3
+ * Set controls update on future node without the need to re-sync the whole running tree
+
+## Version 0.5.2
 * Added more precision for ranges
 * ControlBus state synchronization with DAW and parameters values
 * Write host tempo/transport to control buses 32-35 (thanks @unthingable)

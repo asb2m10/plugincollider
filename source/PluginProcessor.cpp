@@ -412,11 +412,16 @@ void PluginColliderAudioProcessor::valueTreePropertyChanged(juce::ValueTree &tre
      if ( property == IDs::pCurrentValue ) {
         int idx = treeWhosePropertyHasChanged.getProperty(IDs::pIdx);
         float value = treeWhosePropertyHasChanged.getProperty(IDs::pCurrentValue);
+        bool isDefault = treeWhosePropertyHasChanged.hasProperty(IDs::pDefaultValue) &&
+                         value == static_cast<float>(treeWhosePropertyHasChanged.getProperty(IDs::pDefaultValue));
         juce::ValueTree node = treeWhosePropertyHasChanged.getParent().getParent();
         int nodeid = node.getProperty(IDs::nodeid, -1);
         if ( nodeid != -1 ) {
-            execOnAudioThread([this, nodeid, idx, value](PluginColliderAudioProcessor &proc) {
+            execOnAudioThread([this, nodeid, idx, value, isDefault](PluginColliderAudioProcessor &proc) {
                 superCollider.rt_setNodeValue(nodeid, idx, value);
+                // keep the precompiled value current so newly allocated synths (notes) use it
+                if ( container != nullptr )
+                    container->rt_updatePrecompiledValue(nodeid, idx, value, isDefault);
             });
         }
         return;
